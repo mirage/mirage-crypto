@@ -1,0 +1,29 @@
+OASISFormat: 0.3
+Name:        mirage-entropy
+Version:     1.1.0
+Synopsis:    Entropy implementation for Unix (hopefully Xen soon)
+Authors:     Hannes Mehnert
+License:     ISC
+Plugins:     META (0.3)
+BuildTools:  ocamlbuild
+
+Library mirage_entropy
+  CompiledObject:     best
+  Path:               lib
+  Findlibname:        mirage-entropy
+  Modules:            S
+  BuildDepends:       cstruct, lwt, mirage-types, mirage-types.lwt
+
+Library mirage_entropy_unix
+  CompiledObject:     best
+  Path:               unix
+  Findlibname:        mirage-entropy-unix
+  Modules:            Entropy
+  BuildDepends:       cstruct, lwt, lwt.unix, mirage-types, mirage-entropy
+
+Library mirage_entropy_xen
+  CompiledObject:     best
+  Path:               xen
+  Findlibname:        mirage-entropy-xen
+  Modules:            Entropy
+  BuildDepends:       cstruct, lwt, lwt.unix, mirage-types, mirage-entropy
