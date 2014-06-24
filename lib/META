@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 8d6b22e76f4a59dccdfd9bc20dee87d8)
+version = "1.1.0"
+description = "Entropy implementation for Unix (hopefully Xen soon)"
+requires = "cstruct lwt mirage-types mirage-types.lwt"
+archive(byte) = "mirage_entropy.cma"
+archive(byte, plugin) = "mirage_entropy.cma"
+archive(native) = "mirage_entropy.cmxa"
+archive(native, plugin) = "mirage_entropy.cmxs"
+exists_if = "mirage_entropy.cma"
+# OASIS_STOP
+
