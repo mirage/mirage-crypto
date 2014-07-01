@@ -30,7 +30,7 @@ type t = { id : string }
 type id = string
 type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
-type error = [ `Invalid_entropy of string ]
+type error = [ `No_entropy_device of string ]
 
 let connect id = return (`Ok { id } )
 let disconnect _ = return ()

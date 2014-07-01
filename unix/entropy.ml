@@ -31,13 +31,13 @@ type t = { id : string ; fd : file_descr }
 type id = string
 type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
-type error = [ `Invalid_entropy of string ]
+type error = [ `No_entropy_device of string ]
 
 let connect id =
   try_lwt
     openfile "/dev/random" [ Unix.O_RDONLY ] 0 >|= fun fd ->
     `Ok { id ; fd }
-  with _ -> return (`Error (`Invalid_entropy "failed to open /dev/random"))
+  with _ -> return (`Error (`No_entropy_device "failed to open /dev/random"))
 
 let disconnect { fd = fd } = close fd
 
