@@ -19,7 +19,7 @@ Library mirage_entropy_unix
   Path:               unix
   Findlibname:        mirage-entropy-unix
   Modules:            Entropy
-  BuildDepends:       cstruct, lwt, lwt.unix, mirage-types, mirage-entropy
+  BuildDepends:       cstruct, cstruct.lwt, lwt, lwt.unix, lwt.syntax, mirage-types, mirage-entropy
 
 Library mirage_entropy_xen
   CompiledObject:     best
