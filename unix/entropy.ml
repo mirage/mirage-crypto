@@ -11,9 +11,7 @@ let connect id =
   lwt fd = openfile "/dev/random" [ Unix.O_RDONLY ] 0 in
   return (`Ok { id ; fd } )
 
-let disconnect { fd = fd } =
-  close fd >>= fun () ->
-  return ()
+let disconnect { fd = fd } = close fd
 
 let id { id } = id
 
