@@ -8,8 +8,10 @@ type buffer = Cstruct.t
 type error = [ `Invalid_entropy of string ]
 
 let connect id =
-  lwt fd = openfile "/dev/random" [ Unix.O_RDONLY ] 0 in
-  return (`Ok { id ; fd } )
+  try_lwt
+    openfile "/dev/random" [ Unix.O_RDONLY ] 0 >|= fun fd ->
+    `Ok { id ; fd }
+  with _ -> return (`Error (`Invalid_entropy "failed to open /dev/random"))
 
 let disconnect { fd = fd } = close fd
 
