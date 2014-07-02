@@ -37,5 +37,4 @@ let disconnect _ = return ()
 let id { id } = id
 
 let entropy t len =
-  let r = Cstruct.create len in
-  return (`Ok r)
+  return (`Error (`No_entroy_device "no entropy on XEN yet, sorry"))
