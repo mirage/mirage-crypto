@@ -26,15 +26,15 @@
 
 open Lwt
 
-type t = { id : string }
-type id = string
+type t
+type id = unit
 type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
 type error = [ `No_entropy_device of string ]
 
-let connect id = return (`Ok { id } )
+let connect _ = return (`Error (`No_entropy_device "nothing on XEN yet, sorry"))
 let disconnect _ = return ()
-let id { id } = id
+let id _ = ()
 
 let entropy t len =
   return (`Error (`No_entroy_device "no entropy on XEN yet, sorry"))

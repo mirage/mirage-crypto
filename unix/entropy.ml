@@ -27,21 +27,21 @@
 open Lwt
 open Lwt_unix
 
-type t = { id : string ; fd : file_descr }
-type id = string
+type t = { fd : file_descr }
+type id = unit
 type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
 type error = [ `No_entropy_device of string ]
 
-let connect id =
+let connect _ =
   try_lwt
     openfile "/dev/random" [ Unix.O_RDONLY ] 0 >|= fun fd ->
-    `Ok { id ; fd }
+    `Ok { fd }
   with _ -> return (`Error (`No_entropy_device "failed to open /dev/random"))
 
 let disconnect { fd = fd } = close fd
 
-let id { id } = id
+let id _ = ()
 
 let entropy { fd = fd } len =
   let r = Cstruct.create len in
