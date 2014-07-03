@@ -34,7 +34,7 @@ type buffer = Cstruct.t
 type error = [ `No_entropy_device of string ]
 
 let connect _ =
-  try_lwt
+  try
     openfile "/dev/random" [ Unix.O_RDONLY ] 0 >|= fun fd ->
     `Ok { fd }
   with _ -> return (`Error (`No_entropy_device "failed to open /dev/random"))
@@ -45,5 +45,5 @@ let id _ = ()
 
 let entropy { fd = fd } len =
   let r = Cstruct.create len in
-  lwt res = Lwt_cstruct.read fd r in
-  return (`Ok r)
+  Lwt_cstruct.read fd r >|= fun _ ->
+  `Ok r

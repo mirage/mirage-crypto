@@ -1,0 +1,14 @@
+#!/bin/sh
+
+OS=${OS:-unix}
+OCAMLBUILD=ocamlbuild
+
+ocamlbuild -use-ocamlfind -pkg cstruct -pkg cstruct.lwt -pkg lwt -pkg lwt.unix -pkg mirage-types ${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs
+
+B=_build/${OS}
+if [ "$1" = "true" ]; then
+  ocamlfind remove mirage-entropy-${OS} || true
+  ocamlfind install mirage-entropy-${OS} ${OS}/META \
+    $B/entropy.cmo $B/entropy.cmi $B/mirage-entropy.cma \
+    $B/mirage-entropy.a $B/entropy.cmx $B/mirage-entropy.cmxa $B/mirage-entropy.cmxs
+fi
