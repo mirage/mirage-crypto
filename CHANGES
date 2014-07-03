@@ -1,3 +1,6 @@
+0.1.2 (03-July-2014)
+* Use /dev/urandom instead of /dev/random (for non-blocking behaviour)
+
 0.1.1 (03-July-2014)
 * Use Makefile instead of oasis as build system
 

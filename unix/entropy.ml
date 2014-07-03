@@ -35,7 +35,7 @@ type error = [ `No_entropy_device of string ]
 
 let connect _ =
   try
-    openfile "/dev/random" [ Unix.O_RDONLY ] 0 >|= fun fd ->
+    openfile "/dev/urandom" [ Unix.O_RDONLY ] 0 >|= fun fd ->
     `Ok { fd }
   with _ -> return (`Error (`No_entropy_device "failed to open /dev/random"))
 
