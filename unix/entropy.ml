@@ -37,7 +37,7 @@ let connect _ =
   try
     openfile "/dev/urandom" [ Unix.O_RDONLY ] 0 >|= fun fd ->
     `Ok { fd }
-  with _ -> return (`Error (`No_entropy_device "failed to open /dev/random"))
+  with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
 
 let disconnect { fd = fd } = close fd
 
