@@ -1,4 +1,4 @@
-version = "0.1.1"
+version = "0.1.3"
 description = "Entropy implementation for Xen"
 requires = "cstruct lwt mirage-types"
 archive(byte) = "mirage-entropy.cma"

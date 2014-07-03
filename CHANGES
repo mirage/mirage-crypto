@@ -1,3 +1,6 @@
+0.1.3 (03-July-2014)
+* Unbreak build: ocamlfind wasn't able to locate previously
+
 0.1.2 (03-July-2014)
 * Use /dev/urandom instead of /dev/random (for non-blocking behaviour)
 
