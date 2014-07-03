@@ -1,2 +1,5 @@
+0.1.1 (03-July-2014)
+* Use Makefile instead of oasis as build system
+
 0.1.0 (03-July-2014)
 * Initial release: on Unix, use /dev/random; on XEN, error out
