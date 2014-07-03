@@ -1,0 +1,2 @@
+0.1.0 (03-July-2014)
+* Initial release: on Unix, use /dev/random; on XEN, error out
