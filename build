@@ -9,6 +9,6 @@ B=_build/${OS}
 if [ "$1" = "true" ]; then
   ocamlfind remove mirage-entropy-${OS} || true
   ocamlfind install mirage-entropy-${OS} ${OS}/META \
-    $B/entropy.cmo $B/entropy.cmi $B/mirage-entropy.cma \
-    $B/mirage-entropy.a $B/entropy.cmx $B/mirage-entropy.cmxa $B/mirage-entropy.cmxs
+    $B/entropy_${OS}.cmo $B/entropy_${OS}.cmi $B/mirage-entropy.cma \
+    $B/mirage-entropy.a $B/entropy_${OS}.cmx $B/mirage-entropy.cmxa $B/mirage-entropy.cmxs
 fi

@@ -1,17 +1,17 @@
 (*
  * Copyright (c) 2014, Hannes Mehnert
  * All rights reserved.
-
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
-
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
-
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
-     this list of conditions and the following disclaimer in the documentation
-     and/or other materials provided with the distribution.
-
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,25 +25,16 @@
  *)
 
 open Lwt
-open Lwt_unix
 
-type t = { fd : file_descr }
+type t
 type id = unit
 type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
 type error = [ `No_entropy_device of string ]
 
-let connect _ =
-  try
-    openfile "/dev/urandom" [ Unix.O_RDONLY ] 0 >|= fun fd ->
-    `Ok { fd }
-  with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
-
-let disconnect { fd = fd } = close fd
-
+let connect _ = return (`Error (`No_entropy_device "no entropy device on XEN yet, sorry"))
+let disconnect _ = return ()
 let id _ = ()
 
-let entropy { fd = fd } len =
-  let r = Cstruct.create len in
-  Lwt_cstruct.read fd r >|= fun _ ->
-  `Ok r
+let entropy _ _ =
+  return (`Error (`No_entropy_device "no entropy on XEN yet, sorry"))
