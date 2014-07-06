@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2014, Hannes Mehnert
+ * Copyright (c) 2014 Anil Madhavapeddy <anil@recoil.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,9 +33,19 @@ type 'a io = 'a Lwt.t
 type buffer = Cstruct.t
 type error = [ `No_entropy_device of string ]
 
-let connect _ = return (`Error (`No_entropy_device "no entropy device on XEN yet, sorry"))
-let disconnect _ = return ()
+let connect _ =
+  Random.self_init ();
+  print_endline "Entropy_xen_weak: using a weak entropy source seeded only from time.";
+  return ()
+
+let disconnect _ =
+  return ()
+
 let id _ = ()
 
-let entropy _ _ =
-  return (`Error (`No_entropy_device "no entropy on XEN yet, sorry"))
+let entropy buf len =
+  for i = 0 to len - 1 do
+    let r = Random.int 256 in
+    Cstruct.set_uint8 buf i r
+  done;
+  return (`Ok buf)
