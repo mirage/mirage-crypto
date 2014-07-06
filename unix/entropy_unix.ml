@@ -45,5 +45,5 @@ let id _ = ()
 
 let entropy { fd = fd } len =
   let r = Cstruct.create len in
-  Lwt_cstruct.read fd r >|= fun _ ->
+  Lwt_cstruct.(complete (read fd) r) >|= fun () ->
   `Ok r

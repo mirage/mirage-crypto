@@ -1,3 +1,6 @@
+0.1.5 (06-July-2014):
+* Guarantee that all of the required entropy is read on Unix.
+
 0.1.4 (04-July-2014):
 * provide Mirage 1.2.0 interfaces (`V1_LWT.ENTROPY`).
 * name modules `Entropy_xen` and `Entropy_unix` to not clash.
