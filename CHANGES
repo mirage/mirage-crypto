@@ -1,5 +1,6 @@
 0.1.5 (06-July-2014):
 * Guarantee that all of the required entropy is read on Unix.
+* Add a `Entropy_xen_weak` that uses the builtin `Random.self_init` as a measure of last-resort.
 
 0.1.4 (04-July-2014):
 * provide Mirage 1.2.0 interfaces (`V1_LWT.ENTROPY`).
