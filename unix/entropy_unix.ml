@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2014, Hannes Mehnert
+ * Copyright (c) 2014, David Kaloper
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,23 +28,55 @@
 open Lwt
 open Lwt_unix
 
-type t = { fd : file_descr }
-type id = unit
-type 'a io = 'a Lwt.t
-type buffer = Cstruct.t
-type error = [ `No_entropy_device of string ]
+module Make (T : V1_LWT.TIME) = struct
 
-let connect _ =
-  try
-    openfile "/dev/urandom" [ Unix.O_RDONLY ] 0 >|= fun fd ->
-    `Ok { fd }
-  with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
+  type id = unit
 
-let disconnect { fd = fd } = close fd
+  type 'a io  = 'a Lwt.t
+  type buffer = Cstruct.t
+  type error  = [ `No_entropy_device of string ]
 
-let id _ = ()
+  type handler = source:int -> buffer -> unit
 
-let entropy { fd = fd } len =
-  let r = Cstruct.create len in
-  Lwt_cstruct.(complete (read fd) r) >|= fun () ->
-  `Ok r
+  type t = {
+    fd : file_descr ;
+    mutable handler : handler option ;
+  }
+
+  let period = 600.
+  and chunk  = 16
+  and source = "/dev/urandom"
+
+  let connect _ =
+    try
+      openfile source[ Unix.O_RDONLY ] 0 >|= fun fd ->
+      `Ok { fd ; handler = None }
+    with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
+
+  let disconnect t =
+    t.handler <- None ; close t.fd
+
+  let id _ = ()
+
+  let refeed t =
+    match t.handler with
+    | None   -> return_unit
+    | Some f ->
+        let cs = Cstruct.create (chunk + 1) in
+        Lwt_cstruct.(complete (read t.fd) cs) >|= fun _ ->
+          f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.sub cs 1 chunk)
+
+  (*
+   * Registering a `handler` spins up a read-loop.
+   *
+   * XXX The loop should be terminated on `disconnect`.
+   *
+   * XXX There should be no loop in the first place; `refeed` should piggyback
+   * on other activity going on in the system.
+   *)
+  let handler t f =
+    let rec loop t = refeed t >> T.sleep period >> loop t in
+    t.handler <- Some f ;
+    refeed t >|= fun _ -> async (fun () -> loop t)
+
+end

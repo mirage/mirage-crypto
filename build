@@ -3,7 +3,15 @@
 OS=${OS:-unix}
 OCAMLBUILD=ocamlbuild
 
-ocamlbuild -use-ocamlfind -pkg cstruct -pkg cstruct.lwt -pkg lwt -pkg lwt.unix -pkg mirage-types ${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs
+ocamlbuild -use-ocamlfind \
+  -syntax camlp4o \
+  -pkg cstruct \
+  -pkg cstruct.lwt \
+  -pkg lwt \
+  -pkg lwt.unix \
+  -pkg lwt.syntax \
+  -pkg mirage-types \
+  ${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs
 
 B=_build/${OS}
 if [ "$1" = "true" ]; then
