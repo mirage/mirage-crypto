@@ -1,15 +1,15 @@
-0.1.4 (04-July-2014)
-* provide interfaces (V1_LWT.ENTROPY)
-* name modules Entropy_xen and Entropy_unix
+0.1.4 (04-July-2014):
+* provide Mirage 1.2.0 interfaces (`V1_LWT.ENTROPY`).
+* name modules `Entropy_xen` and `Entropy_unix` to not clash.
 
-0.1.3 (03-July-2014)
-* Unbreak build: ocamlfind wasn't able to locate previously
+0.1.3 (03-July-2014):
+* Unbreak build: ocamlfind wasn't able to locate the package previously.
 
-0.1.2 (03-July-2014)
-* Use /dev/urandom instead of /dev/random (for non-blocking behaviour)
+0.1.2 (03-July-2014):
+* Use `/dev/urandom` instead of `/dev/random` (for non-blocking behaviour).
 
-0.1.1 (03-July-2014)
-* Use Makefile instead of oasis as build system
+0.1.1 (03-July-2014):
+* Use Makefile instead of oasis as build system.
 
-0.1.0 (03-July-2014)
-* Initial release: on Unix, use /dev/random; on XEN, error out
+0.1.0 (03-July-2014):
+* Initial release: on Unix, use `/dev/random`; on XEN, error out.
