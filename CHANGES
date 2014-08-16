@@ -1,3 +1,6 @@
+0.2.0 (16-Aug-2014):
+* Do not wrap `Entropy_unix` in a functor as it is meant to be used directly.
+
 0.1.6 (06-July-2014):
 * Rework the module to be event-driven, more in line with entropy gathering.
 
