@@ -1,4 +1,4 @@
-version = "0.1.6"
+version = "0.2.0"
 description = "Entropy implementation for Unix"
 requires = "cstruct cstruct.lwt lwt lwt.unix lwt.syntax mirage-types"
 archive(byte) = "mirage-entropy.cma"

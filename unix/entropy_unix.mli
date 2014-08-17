@@ -25,4 +25,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-module Make (T : V1_LWT.TIME) : V1_LWT.ENTROPY with type id = unit
+include V1_LWT.ENTROPY with type id = unit

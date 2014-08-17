@@ -28,43 +28,41 @@
 open Lwt
 open Lwt_unix
 
-module Make (T : V1_LWT.TIME) = struct
+type id = unit
 
-  type id = unit
+type 'a io  = 'a Lwt.t
+type buffer = Cstruct.t
+type error  = [ `No_entropy_device of string ]
 
-  type 'a io  = 'a Lwt.t
-  type buffer = Cstruct.t
-  type error  = [ `No_entropy_device of string ]
+type handler = source:int -> buffer -> unit
 
-  type handler = source:int -> buffer -> unit
+type t = {
+  fd : file_descr ;
+  mutable handler : handler option ;
+}
 
-  type t = {
-    fd : file_descr ;
-    mutable handler : handler option ;
-  }
+let period = 600.
+and chunk  = 16
+and source = "/dev/urandom"
 
-  let period = 600.
-  and chunk  = 16
-  and source = "/dev/urandom"
+let connect _ =
+  try
+    openfile source [ Unix.O_RDONLY ] 0 >|= fun fd ->
+    `Ok { fd ; handler = None }
+  with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
 
-  let connect _ =
-    try
-      openfile source[ Unix.O_RDONLY ] 0 >|= fun fd ->
-      `Ok { fd ; handler = None }
-    with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
+let disconnect t =
+  t.handler <- None ; close t.fd
 
-  let disconnect t =
-    t.handler <- None ; close t.fd
+let id _ = ()
 
-  let id _ = ()
-
-  let refeed t =
-    match t.handler with
-    | None   -> return_unit
-    | Some f ->
-        let cs = Cstruct.create (chunk + 1) in
-        Lwt_cstruct.(complete (read t.fd) cs) >|= fun _ ->
-          f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.sub cs 1 chunk)
+let refeed t =
+  match t.handler with
+  | None   -> return_unit
+  | Some f ->
+    let cs = Cstruct.create (chunk + 1) in
+    Lwt_cstruct.(complete (read t.fd) cs) >|= fun _ ->
+    f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.sub cs 1 chunk)
 
   (*
    * Registering a `handler` spins up a read-loop.
@@ -74,9 +72,8 @@ module Make (T : V1_LWT.TIME) = struct
    * XXX There should be no loop in the first place; `refeed` should piggyback
    * on other activity going on in the system.
    *)
-  let handler t f =
-    let rec loop t = refeed t >> T.sleep period >> loop t in
-    t.handler <- Some f ;
-    refeed t >|= fun _ -> async (fun () -> loop t)
+let handler t f =
+  let rec loop t = refeed t >>= fun () -> sleep period >>= fun () -> loop t in
+  t.handler <- Some f ;
+  refeed t >|= fun _ -> async (fun () -> loop t)
 
-end
