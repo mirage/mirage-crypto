@@ -37,7 +37,7 @@ type error  = [ `No_entropy_device of string ]
 type handler = source:int -> buffer -> unit
 
 type t = {
-  fd : file_descr ;
+  fd         : file_descr ;
   mutable ev : Lwt_engine.event option ;
 }
 
@@ -69,7 +69,10 @@ let refeed size fd f =
  * Registering a `handler` spins up a recurrent timer.
  *
  * XXX There should be no timer in the first place; `refeed` should piggyback
- * on other activity going on in the system.
+ * on other activity going on in the system. We should trigger refeeding every
+ * time the engine fires some _other_ callback, throttling the frequency. That
+ * way, refeeding would be broadly aligned with the general activity of the
+ * system instead of forcing the `period`.
  *)
 let handler t f =
   let trigger _ = async @@ fun () -> refeed chunk t.fd f in
