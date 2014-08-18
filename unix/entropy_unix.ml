@@ -75,7 +75,7 @@ let refeed size fd f =
  * system instead of forcing the `period`.
  *)
 let handler t f =
-  let trigger _ = async @@ fun () -> refeed chunk t.fd f in
+  let trigger _ = async (fun () -> refeed chunk t.fd f) in
   stop t;
   refeed 32 t.fd f >|= fun () ->
   let ev = Lwt_engine.on_timer period true trigger in
