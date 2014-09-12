@@ -37,8 +37,8 @@ type error  = [ `No_entropy_device of string ]
 type handler = source:int -> buffer -> unit
 
 type t = {
-  fd : file_descr ;
-  mutable handler : handler option ;
+  fd         : file_descr ;
+  mutable ev : Lwt_engine.event option ;
 }
 
 let period = 600.
@@ -48,32 +48,35 @@ and source = "/dev/urandom"
 let connect _ =
   try
     openfile source [ Unix.O_RDONLY ] 0 >|= fun fd ->
-    `Ok { fd ; handler = None }
+    `Ok { fd ; ev = None }
   with _ -> return (`Error (`No_entropy_device "failed to open /dev/urandom"))
 
-let disconnect t =
-  t.handler <- None ; close t.fd
+let stop t =
+  match t.ev with
+  | None    -> ()
+  | Some ev -> Lwt_engine.stop_event ev ; t.ev <- None
+
+let disconnect t = stop t ; close t.fd
 
 let id _ = ()
 
-let refeed t =
-  match t.handler with
-  | None   -> return_unit
-  | Some f ->
-    let cs = Cstruct.create (chunk + 1) in
-    Lwt_cstruct.(complete (read t.fd) cs) >|= fun _ ->
-    f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.sub cs 1 chunk)
+let refeed size fd f =
+  let cs = Cstruct.create (size + 1) in
+  Lwt_cstruct.(complete (read fd) cs) >|= fun _ ->
+  f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.sub cs 1 size)
 
-  (*
-   * Registering a `handler` spins up a read-loop.
-   *
-   * XXX The loop should be terminated on `disconnect`.
-   *
-   * XXX There should be no loop in the first place; `refeed` should piggyback
-   * on other activity going on in the system.
-   *)
+(*
+ * Registering a `handler` spins up a recurrent timer.
+ *
+ * XXX There should be no timer in the first place; `refeed` should piggyback
+ * on other activity going on in the system. We should trigger refeeding every
+ * time the engine fires some _other_ callback, throttling the frequency. That
+ * way, refeeding would be broadly aligned with the general activity of the
+ * system instead of forcing the `period`.
+ *)
 let handler t f =
-  let rec loop t = refeed t >>= fun () -> sleep period >>= fun () -> loop t in
-  t.handler <- Some f ;
-  refeed t >|= fun _ -> async (fun () -> loop t)
-
+  let trigger _ = async (fun () -> refeed chunk t.fd f) in
+  stop t;
+  refeed 32 t.fd f >|= fun () ->
+  let ev = Lwt_engine.on_timer period true trigger in
+  t.ev <- Some ev
