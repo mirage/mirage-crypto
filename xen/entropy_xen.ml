@@ -30,7 +30,70 @@
 let period = 600. (* refeed every <period> seconds *)
 let chunk = 16    (* read <chunk> bytes of entropy every <period> *)
 
+module Protocol = struct
+  (* These are defined in xentropy/doc/protocol.md *)
+  let console_name = "org.openmirage.entropy.1"
+  let handshake_message =
+    let string = "Hello, may I have some entropy?\r\n" in
+    let buffer = Cstruct.create (String.length string) in
+    Cstruct.blit_from_string string 0 buffer 0 (String.length string);
+    buffer
+  let handshake_response = "You may treat everything following this message as entropy.\r\n"
+end
+
 open Lwt
+
+let (>>|=) x f = x >>= function
+| `Ok x -> f x
+| `Eof ->
+  print_endline "Received an EOF from the entropy console";
+  return (`Error (`No_entropy_device Protocol.console_name))
+| `Error (`Invalid_console x) ->
+  Printf.printf "Invalid_console %s\n%!" x;
+  return (`Error (`No_entropy_device Protocol.console_name))
+| `Error _ ->
+  Printf.printf "Unknown console device failure\n%!";
+  return (`Error (`No_entropy_device Protocol.console_name))
+
+module BufferedConsole = struct
+  type t = {
+    device: Console_xen.t;
+    mutable unconsumed: Cstruct.t;
+  }
+  (* Buffered reading on top of a console *)
+
+  let create device =
+    let unconsumed = Cstruct.create 0 in
+    { device; unconsumed }
+
+  (* read n bytes directly into [results] and return any extra
+     received bytes which we'll buffer *)
+  let rec read_n t results = match Cstruct.len results with
+  | 0 -> return (`Ok (Cstruct.create 0))
+  | n ->
+    Console_xen.read t.device
+    >>|= fun buffer ->
+    let needed = min n (Cstruct.len buffer) in
+    Cstruct.blit buffer 0 results 0 needed;
+    if n = needed
+    then return (`Ok (Cstruct.shift buffer needed))
+    else read_n t (Cstruct.shift results needed)
+
+  let read t n =
+    let results = Cstruct.create n in
+    (* first look in our unconsumed buffer *)
+    let needed = min n (Cstruct.len t.unconsumed) in
+    Cstruct.blit t.unconsumed 0 results 0 needed;
+    t.unconsumed <- Cstruct.shift t.unconsumed needed;
+    if n = needed
+    then return (`Ok results)
+    else
+      (* that wasn't enough, so read another chunk *)
+      read_n t (Cstruct.shift results needed)
+      >>|= fun extra ->
+      t.unconsumed <- extra;
+      return (`Ok results)
+end
 
 type 'a io  = 'a Lwt.t
 type buffer = Cstruct.t
@@ -42,7 +105,7 @@ type id = [ `FromHost | `Weak ]
 
 type implementation =
 | RandomSelfInit (* Implementation of `Weak *)
-| EntropyConsole of Console_xen.t (* Implementation of `FromHost *)
+| EntropyConsole of BufferedConsole.t (* Implementation of `FromHost *)
 
 type t = {
   implementation: implementation;
@@ -53,55 +116,42 @@ let id t = match t.implementation with
 | RandomSelfInit -> `Weak
 | EntropyConsole _ -> `FromHost
 
-(* These are defined in xentropy/doc/protocol.md *)
-let console_name = "org.openmirage.entropy.1"
-let handshake_message =
-  let string = "Hello, may I have some entropy?\r\n" in
-  let buffer = Cstruct.create (String.length string) in
-  Cstruct.blit_from_string string 0 buffer 0 (String.length string);
-  buffer
-let handshake_response = "You may treat everything following this message as entropy.\r\n"
-
-let (>>|=) x f = x >>= function
-| `Ok x -> f x
-| `Eof ->
-  print_endline "Received an EOF from the entropy console";
-  return (`Error (`No_entropy_device console_name))
-| `Error (`Invalid_console x) ->
-  Printf.printf "Invalid_console %s\n%!" x;
-  return (`Error (`No_entropy_device console_name))
-| `Error _ ->
-  Printf.printf "Unknown console device failure\n%!";
-  return (`Error (`No_entropy_device console_name))
-
 let connect = function
 | `Weak ->
   Random.self_init ();
   print_endline "Entropy_xen: using a weak entropy source seeded only from time.";
-  return (`Ok { implementation = RandomSelfInit; ev = None })
+  return (`Ok {
+    implementation = RandomSelfInit;
+    ev = None;
+  })
 | `FromHost ->
-  Printf.printf "Entropy_xen: attempting to connect to Xen entropy source %s\n%!" console_name;
-  Console_xen.connect console_name
+  Printf.printf "Entropy_xen: attempting to connect to Xen entropy source %s\n%!" Protocol.console_name;
+  Console_xen.connect Protocol.console_name
   >>|= fun device ->
-  Console_xen.write device handshake_message
+  Console_xen.write device Protocol.handshake_message
   >>|= fun () ->
-  Console_xen.read device
-  >>|= fun buffer ->
-  let string = Cstruct.to_string buffer in
-  if string <> handshake_response then begin
+  let bc = BufferedConsole.create device in
+  BufferedConsole.read bc (String.length Protocol.handshake_response)
+  >>|= fun response ->
+  let response = Cstruct.to_string response in
+
+  if response <> Protocol.handshake_response then begin
     Printf.printf "Entropy_xen: received [%s](%d bytes) instead of expected handshake message"
-      (String.escaped string) (String.length string);
-    return (`Error (`No_entropy_device console_name))
+      (String.escaped response) (String.length response);
+    return (`Error (`No_entropy_device Protocol.console_name))
   end else begin
     print_endline "Entropy_xen: connected to Xen entropy source";
-    return (`Ok { implementation = EntropyConsole device; ev = None })
+    return (`Ok {
+      implementation = EntropyConsole bc;
+      ev = None;
+    })
   end
 
 let disconnect _ = return_unit
 
 let refeed t f = match t.implementation with
 | EntropyConsole console ->
-  ( Console_xen.read console
+  ( BufferedConsole.read console chunk
     >>= function
     | `Ok cs ->
       return cs
