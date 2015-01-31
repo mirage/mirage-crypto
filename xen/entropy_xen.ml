@@ -95,6 +95,8 @@ module BufferedConsole = struct
       return (`Ok results)
 end
 
+module Make(T : V1_LWT.TIME) = struct
+
 type 'a io  = 'a Lwt.t
 type buffer = Cstruct.t
 type error  = [ `No_entropy_device of string ]
@@ -171,11 +173,6 @@ let refeed t f = match t.implementation with
   f ~source:s cs;
   return_unit
 
-let stop t =
-  match t.ev with
-  | None    -> ()
-  | Some ev -> Lwt_engine.stop_event ev ; t.ev <- None
-
 (*
  * Registering a `handler` spins up a recurrent timer.
  *
@@ -187,11 +184,15 @@ let stop t =
  *)
 
 let handler t f : unit Lwt.t =
-  let trigger _ = async (fun () -> refeed t f) in
-  stop t;
   refeed t f
   >>= fun () ->
-  let ev = Lwt_engine.on_timer period true trigger in
-  t.ev <- Some ev;
+  let rec loop_forever () =
+    T.sleep period
+    >>= fun () ->
+    refeed t f
+    >>= fun () ->
+    loop_forever () in
+  let (_: [ `Never_returns] Lwt.t) = loop_forever () in
   return_unit
 
+end

@@ -25,4 +25,5 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-include V1_LWT.ENTROPY with type id = [ `FromHost | `Weak ]
+module Make(T : V1_LWT.TIME): V1_LWT.ENTROPY
+  with type id = [ `FromHost | `Weak ]
