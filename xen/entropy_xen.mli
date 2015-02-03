@@ -26,3 +26,4 @@
  *)
 
 include V1_LWT.ENTROPY with type id = unit
+val connect : unit -> [`Ok of t | `Error of error] io
