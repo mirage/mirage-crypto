@@ -25,9 +25,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-module Make(T : V1_LWT.TIME) : sig
+(* module Make(T : V1_LWT.TIME) : sig
   include V1_LWT.ENTROPY
     with type id = [ `FromHost | `Weak ]
 
   val connect : [ `FromHost | `Weak ] -> [`Ok of t | `Error of error] io
-end
+end *)
+
+include V1_LWT.ENTROPY
+  with type id = unit
+
+val connect : unit -> [`Ok of t | `Error of error] io

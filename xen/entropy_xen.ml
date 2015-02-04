@@ -27,6 +27,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+module Cpu_native = struct
+
+  exception Instruction_not_available
+  exception Entropy_empty
+
+  let _ =
+    List.iter (fun (id, exn) -> Callback.register_exception id exn)
+    [ ("instruction not available", Instruction_not_available)
+    ; ("entropy pool empty", Entropy_empty)
+    ]
+
+  external cycles : unit -> int = "caml_cycle_counter" "noalloc"
+  external rdrand : unit -> int = "caml_rdrand"
+  external rdseed : unit -> int = "caml_rdseed"
+
+  let available f =
+    try ignore (f ()); true
+    with Instruction_not_available -> false
+end
+
+
 let period = 600. (* refeed every <period> seconds *)
 let chunk = 16    (* read <chunk> bytes of entropy every <period> *)
 
@@ -95,7 +116,7 @@ module BufferedConsole = struct
       return (`Ok results)
 end
 
-module Make(T : V1_LWT.TIME) = struct
+(* module Make(T : V1_LWT.TIME) = struct *)
 
 type 'a io  = 'a Lwt.t
 type buffer = Cstruct.t
@@ -103,11 +124,60 @@ type error  = [ `No_entropy_device of string ]
 
 type handler = source:int -> buffer -> unit
 
-type id = [ `FromHost | `Weak ]
+type id = unit
+
+type t = {
+  listeners : handler Lwt_sequence.t ;
+  kickstart : (unit -> Cstruct.t Lwt.t) list
+}
+
+let fast_source () =
+  let (descr, src) =
+    match Cpu_native.(available rdrand) with
+    | true ->
+        let cs = Cstruct.create 12 in
+        "RDRAND, CLOCK", fun () ->
+          let a = Cpu_native.cycles ()
+          and b = Cpu_native.rdrand () in
+          Cstruct.LE.set_uint32 cs 0 (Int32.of_int a);
+          Cstruct.LE.set_uint64 cs 4 (Int64.of_int b);
+          cs
+    | false ->
+        let cs = Cstruct.create 4 in
+        "CLOCK", fun () ->
+          let a = Cpu_native.cycles () in
+          Cstruct.LE.set_uint32 cs 0 (Int32.of_int a);
+          cs in
+  Printf.printf "Internal entropy: %s\n%!" descr ;
+  src
+
+let connect () =
+  let listeners = Lwt_sequence.create ()
+  and src0      = fast_source () in
+  let kickstart = [ fun () -> return (src0 ()) ]
+  and event ()  =
+    let cs = src0 () in
+    Lwt_sequence.iter_l (fun f -> f ~source:0 cs) listeners in
+  OS.Main.at_enter_iter event ;
+  return (`Ok { listeners ; kickstart })
+
+let handler t f =
+  ignore (Lwt_sequence.add_r f t.listeners);
+  Lwt_list.iteri_p (fun i k -> k () >|= f ~source:i) t.kickstart
+
+let disconnect t =
+  let rec drain t =
+    Lwt_sequence.(if not (is_empty t) then ignore (take_l t)) in
+  drain t.listeners ;
+  return_unit
+
+let id _ = ()
+
+(* type id = [ `FromHost | `Weak ]
 
 type implementation =
-| RandomSelfInit (* Implementation of `Weak *)
-| EntropyConsole of BufferedConsole.t (* Implementation of `FromHost *)
+| RandomSelfInit |+ Implementation of `Weak +|
+| EntropyConsole of BufferedConsole.t |+ Implementation of `FromHost +|
 
 type t = {
   implementation: implementation;
@@ -159,7 +229,7 @@ let refeed t f = match t.implementation with
       return cs
     | _ ->
       Printf.printf "ERROR: reading from entropy device. We have no more entropy\n%!";
-      (* Abort the unikernel *)
+      |+ Abort the unikernel +|
       failwith "Unable to read from entropy device"
   ) >>= fun cs ->
   f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.shift cs 1);
@@ -173,7 +243,7 @@ let refeed t f = match t.implementation with
   f ~source:s cs;
   return_unit
 
-(*
+|+
  * Registering a `handler` spins up a recurrent timer.
  *
  * XXX There should be no timer in the first place; `refeed` should piggyback
@@ -181,7 +251,7 @@ let refeed t f = match t.implementation with
  * time the engine fires some _other_ callback, throttling the frequency. That
  * way, refeeding would be broadly aligned with the general activity of the
  * system instead of forcing the `period`.
- *)
+ +|
 
 let handler t f : unit Lwt.t =
   refeed t f
@@ -193,6 +263,6 @@ let handler t f : unit Lwt.t =
     >>= fun () ->
     loop_forever () in
   let (_: [ `Never_returns] Lwt.t) = loop_forever () in
-  return_unit
+  return_unit *)
 
-end
+(* end *)
