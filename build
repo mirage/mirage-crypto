@@ -3,7 +3,11 @@
 OS=${OS:-unix}
 OCAMLBUILD=ocamlbuild
 
-ocamlbuild -use-ocamlfind \
+case "${OS}" in
+xen) EXTRA_PKG="-pkg mirage-console.xen";;
+esac
+
+ocamlbuild -use-ocamlfind $EXTRA_PKG \
   -syntax camlp4o \
   -pkg cstruct \
   -pkg cstruct.lwt \
