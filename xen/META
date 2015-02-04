@@ -1,6 +1,6 @@
 version = "0.2.0"
 description = "Entropy implementation for Xen"
-requires = "cstruct lwt mirage-types"
+requires = "cstruct lwt mirage-types mirage-console.xen"
 archive(byte) = "mirage-entropy.cma"
 archive(byte, plugin) = "mirage-entropy.cma"
 archive(native) = "mirage-entropy.cmxa"
