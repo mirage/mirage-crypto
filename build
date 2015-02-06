@@ -1,26 +1,28 @@
 #!/bin/sh -e
 
 OS=${OS:-unix}
-OCAMLBUILD=ocamlbuild
+OCAMLBUILD="ocamlbuild -use-ocamlfind -syntax camlp4o"
+PKG="-pkgs lwt,lwt.syntax,cstruct,mirage-types"
+
+TARGET="${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs"
 
 case "${OS}" in
-xen) EXTRA_PKG="-pkg mirage-console.xen";;
+  xen)
+    ${OCAMLBUILD} ${PKG} -pkgs mirage-console.xen \
+      -tag-line "<xen/mirage-entropy.{cma,cmxa}>: use_libmirage-entropy_xen_stubs" \
+      ${OS}/libmirage-entropy_xen_stubs.a \
+      ${TARGET}
+    ;;
+  unix)
+    ${OCAMLBUILD} ${PKG} -pkgs lwt.unix,cstruct.lwt ${TARGET}
+    ;;
 esac
-
-ocamlbuild -use-ocamlfind $EXTRA_PKG \
-  -syntax camlp4o \
-  -pkg cstruct \
-  -pkg cstruct.lwt \
-  -pkg lwt \
-  -pkg lwt.unix \
-  -pkg lwt.syntax \
-  -pkg mirage-types \
-  ${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs
 
 B=_build/${OS}
 if [ "$1" = "true" ]; then
   ocamlfind remove mirage-entropy-${OS} || true
   ocamlfind install mirage-entropy-${OS} ${OS}/META \
-    $B/entropy_${OS}.cmo $B/entropy_${OS}.cmi $B/mirage-entropy.cma \
-    $B/mirage-entropy.a $B/entropy_${OS}.cmx $B/mirage-entropy.cmxa $B/mirage-entropy.cmxs
+    ${B}/*.{cmi,cmo,cmx,a,cma,cmxa,cmxs}
+#     $B/entropy_${OS}.cmo $B/entropy_${OS}.cmi $B/mirage-entropy.cma \
+#     $B/mirage-entropy.a $B/entropy_${OS}.cmx $B/mirage-entropy.cmxa $B/mirage-entropy.cmxs
 fi
