@@ -1,4 +1,3 @@
-
 exception Instruction_unavailable of string
 exception Entropy_unavailable
 
@@ -12,7 +11,3 @@ let _ =
 external rdtscp : unit -> int = "caml_rdtscp" "noalloc"
 external rdrand : unit -> int = "caml_rdrand"
 external rdseed : unit -> int = "caml_rdseed"
-
-let rand =
-  try ignore (rdseed ()); rdseed
-  with Instruction_unavailable _ -> rdrand

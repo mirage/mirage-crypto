@@ -2,13 +2,22 @@
 #include <caml/mlvalues.h>
 #include <caml/fail.h>
 #include <caml/callback.h>
-#include <stdio.h>
 
 #define __unlikely(x) __builtin_expect((x), 0)
 
-/* XXX
- * Everything here is x86 only.
- */
+static const char no_instr_id   [] = "instruction not available";
+static const char no_entropy_id [] = "entropy pool empty";
+
+#define raise_not_available() \
+  (caml_raise_constant (*caml_named_value (no_instr_id)))
+
+#define raise_no_entropy() \
+  (caml_raise_constant (*caml_named_value (no_entropy_id)))
+
+
+#if defined(__x86_64__)
+
+typedef uint64_t rand_t; /* XXX RDxxx work on __x386__ too. */
 
 typedef struct cpuid {
   unsigned int eax;
@@ -18,15 +27,14 @@ typedef struct cpuid {
 } cpuid_t;
 
 static inline void cpuid (cpuid_t *id, unsigned int leaf, unsigned int subleaf) {
-  /* XXX
-   * __i386__ needs saving %ebx with -fPIC.
-   */
+  /* XXX __i386__ needs saving %ebx with -fPIC.  */
   asm volatile ("cpuid"
       : "=a" (id->eax), "=b" (id->ebx), "=c" (id->ecx), "=d" (id->edx)
       : "a" (leaf), "c" (subleaf)
     );
 }
 
+/* XXX Assumes Intel. */
 static inline int has_rdrand () {
   static int r = -1;
   if (r == -1) {
@@ -37,6 +45,7 @@ static inline int has_rdrand () {
   return r;
 }
 
+/* XXX Assumes Intel. */
 static inline int has_rdseed () {
   static int r = -1;
   if (r == -1) {
@@ -46,55 +55,60 @@ static inline int has_rdseed () {
   }
   return r;
 }
+#endif /* __x86_64__ */
 
-
-/* XXX
- * arch switch the typedef - rdXXX work on 32 too.
- */
-typedef uint64_t rand_t ;
-
-static inline void rdtscp (unsigned int *hi, unsigned int *lo) {
-  asm volatile ("rdtscp" : "=a" (*lo), "=d" (*hi));
+#if defined(__i386__) || defined(__x86_64__)
+static inline void rdtsc (unsigned int *hi, unsigned int *lo) {
+  asm volatile ("rdtsc" : "=a" (*lo), "=d" (*hi));
 }
+#endif
 
+#if defined(__x86_64__)
 static inline int rdrand (rand_t *r) {
   unsigned char e;
   asm volatile ("rdrand %0; setc %1" : "=r" (*r), "=qm" (e));
   return e;
 }
+#endif
 
+#if defined(__x86_64__)
 static inline int rdseed (rand_t *r) {
   unsigned char e;
   asm volatile ("rdseed %0; setc %1" : "=r" (*r), "=qm" (e));
   return e;
 }
+#endif
 
-
-static const char no_instr_id []   = "entropy instruction unavailable";
-static const char no_entropy_id [] = "entropy pool empty";
-
-CAMLprim value caml_rdtscp () {
+CAMLprim value caml_cycle_counter () {
+#if defined(__i386__) || defined(__x86_64__)
   unsigned int hi, lo;
-  rdtscp (&hi, &lo);
+  rdtsc (&hi, &lo);
   return Val_long(((intnat)hi << 32) | (intnat)lo);
+#else
+#error ("No known cycle-counting instruction.")
+#endif
 }
 
 CAMLprim value caml_rdrand () {
+#if defined(__x86_64__)
   rand_t r;
-  if (__unlikely(!has_rdrand ()))
-    caml_raise_with_string (* caml_named_value (no_instr_id), "rdrand");
+  if (__unlikely (!has_rdrand ())) raise_not_available ();
   unsigned char e = rdrand(&r);
-  if (__unlikely(!e))
-    caml_raise_constant (*caml_named_value (no_entropy_id));
+  if (__unlikely(!e)) raise_no_entropy ();
   return Val_long(r);
+#else
+  raise_not_available ();
+#endif
 }
 
 CAMLprim value caml_rdseed () {
+#if defined(__x86_64__)
   rand_t r;
-  if (__unlikely(!has_rdseed ()))
-    caml_raise_with_string (* caml_named_value (no_instr_id), "rdseed");
+  if (__unlikely(!has_rdseed ())) raise_not_available ();
   unsigned char e = rdseed(&r);
-  if (__unlikely(!e))
-    caml_raise_constant (*caml_named_value (no_entropy_id));
+  if (__unlikely(!e)) raise_no_entropy ();
   return Val_long(r);
+#else
+  raise_not_available ();
+#endif
 }
