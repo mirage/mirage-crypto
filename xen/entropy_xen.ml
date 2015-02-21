@@ -150,29 +150,43 @@ let bootstrap f =
     done
   done
 
-let fast_source () =
+let create_event_source () =
+  let open Cpu_native in
+  let open Cstruct in
+  let buf = Cstruct.create 12 in
+
+  (* Inlined to sqeeze out cycles, pending benchmarks. *)
+
+  let tsc_rdseed () =
+    let a = cycles ()
+    and b = rdseed () in
+    LE.set_uint32 buf 0 (Int32.of_int a);
+    LE.set_uint64 buf 4 (Int64.of_int b);
+    buf
+
+  and tsc_rdrand () =
+    let a = cycles ()
+    and b = rdrand () in
+    LE.set_uint32 buf 0 (Int32.of_int a);
+    LE.set_uint64 buf 4 (Int64.of_int b);
+    buf
+
+  and tsc () =
+    let a = Cpu_native.cycles () in
+    LE.set_uint32 buf 0 (Int32.of_int a);
+    buf
+  in
   let (descr, src) =
-    match Cpu_native.(available rdrand) with
-    | true ->
-        let cs = Cstruct.create 12 in
-        "RDRAND, CLOCK", fun () ->
-          let a = Cpu_native.cycles ()
-          and b = Cpu_native.rdrand () in
-          Cstruct.LE.set_uint32 cs 0 (Int32.of_int a);
-          Cstruct.LE.set_uint64 cs 4 (Int64.of_int b);
-          cs
-    | false ->
-        let cs = Cstruct.create 4 in
-        "CLOCK", fun () ->
-          let a = Cpu_native.cycles () in
-          Cstruct.LE.set_uint32 cs 0 (Int32.of_int a);
-          cs in
+    match (available rdseed, available rdrand) with
+    | (true, _) -> ("RDSEED, CYCLES", tsc_rdseed)
+    | (_, true) -> ("RDRAND, CYCLES", tsc_rdrand)
+    | _         -> ("CLOCK"         , tsc       ) in
   Printf.printf "Internal entropy: %s\n%!" descr ;
   src
 
 let connect () =
   let listeners = Lwt_sequence.create ()
-  and src0      = fast_source () in
+  and src0      = create_event_source () in
   let kickstart = [ fun f -> return (f (src0 ())) ]
   and event ()  =
     let cs = src0 () in
