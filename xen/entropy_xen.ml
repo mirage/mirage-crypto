@@ -128,8 +128,27 @@ type id = unit
 
 type t = {
   listeners : handler Lwt_sequence.t ;
-  kickstart : (unit -> Cstruct.t Lwt.t) list
+  kickstart : ((Cstruct.t -> unit) -> unit Lwt.t) list
 }
+
+(* Note:
+ * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
+ * data races that lead to execution-time variability of identical instructions.
+ * See Whirlwind RNG:
+ *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
+ *)
+let bootstrap f =
+  let outer     = 100
+  and inner_max = 1024
+  and a         = ref 0
+  and cs        = Cstruct.create 2 in
+  for i = 0 to outer - 1 do
+    let tsc = Cpu_native.cycles () in
+    let ()  = Cstruct.LE.set_uint16 cs 0 tsc ; f cs in
+    for j = 1 to tsc mod inner_max do
+      a := tsc / j - !a * i + 1
+    done
+  done
 
 let fast_source () =
   let (descr, src) =
@@ -154,7 +173,7 @@ let fast_source () =
 let connect () =
   let listeners = Lwt_sequence.create ()
   and src0      = fast_source () in
-  let kickstart = [ fun () -> return (src0 ()) ]
+  let kickstart = [ fun f -> return (f (src0 ())) ]
   and event ()  =
     let cs = src0 () in
     Lwt_sequence.iter_l (fun f -> f ~source:0 cs) listeners in
@@ -163,7 +182,7 @@ let connect () =
 
 let handler t f =
   ignore (Lwt_sequence.add_r f t.listeners);
-  Lwt_list.iteri_p (fun i k -> k () >|= f ~source:i) t.kickstart
+  Lwt_list.iteri_p (fun i k -> k (f ~source:i)) t.kickstart
 
 let disconnect t =
   let rec drain t =
