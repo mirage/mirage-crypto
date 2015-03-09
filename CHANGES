@@ -1,8 +1,6 @@
-trunk (unreleased):
-* xen: read entropy from a Xen PV device
-
-0.2.0 (16-Aug-2014):
+0.2.0 (09-Mar-2015):
 * Do not wrap `Entropy_unix` in a functor as it is meant to be used directly.
+* Xen: read entropy from a Xen PV device.  This is implemented by the `xentropyd` daemon.
 
 0.1.6 (06-July-2014):
 * Rework the module to be event-driven, more in line with entropy gathering.
