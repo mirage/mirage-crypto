@@ -27,7 +27,7 @@
 
 module Make(T : V1_LWT.TIME) : sig
   include V1_LWT.ENTROPY
-    with type id = [ `FromHost | `Weak ]
+    with type id = [ `From_host | `Weak ]
 
-  val connect : [ `FromHost | `Weak ] -> [`Ok of t | `Error of error] io
+  val connect : [ `From_host | `Weak ] -> [`Ok of t | `Error of error] io
 end
