@@ -2,13 +2,16 @@
 
 OS=${OS:-unix}
 OCAMLBUILD="ocamlbuild -use-ocamlfind -syntax camlp4o"
-PKG="-pkgs lwt,lwt.syntax,cstruct,mirage-types"
+PKG="lwt,lwt.syntax,cstruct,mirage-types,mirage-xen"
+CFLAGS="-ccopt,-mrdrnd,-ccopt,-mrdseed"
 
 TARGET="${OS}/mirage-entropy.cma ${OS}/mirage-entropy.cmxa ${OS}/mirage-entropy.cmxs"
 
 case "${OS}" in
   xen)
-    ${OCAMLBUILD} ${PKG} -pkgs mirage-console.xen \
+    ${OCAMLBUILD} \
+      -pkgs ${PKG} \
+      -cflags '-ccopt,-mrdrnd,-ccopt,-mrdseed' \
       -tag-line "<xen/mirage-entropy.{cma,cmxa}>: use_libmirage-entropy_xen_stubs" \
       ${OS}/libmirage-entropy_xen_stubs.a \
       ${TARGET}
