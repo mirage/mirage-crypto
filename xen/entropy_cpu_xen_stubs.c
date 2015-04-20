@@ -63,14 +63,6 @@ static inline int has_rdseed () {
 #endif /* __x86_64__ */
 
 #if defined(__x86_64__)
-static inline int rdrand (rand_t *r) {
-  unsigned char e;
-  asm volatile ("rdrand %0; setc %1" : "=r" (*r), "=qm" (e));
-  return e;
-}
-#endif
-
-#if defined(__x86_64__)
 static inline int rdseed (rand_t *r) {
   unsigned char e;
   asm volatile ("rdseed %0; setc %1" : "=r" (*r), "=qm" (e));
@@ -89,9 +81,9 @@ CAMLprim value caml_cycle_counter () {
 
 CAMLprim value caml_rdrand () {
 #if defined(__x86_64__)
-  rand_t r;
+  unsigned long long r;
   if (__unlikely (!has_rdrand ())) raise_not_available ();
-  unsigned char e = rdrand(&r);
+  unsigned char e = _rdrand64_step (&r);
   if (__unlikely(!e)) raise_no_entropy ();
   return Val_long(r);
 #else
