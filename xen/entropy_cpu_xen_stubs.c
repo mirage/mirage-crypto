@@ -1,4 +1,9 @@
 #include <stdint.h>
+
+#if ( defined (__i386__) || defined (__x86_64__) )
+#include <x86intrin.h>
+#endif
+
 #include <caml/mlvalues.h>
 #include <caml/fail.h>
 #include <caml/callback.h>
@@ -57,12 +62,6 @@ static inline int has_rdseed () {
 }
 #endif /* __x86_64__ */
 
-#if defined(__i386__) || defined(__x86_64__)
-static inline void rdtsc (unsigned int *hi, unsigned int *lo) {
-  asm volatile ("rdtsc" : "=a" (*lo), "=d" (*hi));
-}
-#endif
-
 #if defined(__x86_64__)
 static inline int rdrand (rand_t *r) {
   unsigned char e;
@@ -81,10 +80,9 @@ static inline int rdseed (rand_t *r) {
 
 CAMLprim value caml_cycle_counter () {
 #if defined(__i386__) || defined(__x86_64__)
-  unsigned int hi, lo;
-  rdtsc (&hi, &lo);
-  return Val_long(((intnat)hi << 32) | (intnat)lo);
+  return Val_long (__rdtsc ());
 #else
+  /* ARM: Plug an equivalent to RDTSC[P] here. */
 #error ("No known cycle-counting instruction.")
 #endif
 }
