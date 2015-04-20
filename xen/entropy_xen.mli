@@ -25,14 +25,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-(* module Make(T : V1_LWT.TIME) : sig
-  include V1_LWT.ENTROPY
-    with type id = [ `FromHost | `Weak ]
+type t
 
-  val connect : [ `FromHost | `Weak ] -> [`Ok of t | `Error of error] io
-end *)
+type 'a io   = 'a Lwt.t
+type buffer  = Cstruct.t
+type handler = source:int -> buffer -> unit
 
-include V1_LWT.ENTROPY
-  with type id = unit
+type source = [
+    `Timer
+  | `Rdseed
+  | `Rdrand
+  | `Xentropyd
+]
 
-val connect : unit -> [`Ok of t | `Error of error] io
+val sources : t -> source list
+val connect : unit -> [> `Ok of t ] io
+val disconnect : t -> unit io
+val add_handler : t -> handler -> unit io
