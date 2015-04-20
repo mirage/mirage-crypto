@@ -29,22 +29,18 @@
 
 module Cpu_native = struct
 
-  exception Instruction_not_available
-  exception Entropy_empty
+  external cycles     : unit -> int  = "caml_cycle_counter" "noalloc"
+  external random     : unit -> int  = "caml_cpu_random" "noalloc"
+  external has_rdrand : unit -> bool = "caml_has_rdrand"
+  external has_rdseed : unit -> bool = "caml_has_rdrand"
 
-  let _ =
-    List.iter (fun (id, exn) -> Callback.register_exception id exn)
-    [ ("instruction not available", Instruction_not_available)
-    ; ("entropy pool empty", Entropy_empty)
-    ]
-
-  external cycles : unit -> int = "caml_cycle_counter" "noalloc"
-  external rdrand : unit -> int = "caml_rdrand"
-  external rdseed : unit -> int = "caml_rdseed"
-
-  let available f =
-    try ignore (f ()); true
-    with Instruction_not_available -> false
+  (* Mirrors the internal preference in the native code. *)
+  let cpu_rng =
+    if has_rdseed () then
+      Some `Rdseed
+    else if has_rdrand () then
+      Some `Rdrand
+    else None
 end
 
 
