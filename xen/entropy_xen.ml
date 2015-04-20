@@ -43,7 +43,100 @@ module Cpu_native = struct
     else None
 end
 
+open Lwt
 
+type 'a io   = 'a Lwt.t
+type buffer  = Cstruct.t
+type handler = source:int -> buffer -> unit
+
+type t = {
+  mutable listeners : handler list ;
+  inits : ((Cstruct.t -> unit) -> unit Lwt.t) list
+}
+
+type source = [
+    `Timer
+  | `Rdseed
+  | `Rdrand
+  | `Xentropyd
+]
+
+let sources _ =
+  `Timer ::
+  match Cpu_native.cpu_rng with
+  | Some x -> [x]
+  | None   -> []
+
+(* Note:
+ * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
+ * data races that lead to execution-time variability of identical instructions.
+ * See Whirlwind RNG:
+ *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
+ *)
+let bootstrap f =
+  let outer     = 100
+  and inner_max = 1024
+  and a         = ref 0
+  and cs        = Cstruct.create 2 in
+  for i = 0 to outer - 1 do
+    let tsc = Cpu_native.cycles () in
+    let ()  = Cstruct.LE.set_uint16 cs 0 tsc ; f cs in
+    for j = 1 to tsc mod inner_max do
+      a := tsc / j - !a * i + 1
+    done
+  done ;
+  return_unit
+
+let interrupt_hook () =
+  match Cpu_native.cpu_rng with
+  | None ->
+      let buf = Cstruct.create 4 in fun () ->
+        let a = Cpu_native.cycles () in
+        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
+        buf
+  | Some _ ->
+      let buf = Cstruct.create 12 in fun () ->
+        let a = Cpu_native.cycles ()
+        and b = Cpu_native.random () in
+        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
+        Cstruct.LE.set_uint64 buf 4 (Int64.of_int b) ;
+        buf
+
+let connect () =
+
+  (* XXX TODO
+   * Xentropyd. Detect its presence here, make it feed into `t.listeners` as
+   * `~source:1` and add a function providing initial entropy burst to
+   * `t.inits`.
+   *)
+
+  let t    = { listeners = [] ; inits = [ bootstrap ] }
+  and hook = interrupt_hook () in
+  OS.Main.at_enter_iter (fun () ->
+    match t.listeners with
+    | [] -> ()
+    | xs -> let e = hook () in List.iter (fun l -> l ~source:0 e) xs) ;
+  return (`Ok t)
+
+let add_handler t f =
+  t.listeners <- f :: t.listeners ;
+  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits
+
+let disconnect t =
+  t.listeners <- [] ;
+  return_unit
+
+
+(*
+ * Xentropyd code:
+ *
+ * - Needs to be able to detect if xentropyd is running and connect to it
+ *   conditionally.
+ * - Needs to be able to handle xentropyd disappearing and survive.
+ *)
+
+
+(*
 let period = 600. (* refeed every <period> seconds *)
 let chunk = 16    (* read <chunk> bytes of entropy every <period> *)
 
@@ -111,96 +204,9 @@ module BufferedConsole = struct
       t.unconsumed <- extra;
       return (`Ok results)
 end
+*)
 
 (* module Make(T : V1_LWT.TIME) = struct *)
-
-type 'a io  = 'a Lwt.t
-type buffer = Cstruct.t
-type error  = [ `No_entropy_device of string ]
-
-type handler = source:int -> buffer -> unit
-
-type id = unit
-
-type t = {
-  listeners : handler Lwt_sequence.t ;
-  kickstart : ((Cstruct.t -> unit) -> unit Lwt.t) list
-}
-
-(* Note:
- * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
- * data races that lead to execution-time variability of identical instructions.
- * See Whirlwind RNG:
- *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
- *)
-let bootstrap f =
-  let outer     = 100
-  and inner_max = 1024
-  and a         = ref 0
-  and cs        = Cstruct.create 2 in
-  for i = 0 to outer - 1 do
-    let tsc = Cpu_native.cycles () in
-    let ()  = Cstruct.LE.set_uint16 cs 0 tsc ; f cs in
-    for j = 1 to tsc mod inner_max do
-      a := tsc / j - !a * i + 1
-    done
-  done
-
-let create_event_source () =
-  let open Cpu_native in
-  let open Cstruct in
-  let buf = Cstruct.create 12 in
-
-  (* Inlined to sqeeze out cycles, pending benchmarks. *)
-
-  let tsc_rdseed () =
-    let a = cycles ()
-    and b = rdseed () in
-    LE.set_uint32 buf 0 (Int32.of_int a);
-    LE.set_uint64 buf 4 (Int64.of_int b);
-    buf
-
-  and tsc_rdrand () =
-    let a = cycles ()
-    and b = rdrand () in
-    LE.set_uint32 buf 0 (Int32.of_int a);
-    LE.set_uint64 buf 4 (Int64.of_int b);
-    buf
-
-  and tsc () =
-    let a = Cpu_native.cycles () in
-    LE.set_uint32 buf 0 (Int32.of_int a);
-    buf
-  in
-  let (descr, src) =
-    match (available rdseed, available rdrand) with
-    | (true, _) -> ("RDSEED, CYCLES", tsc_rdseed)
-    | (_, true) -> ("RDRAND, CYCLES", tsc_rdrand)
-    | _         -> ("CLOCK"         , tsc       ) in
-  Printf.printf "Internal entropy: %s\n%!" descr ;
-  src
-
-let connect () =
-  let listeners = Lwt_sequence.create ()
-  and src0      = create_event_source () in
-  let kickstart = [ fun f -> return (f (src0 ())) ]
-  and event ()  =
-    let cs = src0 () in
-    Lwt_sequence.iter_l (fun f -> f ~source:0 cs) listeners in
-  OS.Main.at_enter_iter event ;
-  return (`Ok { listeners ; kickstart })
-
-let handler t f =
-  ignore (Lwt_sequence.add_r f t.listeners);
-  Lwt_list.iteri_p (fun i k -> k (f ~source:i)) t.kickstart
-
-let disconnect t =
-  let rec drain t =
-    Lwt_sequence.(if not (is_empty t) then ignore (take_l t)) in
-  drain t.listeners ;
-  return_unit
-
-let id _ = ()
 
 (* type id = [ `FromHost | `Weak ]
 
