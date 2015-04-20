@@ -62,6 +62,9 @@ static inline int has_rdseed () {
 }
 #endif /* __x86_64__ */
 
+static int __has_rdseed = 0;
+static int __has_rdrand = 0;
+
 CAMLprim value caml_cycle_counter () {
 #if defined(__i386__) || defined(__x86_64__)
   return Val_long (__rdtsc ());
@@ -71,26 +74,37 @@ CAMLprim value caml_cycle_counter () {
 #endif
 }
 
-CAMLprim value caml_rdrand () {
-#if defined(__x86_64__)
-  unsigned long long r;
-  if (__unlikely (!has_rdrand ())) raise_not_available ();
-  unsigned char e = _rdrand64_step (&r);
-  if (__unlikely(!e)) raise_no_entropy ();
-  return Val_long(r);
+#if defined (__x86_64__)
+#define random_t unsigned long long
+#define _rdseed_step _rdseed64_step
+#define _rdrand_step _rdrand64_step
+
+#elif defined (__i386__)
+#define random_t unsigned int
+#define _rdseed_step _rdseed32_step
+#define _rdrand_step _rdrand32_step
+
+#endif
+
+CAMLprim value caml_cpu_random () {
+#if defined (__i386__) || defined (__x86_64__)
+  random_t r = 0;
+  if (__has_rdseed) {
+    _rdseed_step (&r);
+  } else if (__has_rdrand) {
+    _rdrand_step (&r);
+  }
+  return Val_long (r);
 #else
-  raise_not_available ();
+  /* ARM: CPU-assisted randomness here. */
+  return Val_long (0);
 #endif
 }
 
-CAMLprim value caml_rdseed () {
-#if defined(__x86_64__)
-  unsigned long long r;
-  if (__unlikely(!has_rdseed ())) raise_not_available ();
-  unsigned char e = _rdseed64_step (&r);
-  if (__unlikely(!e)) raise_no_entropy ();
-  return Val_long(r);
-#else
-  raise_not_available ();
-#endif
+CAMLprim value caml_has_rdrand () {
+  return Val_bool (__has_rdrand);
+}
+
+CAMLprim value caml_has_rdseed () {
+  return Val_bool (__has_rdseed);
 }
