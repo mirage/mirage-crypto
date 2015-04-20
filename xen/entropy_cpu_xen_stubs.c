@@ -52,7 +52,7 @@ static void init () {
 #endif
 }
 
-CAMLprim value caml_cycle_counter () {
+CAMLprim value caml_cycle_counter (value unit) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
 #else
@@ -61,7 +61,7 @@ CAMLprim value caml_cycle_counter () {
 #endif
 }
 
-CAMLprim value caml_cpu_random () {
+CAMLprim value caml_cpu_random (value unit) {
 #if defined (__x86__)
   random_t r = 0;
   if (__has_rdseed) {
@@ -76,10 +76,10 @@ CAMLprim value caml_cpu_random () {
 #endif
 }
 
-CAMLprim value caml_has_rdrand () {
+CAMLprim value caml_has_rdrand (value unit) {
   return Val_bool (__has_rdrand);
 }
 
-CAMLprim value caml_has_rdseed () {
+CAMLprim value caml_has_rdseed (value unit) {
   return Val_bool (__has_rdseed);
 }
