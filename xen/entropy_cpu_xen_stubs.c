@@ -27,13 +27,18 @@
 
 #endif
 
-static int __has_rdseed = 0;
-static int __has_rdrand = 0;
+enum cpu_rng_t {
+  RNG_NONE   = 0,
+  RNG_RDRAND = 1,
+  RNG_RDSEED = 2,
+};
+
+static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
 /* XXX:
-__attribute__ ((constructor))
+ * __attribute__ ((constructor))
  */
-static void init () {
+static void detect () {
 #if defined (__x86__)
 
   unsigned int sig, eax, ebx, ecx, edx;
@@ -43,10 +48,10 @@ static void init () {
 
   if (sig == signature_INTEL_ebx || sig == signature_AMD_ebx) {
     __cpuid (1, eax, ebx, ecx, edx);
-    __has_rdrand = (ecx & bit_RDRND) != 0;
+    if (ecx & bit_RDRND) __cpu_rng = RNG_RDRAND;
     if (max > 7) {
       __cpuid_count (7, 0, eax, ebx, ecx, edx);
-      __has_rdseed = (ebx & bit_RDSEED) != 0;
+      if (ebx & bit_RDSEED) __cpu_rng = RNG_RDSEED;
     }
   }
 #endif
@@ -64,9 +69,9 @@ CAMLprim value caml_cycle_counter (value unit) {
 CAMLprim value caml_cpu_random (value unit) {
 #if defined (__x86__)
   random_t r = 0;
-  if (__has_rdseed) {
+  if (__cpu_rng == RNG_RDSEED) {
     _rdseed_step (&r);
-  } else if (__has_rdrand) {
+  } else if (__cpu_rng == RNG_RDRAND) {
     _rdrand_step (&r);
   }
   return Val_long (r); /* Zeroed-out if carry == 0. */
@@ -76,15 +81,11 @@ CAMLprim value caml_cpu_random (value unit) {
 #endif
 }
 
-CAMLprim value caml_has_rdrand (value unit) {
-  return Val_bool (__has_rdrand);
+CAMLprim value caml_cpu_rng_type (value unit) {
+  return Val_int (__cpu_rng);
 }
 
-CAMLprim value caml_has_rdseed (value unit) {
-  return Val_bool (__has_rdseed);
-}
-
-CAMLprim value caml_entropy_xen_init (value unit) {
-  init ();
+CAMLprim value caml_entropy_xen_detect (value unit) {
+  detect ();
   return Val_unit;
 }

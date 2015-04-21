@@ -31,19 +31,17 @@ module Cpu_native = struct
 
   external cycles     : unit -> int  = "caml_cycle_counter" "noalloc"
   external random     : unit -> int  = "caml_cpu_random" "noalloc"
-  external has_rdrand : unit -> bool = "caml_has_rdrand" "noalloc"
-  external has_rdseed : unit -> bool = "caml_has_rdrand" "noalloc"
-  external init       : unit -> unit = "caml_entropy_xen_init"
+  external rng_type   : unit -> int  = "caml_cpu_rng_type" "noalloc"
+  external detect     : unit -> unit = "caml_entropy_xen_detect"
 
-  let () = init ()
+  let () = detect ()
 
-  (* Mirrors the internal preference in the native code. *)
   let cpu_rng =
-    if has_rdseed () then
-      Some `Rdseed
-    else if has_rdrand () then
-      Some `Rdrand
-    else None
+    match rng_type () with
+    | 0 -> None
+    | 1 -> Some `Rdseed
+    | 2 -> Some `Rdrand
+    | _ -> assert false
 end
 
 open Lwt
