@@ -211,11 +211,12 @@ end
 
 (* module Make(T : V1_LWT.TIME) = struct *)
 
-(* type id = [ `FromHost | `Weak ]
+(*
+type id = [ `From_host | `Weak ]
 
 type implementation =
-| RandomSelfInit |+ Implementation of `Weak +|
-| EntropyConsole of BufferedConsole.t |+ Implementation of `FromHost +|
+| RandomSelfInit (* Implementation of `Weak *)
+| EntropyConsole of BufferedConsole.t (* Implementation of `From_host *)
 
 type t = {
   implementation: implementation;
@@ -224,7 +225,7 @@ type t = {
 
 let id t = match t.implementation with
 | RandomSelfInit -> `Weak
-| EntropyConsole _ -> `FromHost
+| EntropyConsole _ -> `From_host
 
 let connect = function
 | `Weak ->
@@ -234,7 +235,7 @@ let connect = function
     implementation = RandomSelfInit;
     ev = None;
   })
-| `FromHost ->
+| `From_host ->
   Printf.printf "Entropy_xen: attempting to connect to Xen entropy source %s\n%!" Protocol.console_name;
   Console_xen.connect Protocol.console_name
   >>|= fun device ->
