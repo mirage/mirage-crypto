@@ -30,7 +30,9 @@
 static int __has_rdseed = 0;
 static int __has_rdrand = 0;
 
+/* XXX:
 __attribute__ ((constructor))
+ */
 static void init () {
 #if defined (__x86__)
 
@@ -80,4 +82,9 @@ CAMLprim value caml_has_rdrand (value unit) {
 
 CAMLprim value caml_has_rdseed (value unit) {
   return Val_bool (__has_rdseed);
+}
+
+CAMLprim value caml_entropy_xen_init (value unit) {
+  init ();
+  return Val_unit;
 }
