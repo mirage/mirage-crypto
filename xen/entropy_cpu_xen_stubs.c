@@ -9,8 +9,6 @@
 #endif
 
 #include <caml/mlvalues.h>
-#include <caml/fail.h>
-#include <caml/callback.h>
 
 /* because clang... */
 #if !defined(bit_RDSEED)
