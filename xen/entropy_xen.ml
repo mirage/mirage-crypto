@@ -105,14 +105,16 @@ let interrupt_hook () =
         Cstruct.LE.set_uint64 buf 4 (Int64.of_int b) ;
         buf
 
+(* XXX TODO
+ *
+ * Xentropyd. Detect its presence here, make it feed into `t.listeners` as
+ * `~source:1` and add a function providing initial entropy burst to
+ * `t.inits`.
+ *
+ * Compile-time entropy. A function returning it could go into `t.inits`.
+ *)
+
 let connect () =
-
-  (* XXX TODO
-   * Xentropyd. Detect its presence here, make it feed into `t.listeners` as
-   * `~source:1` and add a function providing initial entropy burst to
-   * `t.inits`.
-   *)
-
   let t    = { listeners = [] ; inits = [ bootstrap ] }
   and hook = interrupt_hook () in
   OS.Main.at_enter_iter (fun () ->
