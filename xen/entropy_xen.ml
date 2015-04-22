@@ -39,8 +39,8 @@ module Cpu_native = struct
   let cpu_rng =
     match rng_type () with
     | 0 -> None
-    | 1 -> Some `Rdseed
-    | 2 -> Some `Rdrand
+    | 1 -> Some `Rdrand
+    | 2 -> Some `Rdseed
     | _ -> assert false
 end
 
