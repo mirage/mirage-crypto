@@ -39,6 +39,6 @@ type source = [
 ]
 
 val sources : t -> source list
-val connect : unit -> [> `Ok of t ] io
+val connect : unit -> t io
 val disconnect : t -> unit io
 val add_handler : t -> handler -> unit io

@@ -118,7 +118,7 @@ let connect () =
     match t.handlers with
     | [] -> ()
     | xs -> let e = hook () in List.iter (fun h -> h ~source:0 e) xs) ;
-  return (`Ok t)
+  return t
 
 let add_handler t f =
   t.handlers <- f :: t.handlers ;
