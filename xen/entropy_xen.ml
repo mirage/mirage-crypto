@@ -51,7 +51,7 @@ type buffer  = Cstruct.t
 type handler = source:int -> buffer -> unit
 
 type t = {
-  mutable listeners : handler list ;
+  mutable handlers : handler list ;
   inits : ((Cstruct.t -> unit) -> unit Lwt.t) list
 }
 
@@ -105,28 +105,27 @@ let interrupt_hook () =
 
 (* XXX TODO
  *
- * Xentropyd. Detect its presence here, make it feed into `t.listeners` as
+ * Xentropyd. Detect its presence here, make it feed into `t.handlers` as
  * `~source:1` and add a function providing initial entropy burst to
  * `t.inits`.
  *
  * Compile-time entropy. A function returning it could go into `t.inits`.
  *)
-
 let connect () =
-  let t    = { listeners = [] ; inits = [ bootstrap ] }
+  let t    = { handlers = [] ; inits = [ bootstrap ] }
   and hook = interrupt_hook () in
   OS.Main.at_enter_iter (fun () ->
-    match t.listeners with
+    match t.handlers with
     | [] -> ()
-    | xs -> let e = hook () in List.iter (fun l -> l ~source:0 e) xs) ;
+    | xs -> let e = hook () in List.iter (fun h -> h ~source:0 e) xs) ;
   return (`Ok t)
 
 let add_handler t f =
-  t.listeners <- f :: t.listeners ;
+  t.handlers <- f :: t.handlers ;
   Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits
 
 let disconnect t =
-  t.listeners <- [] ;
+  t.handlers <- [] ;
   return_unit
 
 
