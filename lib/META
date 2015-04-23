@@ -1,0 +1,13 @@
+# OASIS_START
+# DO NOT EDIT (digest: 94cd7342badae2f1d172e71972b5dc09)
+version = "0.3.0"
+description = "Entropy provider for MirageOS on Xen"
+requires = "lwt cstruct mirage-xen"
+archive(byte) = "mirage-entropy-xen.cma"
+archive(byte, plugin) = "mirage-entropy-xen.cma"
+archive(native) = "mirage-entropy-xen.cmxa"
+archive(native, plugin) = "mirage-entropy-xen.cmxs"
+xen_linkopts = "-lmirage-entropy-xen_stubs"
+exists_if = "mirage-entropy-xen.cma"
+# OASIS_STOP
+
