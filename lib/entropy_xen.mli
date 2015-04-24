@@ -30,6 +30,7 @@ type t
 type 'a io   = 'a Lwt.t
 type buffer  = Cstruct.t
 type handler = source:int -> buffer -> unit
+type token
 
 type source = [
     `Timer
@@ -41,4 +42,5 @@ type source = [
 val sources : t -> source list
 val connect : unit -> t io
 val disconnect : t -> unit io
-val add_handler : t -> handler -> unit io
+val add_handler : t -> handler -> token io
+val remove_handler : t -> token -> unit

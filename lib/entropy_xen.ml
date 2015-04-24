@@ -55,6 +55,8 @@ type t = {
   inits : ((Cstruct.t -> unit) -> unit Lwt.t) list
 }
 
+type token = handler
+
 type source = [
     `Timer
   | `Rdseed
@@ -122,7 +124,11 @@ let connect () =
 
 let add_handler t f =
   t.handlers <- f :: t.handlers ;
-  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits
+  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits >>
+  return f
+
+let remove_handler t token =
+  t.handlers <- List.filter (fun f -> not (f == token)) t.handlers
 
 let disconnect t =
   t.handlers <- [] ;
