@@ -12,6 +12,7 @@ Description:
   Entropy provider for MirageOS on Xen.
 Categories: http://org:mirage
 OCamlVersion: >= 4.01.0
+PostConfCommand: ./postconf.sh
 
 Library "mirage-entropy-xen"
   Path:             lib/
@@ -20,6 +21,6 @@ Library "mirage-entropy-xen"
   BuildDepends:     lwt, lwt.syntax, cstruct, mirage-xen
   XMETARequires:    lwt, cstruct, mirage-xen
   XMETAExtraLines:  xen_linkopts = "-lmirage-entropy-xen_stubs"
-  CCOpt:            -O3 -std=c99 -Wall -Wpedantic
+  CCOpt:            -O3 -std=c99 -Wall -Wpedantic $XEN_CFLAGS
   if ( architecture(i386) || architecture(amd64) )
     CCOpt+: -mrdrnd -mrdseed
