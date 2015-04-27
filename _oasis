@@ -1,0 +1,26 @@
+OASISFormat:  0.4
+Name:         mirage-entropy-xen
+Version:      0.3.0
+Synopsis:     Entropy provider for MirageOS on Xen
+Authors:      Hannes Mehnert, David Kaloper, Anil Madhavapeddy, Dave Scott
+Maintainers:  David Kaloper <david@numm.org>
+License:      FreeBSD
+Homepage:     https://github.com/mirage/mirage-entropy
+Plugins:      META (0.4), DevFiles (0.4)
+BuildTools:   ocamlbuild
+Description:
+  Entropy provider for MirageOS on Xen.
+Categories: http://org:mirage
+OCamlVersion: >= 4.01.0
+PostConfCommand: ./postconf.sh
+
+Library "mirage-entropy-xen"
+  Path:             lib/
+  Modules:          Entropy_xen
+  CSources:         entropy_cpu_xen_stubs.c
+  BuildDepends:     lwt, lwt.syntax, cstruct, mirage-xen
+  XMETARequires:    lwt, cstruct, mirage-xen
+  XMETAExtraLines:  xen_linkopts = "-lmirage-entropy-xen_stubs"
+  CCOpt:            -O3 -std=c99 -Wall -Wpedantic $XEN_CFLAGS
+  if ( architecture(i386) || architecture(amd64) )
+    CCOpt+: -mrdrnd -mrdseed

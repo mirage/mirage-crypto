@@ -1,3 +1,9 @@
+0.3.0 (TRUNK):
+* Remove `mirage-entropy-unix` from the repository; it now only contains `mirage-entropy-xen`.
+* Add internal entropy harvesting via timing and CPU RNG if available.
+* Temporarily disable `xentropyd`.
+* The API is no longer `V1.ENTROPY` compatible.
+
 0.2.0 (09-Mar-2015):
 * Do not wrap `Entropy_unix` in a functor as it is meant to be used directly.
 * Xen: read entropy from a Xen PV device.  This is implemented by the `xentropyd` daemon.

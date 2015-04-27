@@ -27,6 +27,124 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+module Cpu_native = struct
+
+  external cycles     : unit -> int  = "caml_cycle_counter" "noalloc"
+  external random     : unit -> int  = "caml_cpu_random" "noalloc"
+  external rng_type   : unit -> int  = "caml_cpu_rng_type" "noalloc"
+  external detect     : unit -> unit = "caml_entropy_xen_detect"
+
+  let () = detect ()
+
+  let cpu_rng =
+    match rng_type () with
+    | 0 -> None
+    | 1 -> Some `Rdrand
+    | 2 -> Some `Rdseed
+    | _ -> assert false
+end
+
+open Lwt
+
+type 'a io   = 'a Lwt.t
+type buffer  = Cstruct.t
+type handler = source:int -> buffer -> unit
+
+type t = {
+  mutable handlers : handler list ;
+  inits : ((Cstruct.t -> unit) -> unit Lwt.t) list
+}
+
+type token = handler
+
+type source = [
+    `Timer
+  | `Rdseed
+  | `Rdrand
+  | `Xentropyd
+]
+
+let sources _ =
+  `Timer ::
+  match Cpu_native.cpu_rng with
+  | Some x -> [x]
+  | None   -> []
+
+(* Note:
+ * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
+ * data races that lead to execution-time variability of identical instructions.
+ * See Whirlwind RNG:
+ *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
+ *)
+let bootstrap f =
+  let outer     = 100
+  and inner_max = 1024
+  and a         = ref 0
+  and cs        = Cstruct.create 2 in
+  for i = 0 to outer - 1 do
+    let tsc = Cpu_native.cycles () in
+    let ()  = Cstruct.LE.set_uint16 cs 0 tsc ; f cs in
+    for j = 1 to tsc mod inner_max do
+      a := tsc / j - !a * i + 1
+    done
+  done ;
+  return_unit
+
+let interrupt_hook () =
+  match Cpu_native.cpu_rng with
+  | None ->
+      let buf = Cstruct.create 4 in fun () ->
+        let a = Cpu_native.cycles () in
+        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
+        buf
+  | Some _ ->
+      let buf = Cstruct.create 12 in fun () ->
+        let a = Cpu_native.cycles ()
+        and b = Cpu_native.random () in
+        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
+        Cstruct.LE.set_uint64 buf 4 (Int64.of_int b) ;
+        buf
+
+(* XXX TODO
+ *
+ * Xentropyd. Detect its presence here, make it feed into `t.handlers` as
+ * `~source:1` and add a function providing initial entropy burst to
+ * `t.inits`.
+ *
+ * Compile-time entropy. A function returning it could go into `t.inits`.
+ *)
+let connect () =
+  let t    = { handlers = [] ; inits = [ bootstrap ] }
+  and hook = interrupt_hook () in
+  OS.Main.at_enter_iter (fun () ->
+    match t.handlers with
+    | [] -> ()
+    | xs -> let e = hook () in List.iter (fun h -> h ~source:0 e) xs) ;
+  return t
+
+let add_handler t f =
+  t.handlers <- f :: t.handlers ;
+  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits >>
+  return f
+
+let remove_handler t token =
+  t.handlers <- List.filter (fun f -> not (f == token)) t.handlers
+
+let disconnect t =
+  t.handlers <- [] ;
+  return_unit
+
+
+(*
+ * Xentropyd code:
+ *
+ * - Needs to be able to detect if xentropyd is running and connect to it
+ *   conditionally.
+ * - Needs to be able to handle xentropyd disappearing and survive.
+ *)
+
+
+(*
 let period = 600. (* refeed every <period> seconds *)
 let chunk = 16    (* read <chunk> bytes of entropy every <period> *)
 
@@ -94,15 +212,11 @@ module BufferedConsole = struct
       t.unconsumed <- extra;
       return (`Ok results)
 end
+*)
 
-module Make(T : V1_LWT.TIME) = struct
+(* module Make(T : V1_LWT.TIME) = struct *)
 
-type 'a io  = 'a Lwt.t
-type buffer = Cstruct.t
-type error  = [ `No_entropy_device of string ]
-
-type handler = source:int -> buffer -> unit
-
+(*
 type id = [ `From_host | `Weak ]
 
 type implementation =
@@ -159,7 +273,7 @@ let refeed t f = match t.implementation with
       return cs
     | _ ->
       Printf.printf "ERROR: reading from entropy device. We have no more entropy\n%!";
-      (* Abort the unikernel *)
+      |+ Abort the unikernel +|
       failwith "Unable to read from entropy device"
   ) >>= fun cs ->
   f ~source:(Cstruct.get_uint8 cs 0) (Cstruct.shift cs 1);
@@ -173,7 +287,7 @@ let refeed t f = match t.implementation with
   f ~source:s cs;
   return_unit
 
-(*
+|+
  * Registering a `handler` spins up a recurrent timer.
  *
  * XXX There should be no timer in the first place; `refeed` should piggyback
@@ -181,7 +295,7 @@ let refeed t f = match t.implementation with
  * time the engine fires some _other_ callback, throttling the frequency. That
  * way, refeeding would be broadly aligned with the general activity of the
  * system instead of forcing the `period`.
- *)
+ +|
 
 let handler t f : unit Lwt.t =
   refeed t f
@@ -193,6 +307,6 @@ let handler t f : unit Lwt.t =
     >>= fun () ->
     loop_forever () in
   let (_: [ `Never_returns] Lwt.t) = loop_forever () in
-  return_unit
+  return_unit *)
 
-end
+(* end *)
