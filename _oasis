@@ -10,7 +10,6 @@ Plugins:      META (0.4), DevFiles (0.4)
 BuildTools:   ocamlbuild
 Description:
   Entropy provider for MirageOS on Xen.
-Categories: http://org:mirage
 OCamlVersion: >= 4.01.0
 PostConfCommand: ./postconf.sh
 
