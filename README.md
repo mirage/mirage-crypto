@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mirage/mirage-entropy.svg?branch=master)](https://travis-ci.org/mirage/mirage-entropy)
+
 mirage-entropy
 ==============
 
