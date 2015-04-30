@@ -24,6 +24,17 @@
 #endif
 #endif /* __i386__ || __x86_64__ */
 
+#if defined (__arm__)
+
+/* Replace with `read_virtual_count` from MiniOS when that symbol
+ * gets exported. */
+static inline uint32_t read_virtual_count () {
+  uint32_t c_lo, c_hi;
+  __asm__ __volatile__("mrrc p15, 1, %0, %1, c14":"=r"(c_lo), "=r"(c_hi));
+  return c_lo;
+}
+#endif /* arm */
+
 enum cpu_rng_t {
   RNG_NONE   = 0,
   RNG_RDRAND = 1,
@@ -68,6 +79,8 @@ static void detect () {
 CAMLprim value caml_cycle_counter (value unit) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
+#elif defined (__arm__)
+  return Val_long (read_virtual_count ());
 #elif defined (__ARM_ARCH_7A__) && 0
   unsigned int res;
   __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
