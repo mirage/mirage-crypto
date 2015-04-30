@@ -1,14 +1,10 @@
+#include <caml/mlvalues.h>
 
 #if defined (__i386__) || defined (__x86_64__)
 #define __x86__
-#endif
 
-#if defined (__x86__)
 #include <x86intrin.h>
 #include <cpuid.h>
-#endif
-
-#include <caml/mlvalues.h>
 
 /* because clang... */
 #if !defined(bit_RDSEED)
@@ -26,6 +22,7 @@
 #define _rdrand_step _rdrand32_step
 
 #endif
+#endif /* __i386__ || __x86_64__ */
 
 enum cpu_rng_t {
   RNG_NONE   = 0,
@@ -35,9 +32,6 @@ enum cpu_rng_t {
 
 static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
-/* XXX:
- * __attribute__ ((constructor))
- */
 static void detect () {
 #if defined (__x86__)
 
@@ -62,11 +56,11 @@ static void detect () {
  * Matches with the bit in caml_cycle_counter.
  */
   /* Disable counter overflow interrupts. */
-  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
   /* Program the PMU control register. */
-  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
   /* Enable all counters. */
-  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
 
 #endif
 }
@@ -76,7 +70,7 @@ CAMLprim value caml_cycle_counter (value unit) {
   return Val_long (__rdtsc ());
 #elif defined (__ARM_ARCH_7A__) && 0
   unsigned int res;
-  __asm__ __volatile__ ("MRC p15, 0, %0, c9, c13, 0": "=r" (res));
+  __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
   return Val_long (res);
 #else
 #error ("No known cycle-counting instruction.")
