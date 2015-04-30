@@ -54,14 +54,31 @@ static void detect () {
       if (ebx & bit_RDSEED) __cpu_rng = RNG_RDSEED;
     }
   }
+
+#elif defined (__ARM_ARCH_7A__) && 0
+/* XXX:
+ * The ideal timing source on ARM are the performance counters, but these are
+ * presently masked by Xen.
+ * Matches with the bit in caml_cycle_counter.
+ */
+  /* Disable counter overflow interrupts. */
+  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
+  /* Program the PMU control register. */
+  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
+  /* Enable all counters. */
+  __asm__ __volatile__ ("MCR p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
+
 #endif
 }
 
 CAMLprim value caml_cycle_counter (value unit) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
+#elif defined (__ARM_ARCH_7A__) && 0
+  unsigned int res;
+  __asm__ __volatile__ ("MRC p15, 0, %0, c9, c13, 0": "=r" (res));
+  return Val_long (res);
 #else
-  /* ARM: Plug an equivalent to RDTSC[P] here. */
 #error ("No known cycle-counting instruction.")
 #endif
 }
