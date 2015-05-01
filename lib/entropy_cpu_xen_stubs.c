@@ -1,14 +1,10 @@
+#include <caml/mlvalues.h>
 
 #if defined (__i386__) || defined (__x86_64__)
 #define __x86__
-#endif
 
-#if defined (__x86__)
 #include <x86intrin.h>
 #include <cpuid.h>
-#endif
-
-#include <caml/mlvalues.h>
 
 /* because clang... */
 #if !defined(bit_RDSEED)
@@ -26,6 +22,18 @@
 #define _rdrand_step _rdrand32_step
 
 #endif
+#endif /* __i386__ || __x86_64__ */
+
+#if defined (__arm__)
+
+/* Replace with `read_virtual_count` from MiniOS when that symbol
+ * gets exported. */
+static inline uint32_t read_virtual_count () {
+  uint32_t c_lo, c_hi;
+  __asm__ __volatile__("mrrc p15, 1, %0, %1, c14":"=r"(c_lo), "=r"(c_hi));
+  return c_lo;
+}
+#endif /* arm */
 
 enum cpu_rng_t {
   RNG_NONE   = 0,
@@ -35,9 +43,6 @@ enum cpu_rng_t {
 
 static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
-/* XXX:
- * __attribute__ ((constructor))
- */
 static void detect () {
 #if defined (__x86__)
 
@@ -60,8 +65,9 @@ static void detect () {
 CAMLprim value caml_cycle_counter (value unit) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
+#elif defined (__arm__)
+  return Val_long (read_virtual_count ());
 #else
-  /* ARM: Plug an equivalent to RDTSC[P] here. */
 #error ("No known cycle-counting instruction.")
 #endif
 }
@@ -89,3 +95,22 @@ CAMLprim value caml_entropy_xen_detect (value unit) {
   detect ();
   return Val_unit;
 }
+
+/*
+ * XXX
+ * The ideal timing source on ARM are the performance counters, but these are
+ * presently masked by Xen.
+ * It would work like this:
+
+#if defined (__ARM_ARCH_7A__)
+  // Disable counter overflow interrupts.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
+  // Program the PMU control register.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
+  // Enable all counters.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
+
+  // Read:
+  unsigned int res;
+  __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
+*/
