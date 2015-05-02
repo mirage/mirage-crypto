@@ -11,7 +11,7 @@ BuildTools:   ocamlbuild
 Description:
   Entropy provider for MirageOS on Xen.
 OCamlVersion: >= 4.01.0
-PostConfCommand: ./postconf.sh
+PostConfCommand: ./postconf
 
 Library "mirage-entropy-xen"
   Path:             lib/
