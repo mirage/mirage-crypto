@@ -1,4 +1,4 @@
-0.3.0 (TRUNK):
+0.3.0 (2015-05-02):
 * Remove `mirage-entropy-unix` from the repository; it now only contains `mirage-entropy-xen`.
 * Add internal entropy harvesting via timing and CPU RNG if available.
 * Temporarily disable `xentropyd`.
