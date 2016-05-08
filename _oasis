@@ -4,7 +4,7 @@ Version:      0.3.0
 Synopsis:     Entropy provider for MirageOS on Xen
 Authors:      Hannes Mehnert, David Kaloper, Anil Madhavapeddy, Dave Scott
 Maintainers:  David Kaloper <david@numm.org>
-License:      FreeBSD
+License:      BSD-2-clause
 Homepage:     https://github.com/mirage/mirage-entropy
 Plugins:      META (0.4), DevFiles (0.4)
 BuildTools:   ocamlbuild
