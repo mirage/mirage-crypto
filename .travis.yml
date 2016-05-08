@@ -1,7 +1,8 @@
 language: c
-install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/master/.travis-opam.sh
+install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
 script: bash -ex .travis-opam.sh
 sudo: required
 env:
   - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.01 UPDATE_GCC_BINUTILS=1
-  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=latest UPDATE_GCC_BINUTILS=1
+  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.02 UPDATE_GCC_BINUTILS=1
+  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.03 UPDATE_GCC_BINUTILS=1
