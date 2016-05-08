@@ -16,7 +16,8 @@ remove: [
   ["ocamlfind" "remove" "mirage-entropy-xen"]
 ]
 depends: [
-  "ocamlfind"
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
   "cstruct" {>= "1.4.0"}
   "mirage-xen" {>="2.2.0"}
 ]
