@@ -8,16 +8,12 @@ maintainer:   "david@numm.org"
 license:      "BSD2"
 
 build: [
-  ["./configure" "--prefix" prefix]
-  [make]
-]
-install: [make "install"]
-remove: [
-  ["ocamlfind" "remove" "mirage-entropy-xen"]
+  ["ocaml" "pkg/pkg.ml" "build" "--pinned" "%{pinned}%"]
 ]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
+  "topkg" {build}
   "cstruct" {>= "1.4.0"}
   "mirage-xen" {>="2.2.0"}
 ]
