@@ -1,5 +1,5 @@
 opam-version: "1.2"
-name:         "mirage-entropy-xen"
+name:         "mirage-entropy-solo5"
 homepage:     "https://github.com/mirage/mirage-entropy"
 dev-repo:     "https://github.com/mirage/mirage-entropy.git"
 bug-reports:  "https://github.com/mirage/mirage-entropy/issues"
@@ -16,7 +16,8 @@ depends: [
   "topkg" {build & >= "0.7.6"}
   "cstruct" {>= "1.4.0"}
   "lwt"
-  "mirage-xen" {>="2.2.0"}
+  "mirage-solo5"
+  "ocaml-freestanding"
 ]
 tags: [ "org:mirage"]
 available: [ ocaml-version >= "4.01.0" ]

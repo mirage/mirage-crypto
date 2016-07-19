@@ -1,6 +1,3 @@
 true : annot, bin_annot, principal, safe_string
 true : warn(+A-4-6-44-48-58)
 true : package(cstruct), package(lwt)
-
-<lib/entropy_cpu_stubs.*>: use_xen_stubs
-<lib/entropy.{ml,mli}>: package(mirage-xen)

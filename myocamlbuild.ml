@@ -11,21 +11,24 @@ let ccopt = match arch with
 
 let common_ccopt = to_opt [ "-O3" ; "-std=c99" ; "-Wall" ; "-Wpedantic" ]
 
-let xen_ccopt =
-  let pkg = "mirage-xen" in
-  let cmd =
-    String.concat " "
-      [ "PKG_CONFIG_PATH=`opam config var prefix`/lib/pkgconfig pkg-config --static" ;
-        pkg ;
-        " --cflags" ]
-  in
-  match Ocamlbuild_pack.My_unix.run_and_read cmd with
+let pkg_config_flags pkg =
+  match Ocamlbuild_pack.My_unix.run_and_read ("./postconf.sh " ^ pkg) with
   | "\n" -> []
   | x -> to_opt [String.sub x 0 (pred (String.length x))]
 
 let () =
   dispatch begin function
-  | After_rules ->
-    flag ["c"; "use_xen_stubs"; "compile"] & S (common_ccopt @ ccopt @ xen_ccopt) ;
+    | After_rules ->
+      copy_rule "copy generated source to xen directory"
+        "lib/%"
+        "xen/%" ;
+      copy_rule "copy generated source to solo5 directory"
+        "lib/%"
+        "solo5/%" ;
+      let flags = common_ccopt @ ccopt in
+      flag ["c"; "use_xen_stubs"; "compile"] &
+        S (flags @ pkg_config_flags "mirage-xen") ;
+      flag ["c"; "use_solo5_stubs"; "compile"] &
+        S (flags @ pkg_config_flags "ocaml-freestanding") ;
   | _ -> ()
   end
