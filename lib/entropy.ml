@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2014, Hannes Mehnert
+ * Copyright (c) 2014 Hannes Mehnert
  * Copyright (c) 2014 Anil Madhavapeddy <anil@recoil.org>
  * Copyright (c) 2014 David Kaloper
  * Copyright (c) 2015 Citrix Systems Inc
@@ -32,7 +32,7 @@ module Cpu_native = struct
   external cycles     : unit -> int  = "caml_cycle_counter" "noalloc"
   external random     : unit -> int  = "caml_cpu_random" "noalloc"
   external rng_type   : unit -> int  = "caml_cpu_rng_type" "noalloc"
-  external detect     : unit -> unit = "caml_entropy_xen_detect"
+  external detect     : unit -> unit = "caml_entropy_detect"
 
   let () = detect ()
 
