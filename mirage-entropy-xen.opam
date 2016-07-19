@@ -15,6 +15,7 @@ depends: [
   "ocamlbuild" {build}
   "topkg" {build}
   "cstruct" {>= "1.4.0"}
+  "lwt"
   "mirage-xen" {>="2.2.0"}
 ]
 tags: [ "org:mirage"]
