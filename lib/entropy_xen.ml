@@ -44,7 +44,7 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-open Lwt
+open Lwt.Infix
 
 type 'a io   = 'a Lwt.t
 type buffer  = Cstruct.t
@@ -88,7 +88,7 @@ let bootstrap f =
       a := tsc / j - !a * i + 1
     done
   done ;
-  return_unit
+  Lwt.return_unit
 
 let interrupt_hook () =
   match Cpu_native.cpu_rng with
@@ -120,19 +120,19 @@ let connect () =
     match t.handlers with
     | [] -> ()
     | xs -> let e = hook () in List.iter (fun h -> h ~source:0 e) xs) ;
-  return t
+  Lwt.return t
 
 let add_handler t f =
   t.handlers <- f :: t.handlers ;
-  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits >>
-  return f
+  Lwt_list.iteri_p (fun i boot -> boot (f ~source:i)) t.inits >|= fun () ->
+  f
 
 let remove_handler t token =
   t.handlers <- List.filter (fun f -> not (f == token)) t.handlers
 
 let disconnect t =
   t.handlers <- [] ;
-  return_unit
+  Lwt.return_unit
 
 
 (*

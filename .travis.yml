@@ -3,6 +3,11 @@ install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.t
 script: bash -ex .travis-opam.sh
 sudo: required
 env:
-  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.01 UPDATE_GCC_BINUTILS=1
-  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.02 UPDATE_GCC_BINUTILS=1
-  - PACKAGE="mirage-entropy-xen" OCAML_VERSION=4.03 UPDATE_GCC_BINUTILS=1
+  global:
+    - PACKAGE="mirage-entropy-xen"
+    - PINS="depext:0.9.1"
+    - UPDATE_GCC_BINUTILS=1
+  matrix:
+    - OCAML_VERSION=4.01
+    - OCAML_VERSION=4.02
+    - OCAML_VERSION=4.03
