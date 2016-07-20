@@ -5,7 +5,7 @@ sudo: required
 env:
   global:
     - PACKAGE="mirage-entropy-xen"
-    - PINS="depext:0.9.1"
+    - PINS="depext:0.9.1 nocrypto:git://github.com/hannesm/ocaml-nocrypto.git#entropy"
     - UPDATE_GCC_BINUTILS=1
   matrix:
     - OCAML_VERSION=4.01

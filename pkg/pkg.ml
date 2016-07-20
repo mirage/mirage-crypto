@@ -18,7 +18,7 @@ let () =
   match Conf.pkg_name c with
   | "mirage-entropy-xen" ->
     Ok [ Pkg.lib "pkg/META.xen" ~dst:"META";
-         Pkg.clib "lib/libmirage-entropy-xen_stubs.clib";
-         Pkg.mllib "lib/mirage-entropy-xen.mllib"; ]
+         Pkg.clib "lib/libmirage-entropy_stubs.clib";
+         Pkg.mllib "lib/mirage-entropy.mllib"; ]
   | other ->
     R.error_msgf "unknown package name: %s" other

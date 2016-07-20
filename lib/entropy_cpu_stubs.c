@@ -91,7 +91,7 @@ CAMLprim value caml_cpu_rng_type (value unit) {
   return Val_int (__cpu_rng);
 }
 
-CAMLprim value caml_entropy_xen_detect (value unit) {
+CAMLprim value caml_entropy_detect (value unit) {
   detect ();
   return Val_unit;
 }

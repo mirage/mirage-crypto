@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2014, Hannes Mehnert
+ * Copyright (c) 2014 Hannes Mehnert
  * Copyright (c) 2014 Anil Madhavapeddy <anil@recoil.org>
  * All rights reserved.
  *
