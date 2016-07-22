@@ -20,7 +20,7 @@ depends: [
   "topkg" {build & >= "0.7.6"}
   "cstruct" {>= "1.4.0"}
   "lwt"
-  "mirage-unix"
+  "mirage-os-shim"
 ]
 depopts: [
   "mirage-solo5"

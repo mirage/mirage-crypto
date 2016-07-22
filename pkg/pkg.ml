@@ -8,9 +8,10 @@ let opams = [
     (Some ["mirage-xen"; "mirage-solo5"; "ocaml-freestanding"])
 ]
 
-let mirage_solo5 = Conf.with_pkg "mirage-solo5"
-let ocaml_freestanding = Conf.with_pkg "ocaml-freestanding"
-let mirage_xen = Conf.with_pkg "mirage-xen"
+let default = false
+let mirage_solo5 = Conf.with_pkg ~default "mirage-solo5"
+let ocaml_freestanding = Conf.with_pkg ~default "ocaml-freestanding"
+let mirage_xen = Conf.with_pkg ~default "mirage-xen"
 
 let xen c = Conf.value c mirage_xen
 let solo5 c = Conf.(value c mirage_solo5 && value c ocaml_freestanding)

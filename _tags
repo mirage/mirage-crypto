@@ -3,7 +3,7 @@ true : warn(+A-4-6-44-48-58)
 true : package(cstruct), package(lwt)
 
 <lib> : include
-<lib/*.ml> : package(mirage-unix)
+<lib/*.ml> : package(mirage-os-shim)
 <lib/mirage-entropy.{cma,cmxa}> : dynamic_link_to_unix_stubs
 <lib/mirage-entropy.cmxs> : static_link_to_unix_stubs
 <lib/native/*.c> : use_c_flags
