@@ -1,3 +1,15 @@
-true : annot, bin_annot, principal, safe_string
+true : bin_annot, principal, safe_string
 true : warn(+A-4-6-44-48-58)
 true : package(cstruct), package(lwt)
+
+<lib> : include
+<lib/*.ml> : package(mirage-unix)
+<lib/mirage-entropy.{cma,cmxa}> : dynamic_link_to_unix_stubs
+<lib/mirage-entropy.cmxs> : static_link_to_unix_stubs
+<lib/native/*.c> : use_c_flags
+
+<xen> : include
+<xen/native/*.c> : use_c_flags,use_xen_pkgconfig_flags
+
+<solo5> : include
+<solo5/native/*.c> : use_c_flags,use_solo5_pkgconfig_flags

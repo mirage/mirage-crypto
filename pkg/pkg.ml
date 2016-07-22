@@ -3,44 +3,22 @@
 #require "topkg"
 open Topkg
 
-let metas = [
-    Pkg.meta_file ~install:false "pkg/META.xen";
-    Pkg.meta_file ~install:false "pkg/META.solo5";
-  ]
+let opams = [
+  Pkg.opam_file "opam" ~lint_deps_excluding:
+    (Some ["mirage-xen"; "mirage-solo5"; "ocaml-freestanding"])
+]
 
-let opams =
-  let install = false in
-  [
-    Pkg.opam_file "mirage-entropy-xen.opam" ~install;
-    Pkg.opam_file "mirage-entropy-solo5.opam" ~install;
-  ]
+let mirage_solo5 = Conf.with_pkg "mirage-solo5"
+let ocaml_freestanding = Conf.with_pkg "ocaml-freestanding"
+let mirage_xen = Conf.with_pkg "mirage-xen"
 
-let cmd c os files =
-  let ocamlbuild = Conf.tool "ocamlbuild" os in
-  let build_dir = Conf.build_dir c in
-  let debug = Cmd.(on (Conf.debug c) (v "-tag" % "debug")) in
-  let flags =
-    match Conf.pkg_name c with
-    | "mirage-entropy-xen" -> Cmd.(v "-pkg" % "mirage-xen" % "-tag" % "use_xen_stubs")
-    | "mirage-entropy-solo5" -> Cmd.(v "-pkg" % "mirage-solo5" % "-tag" % "use_solo5_stubs")
-    | _ -> invalid_arg "unknown package name"
-  in
-  OS.Cmd.run @@
-  Cmd.(ocamlbuild % "-use-ocamlfind" % "-classic-display" %% debug %
-                    "-build-dir" % build_dir %% flags %% of_list files)
-
-let build = Pkg.build ~cmd ()
+let xen c = Conf.value c mirage_xen
+let solo5 c = Conf.(value c mirage_solo5 && value c ocaml_freestanding)
 
 let () =
-  Pkg.describe ~build ~metas ~opams "mirage-entropy-xen" @@ fun c ->
-  match Conf.pkg_name c with
-  | "mirage-entropy-xen" ->
-    Ok [ Pkg.lib "pkg/META.xen" ~dst:"META";
-         Pkg.clib "lib/libmirage-entropy_stubs.clib";
-         Pkg.mllib "lib/mirage-entropy.mllib"; ]
-  | "mirage-entropy-solo5" ->
-    Ok [ Pkg.lib "pkg/META.solo5" ~dst:"META";
-         Pkg.clib "lib/libmirage-entropy_stubs.clib";
-         Pkg.mllib "lib/mirage-entropy.mllib"; ]
-  | other ->
-    R.error_msgf "unknown package name: %s" other
+  Pkg.describe ~opams "mirage-entropy" @@ fun c ->
+    Ok [ Pkg.mllib "lib/mirage-entropy.mllib" ;
+         Pkg.clib "lib/libmirage-entropy_stubs.clib" ;
+         Pkg.clib ~cond:(xen c) "xen/libmirage-entropy-xen_stubs.clib" ;
+         Pkg.clib ~cond:(solo5 c) "solo5/libmirage-entropy-freestanding_stubs.clib"
+    ]
