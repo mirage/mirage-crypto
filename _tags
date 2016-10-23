@@ -4,12 +4,5 @@ true : package(cstruct), package(lwt)
 
 <lib> : include
 <lib/*.ml> : package(mirage-os-shim)
-<lib/mirage-entropy.{cma,cmxa}> : dynamic_link_to_unix_stubs
-<lib/mirage-entropy.cmxs> : static_link_to_unix_stubs
-<lib/native/*.c> : use_c_flags
-
-<xen> : include
-<xen/native/*.c> : use_c_flags,use_xen_pkgconfig_flags
-
-<solo5> : include
-<solo5/native/*.c> : use_c_flags,use_solo5_pkgconfig_flags
+<lib/mirage-entropy.{cma,cmxa}> : link_stubs(lib/libmirage-entropy_stubs)
+<**/*.c> : ccopt(-O3 -std=c99 -Wall -Wpedantic)

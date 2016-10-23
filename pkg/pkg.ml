@@ -1,7 +1,9 @@
 #!/usr/bin/env ocaml
 #use "topfind"
 #require "topkg"
+#require "ocb-stubblr.topkg"
 open Topkg
+open Ocb_stubblr_topkg
 
 let opams = [
   Pkg.opam_file "opam" ~lint_deps_excluding:
@@ -13,13 +15,10 @@ let mirage_solo5 = Conf.with_pkg ~default "mirage-solo5"
 let ocaml_freestanding = Conf.with_pkg ~default "ocaml-freestanding"
 let mirage_xen = Conf.with_pkg ~default "mirage-xen"
 
-let xen c = Conf.value c mirage_xen
-let solo5 c = Conf.(value c mirage_solo5 && value c ocaml_freestanding)
-
 let () =
-  Pkg.describe ~opams "mirage-entropy" @@ fun c ->
-    Ok [ Pkg.mllib "lib/mirage-entropy.mllib" ;
-         Pkg.clib "lib/libmirage-entropy_stubs.clib" ;
-         Pkg.clib ~cond:(xen c) "xen/libmirage-entropy-xen_stubs.clib" ;
-         Pkg.clib ~cond:(solo5 c) "solo5/libmirage-entropy-freestanding_stubs.clib"
-    ]
+  Pkg.describe ~build:(Pkg.build ~cmd ()) ~opams "mirage-entropy" @@ fun c ->
+    let xen = Conf.value c mirage_xen
+    and fs  = Conf.(value c mirage_solo5 && value c ocaml_freestanding) in
+    Ok ([ Pkg.mllib "lib/mirage-entropy.mllib" ;
+          Pkg.clib "lib/libmirage-entropy_stubs.clib" ] @
+          mirage ~xen ~fs "lib/libmirage-entropy_stubs.clib" )

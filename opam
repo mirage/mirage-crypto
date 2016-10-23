@@ -16,11 +16,12 @@ build: [
 ]
 depends: [
   "ocamlfind" {build}
-  "ocamlbuild" {build}
+  "ocamlbuild" {build & >="0.9.3"}
   "topkg" {build & >= "0.7.6"}
+  "ocb-stubblr" {build}
   "cstruct" {>= "1.4.0"}
-  "lwt"
   "mirage-os-shim"
+  "lwt"
 ]
 depopts: [
   "mirage-solo5"
