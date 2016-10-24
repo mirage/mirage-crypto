@@ -1,3 +1,10 @@
+# 0.4.0 (???)
+
+* Obsolete `mirage-entropy-<BACKEND>`; the repository now contains only `mirage-entropy`.
+* Support Unix, Xen, and Solo5 backends.
+* Prune `oasis`.
+* Move `noalloc` to 4.03-style annotations
+
 # 0.3.0 (2015-05-02)
 
 * Remove `mirage-entropy-unix` from the repository; it now only contains `mirage-entropy-xen`.
