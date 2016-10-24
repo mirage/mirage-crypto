@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015-2016 David Kaloper Meršinjak
+ */
+
 #include <caml/mlvalues.h>
 
 #if defined (__i386__) || defined (__x86_64__)

@@ -1,7 +1,7 @@
 (*
  * Copyright (c) 2014 Hannes Mehnert
  * Copyright (c) 2014 Anil Madhavapeddy <anil@recoil.org>
- * Copyright (c) 2014 David Kaloper
+ * Copyright (c) 2014-2016 David Kaloper Meršinjak
  * Copyright (c) 2015 Citrix Systems Inc
  * All rights reserved.
  *
