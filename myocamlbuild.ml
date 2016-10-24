@@ -7,4 +7,4 @@ let intrinsics () =
       flag ["compile"; "c"] (S [A "-ccopt"; A "-mrdrnd -mrdseed"])
   | _ -> ()
 
-let () = dispatch (after_rules intrinsics)
+let () = dispatch Ocb_stubblr.(init & after_rules intrinsics)

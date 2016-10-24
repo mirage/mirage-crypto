@@ -20,5 +20,6 @@ let () =
     let xen = Conf.value c mirage_xen
     and fs  = Conf.(value c mirage_solo5 && value c ocaml_freestanding) in
     Ok ([ Pkg.mllib "lib/mirage-entropy.mllib" ;
+          Pkg.test "test/test";
           Pkg.clib "lib/libmirage-entropy_stubs.clib" ] @
           mirage ~xen ~fs "lib/libmirage-entropy_stubs.clib" )

@@ -6,3 +6,5 @@ true : package(cstruct), package(lwt)
 <lib/*.ml> : package(mirage-os-shim)
 <lib/mirage-entropy.{cma,cmxa}> : link_stubs(lib/libmirage-entropy_stubs)
 <**/*.c> : ccopt(-O3 -std=c99 -Wall -Wpedantic)
+
+<test/*>: package(mirage-os-shim), predicate(unix), use_mirage-entropy
