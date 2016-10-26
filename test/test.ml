@@ -18,4 +18,6 @@ let with_entropy act =
       act () >>= fun res ->
         Entropy.disconnect t >|= fun () -> res
 
-let () = Mirage_OS.OS.(Main.run (with_entropy (fun () -> Time.sleep 1.)))
+let () =
+  Mirage_OS.OS.(Main.run (with_entropy (fun () ->
+    Time.sleep_ns 1_000_000L)))
