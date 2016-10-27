@@ -7,9 +7,7 @@ author:       ["Hannes Mehnert" "David Kaloper" "Anil Madhavapeddy" "Dave Scott"
 maintainer:   "david@numm.org"
 license:      "BSD2"
 
-build: [
-  "ocaml" "pkg/pkg.ml" "build"
-          "--pinned" "%{pinned}%"
+build: [ "ocaml" "pkg/pkg.ml" "build" "--pinned" "%{pinned}%" "--tests" "false"
           "--with-mirage-xen" "%{mirage-xen:installed}%"
           "--with-mirage-solo5" "%{mirage-solo5:installed}%"
           "--with-ocaml-freestanding" "%{ocaml-freestanding:installed}%"
