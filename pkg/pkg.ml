@@ -1,46 +1,25 @@
 #!/usr/bin/env ocaml
 #use "topfind"
 #require "topkg"
+#require "ocb-stubblr.topkg"
 open Topkg
+open Ocb_stubblr_topkg
 
-let metas = [
-    Pkg.meta_file ~install:false "pkg/META.xen";
-    Pkg.meta_file ~install:false "pkg/META.solo5";
-  ]
+let opams = [
+  Pkg.opam_file "opam" ~lint_deps_excluding:
+    (Some ["mirage-xen"; "mirage-solo5"; "ocaml-freestanding"])
+]
 
-let opams =
-  let install = false in
-  [
-    Pkg.opam_file "mirage-entropy-xen.opam" ~install;
-    Pkg.opam_file "mirage-entropy-solo5.opam" ~install;
-  ]
-
-let cmd c os files =
-  let ocamlbuild = Conf.tool "ocamlbuild" os in
-  let build_dir = Conf.build_dir c in
-  let debug = Cmd.(on (Conf.debug c) (v "-tag" % "debug")) in
-  let flags =
-    match Conf.pkg_name c with
-    | "mirage-entropy-xen" -> Cmd.(v "-pkg" % "mirage-xen" % "-tag" % "use_xen_stubs")
-    | "mirage-entropy-solo5" -> Cmd.(v "-pkg" % "mirage-solo5" % "-tag" % "use_solo5_stubs")
-    | _ -> invalid_arg "unknown package name"
-  in
-  OS.Cmd.run @@
-  Cmd.(ocamlbuild % "-use-ocamlfind" % "-classic-display" %% debug %
-                    "-build-dir" % build_dir %% flags %% of_list files)
-
-let build = Pkg.build ~cmd ()
+let default = false
+let mirage_solo5 = Conf.with_pkg ~default "mirage-solo5"
+let ocaml_freestanding = Conf.with_pkg ~default "ocaml-freestanding"
+let mirage_xen = Conf.with_pkg ~default "mirage-xen"
 
 let () =
-  Pkg.describe ~build ~metas ~opams "mirage-entropy-xen" @@ fun c ->
-  match Conf.pkg_name c with
-  | "mirage-entropy-xen" ->
-    Ok [ Pkg.lib "pkg/META.xen" ~dst:"META";
-         Pkg.clib "lib/libmirage-entropy_stubs.clib";
-         Pkg.mllib "lib/mirage-entropy.mllib"; ]
-  | "mirage-entropy-solo5" ->
-    Ok [ Pkg.lib "pkg/META.solo5" ~dst:"META";
-         Pkg.clib "lib/libmirage-entropy_stubs.clib";
-         Pkg.mllib "lib/mirage-entropy.mllib"; ]
-  | other ->
-    R.error_msgf "unknown package name: %s" other
+  Pkg.describe ~build:(Pkg.build ~cmd ()) ~opams "mirage-entropy" @@ fun c ->
+    let xen = Conf.value c mirage_xen
+    and fs  = Conf.(value c mirage_solo5 && value c ocaml_freestanding) in
+    Ok ([ Pkg.mllib "lib/mirage-entropy.mllib" ;
+          Pkg.test "test/test";
+          Pkg.clib "lib/libmirage-entropy_stubs.clib" ] @
+          mirage ~xen ~fs "lib/libmirage-entropy_stubs.clib" )

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+function has {
+  opam config var "${1}:installed"
+}
+
+topkg build -- \
+  --with-mirage-xen $(has 'mirage-xen') \
+  --with-ocaml-freestanding $(has 'ocaml-freestanding') \
+  --with-mirage-solo5 $(has 'mirage-solo5')

@@ -1,1 +1,1 @@
-entropy_cpu_stubs.o
+native/entropy_cpu_stubs.o

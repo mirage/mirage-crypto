@@ -1,4 +1,4 @@
-Copyright (c) 2014, Hannes Mehnert, Anil Madhavapeddy, David Kaloper
+Copyright (c) 2014-2016, Hannes Mehnert, Anil Madhavapeddy, David Kaloper Meršinjak
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

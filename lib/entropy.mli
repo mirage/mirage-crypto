@@ -1,6 +1,7 @@
 (*
  * Copyright (c) 2014 Hannes Mehnert
  * Copyright (c) 2014 Anil Madhavapeddy <anil@recoil.org>
+ * Copyright (c) 2014-2016 David Kaloper Meršinjak
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
