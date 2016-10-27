@@ -16,7 +16,7 @@ build: [
 ]
 depends: [
   "ocamlfind" {build}
-  "ocamlbuild" {build & >="0.9.3"}
+  "ocamlbuild" {build}
   "topkg" {build & >= "0.7.6"}
   "ocb-stubblr" {build}
   "cstruct" {>= "1.4.0"}
