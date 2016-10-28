@@ -5,6 +5,7 @@ function has {
 }
 
 topkg build -- \
+  --benchmark true \
   --with-mirage-xen $(has 'mirage-xen') \
   --with-ocaml-freestanding $(has 'ocaml-freestanding') \
   --with-mirage-solo5 $(has 'mirage-solo5')

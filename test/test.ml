@@ -20,4 +20,4 @@ let with_entropy act =
 
 let () =
   Mirage_OS.OS.(Main.run (with_entropy (fun () ->
-    Time.sleep_ns 1_000_000L)))
+    Time.sleep_ns 1_000L)))
