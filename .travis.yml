@@ -5,7 +5,7 @@ sudo: required
 env:
   global:
     - PACKAGE="mirage-entropy"
-    - PINS="depext:0.9.1 mirage-os-shim:git://github.com/pqwy/mirage-os-shim.git ocb-stubblr:git://github.com/pqwy/ocb-stubblr.git mirage-unix:git://github.com/mirage/mirage-platform.git mirage-xen:git://github.com/mirage/mirage-platform.git"
+    - PINS="depext:0.9.1 mirage-os-shim:git://github.com/pqwy/mirage-os-shim.git mirage-unix:git://github.com/mirage/mirage-platform.git mirage-xen:git://github.com/mirage/mirage-platform.git"
     - UPDATE_GCC_BINUTILS=1
   matrix:
     - OCAML_VERSION=4.02

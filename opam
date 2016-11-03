@@ -15,9 +15,9 @@ build: [ "ocaml" "pkg/pkg.ml" "build" "--pinned" "%{pinned}%" "--tests" "false"
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
-  "topkg" {build & >= "0.7.6"}
+  "topkg" {build}
   "ocb-stubblr" {build}
-  "cstruct" {>= "1.4.0"}
+  "cstruct"
   "mirage-os-shim"
   "lwt"
 ]
@@ -27,6 +27,8 @@ depopts: [
   "mirage-xen"
 ]
 conflicts: [
+  "ocb-stubblr" {<"0.1.0"}
+  "cstruct" {<"1.4.0"}
   "mirage-xen" {<"2.2.0"}
 ]
 tags: [ "org:mirage"]
