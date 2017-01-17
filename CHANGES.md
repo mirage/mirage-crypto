@@ -1,5 +1,7 @@
 # 0.4.0 (???)
 
+* Compatibility with MirageOS 3 module types.
+* Add a benchmark.
 * Obsolete `mirage-entropy-<BACKEND>`; the repository now contains only `mirage-entropy`.
 * Support Unix, Xen, and Solo5 backends.
 * Prune `oasis`.
