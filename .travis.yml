@@ -10,6 +10,10 @@ env:
     - OCAML_VERSION=4.04
     - OCAML_VERSION=4.04 DEPOPTS=mirage-xen
     - OCAML_VERSION=4.04 DEPOPTS="mirage-solo5 ocaml-freestanding"
+    - OCAML_VERSION=4.05
+    - OCAML_VERSION=4.05 DEPOPTS=mirage-xen
+    - OCAML_VERSION=4.05 DEPOPTS="mirage-solo5 ocaml-freestanding"
     - OCAML_VERSION=4.06
+    - OCAML_VERSION=4.06 DEPOPTS="mirage-solo5 ocaml-freestanding"
 notifications:
   email: false
