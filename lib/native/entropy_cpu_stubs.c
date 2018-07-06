@@ -38,6 +38,15 @@ static inline uint32_t read_virtual_count () {
   return c_lo;
 }
 #endif /* arm */
+#if defined (__aarch64__)
+static inline uint64_t read_virtual_count(void)
+{
+  uint64_t c;
+  isb();
+  __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(c));
+  return c;
+}
+#endif /* aarch64 */
 
 enum cpu_rng_t {
   RNG_NONE   = 0,
@@ -69,7 +78,7 @@ static void detect () {
 CAMLprim value caml_cycle_counter (value unit) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
-#elif defined (__arm__)
+#elif defined (__arm__) || defined (__aarch64__)
   return Val_long (read_virtual_count ());
 #else
 #error ("No known cycle-counting instruction.")
