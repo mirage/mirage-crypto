@@ -39,6 +39,7 @@ static inline uint32_t read_virtual_count () {
 }
 #endif /* arm */
 #if defined (__aarch64__)
+#define	isb()		__asm __volatile("isb" : : : "memory")
 static inline uint64_t read_virtual_count(void)
 {
   uint64_t c;
