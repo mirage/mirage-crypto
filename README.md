@@ -5,7 +5,8 @@ mirage-entropy
 
 Entropy source for MirageOS unikernels.
 
-* WWW: <http://openmirage.org>
+* Documentation: <https://mirage.github.io/mirage-entropy/doc>
+* WWW: <https://mirage.io>
 * E-mail: <mirageos-devel@lists.xenproject.org>
-* Issues: <https://github.com/mirage/mirage/issues>
+* Issues: <https://github.com/mirage/mirage-entropy/issues>
 * IRC: `#mirage` on Freenode

@@ -3,6 +3,7 @@ name:         "mirage-entropy"
 homepage:     "https://github.com/mirage/mirage-entropy"
 dev-repo:     "https://github.com/mirage/mirage-entropy.git"
 bug-reports:  "https://github.com/mirage/mirage-entropy/issues"
+doc:          "https://mirage.github.io/mirage-entropy/doc"
 author:       ["Hannes Mehnert" "David Kaloper" "Anil Madhavapeddy" "Dave Scott"]
 maintainer:   "david@numm.org"
 license:      "BSD2"
