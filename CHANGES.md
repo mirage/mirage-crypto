@@ -1,6 +1,6 @@
 # 0.4.1 (2018-08-15)
 
-* Aarch64 support (#39 by #reynir)
+* Aarch64 support (#39 by @reynir)
 
 # 0.4.0 (2017-01-20)
 
