@@ -7,7 +7,7 @@ open Ocb_stubblr_topkg
 
 let opams = [
   Pkg.opam_file "opam" ~lint_deps_excluding:
-    (Some ["mirage-xen"; "mirage-solo5"; "ocaml-freestanding"])
+    (Some ["mirage-xen"; "mirage-solo5"; "ocaml-freestanding"; "ocb-stubblr"])
 ]
 
 let default = false
