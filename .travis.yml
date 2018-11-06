@@ -6,7 +6,6 @@ env:
   global:
     - PACKAGE="mirage-entropy"
     - UPDATE_GCC_BINUTILS=1
-    - OPAM_VERSION=1.2.2
   matrix:
     - OCAML_VERSION=4.04
     - OCAML_VERSION=4.04 DEPOPTS=mirage-xen
