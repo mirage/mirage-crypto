@@ -1,6 +1,12 @@
 open Lwt.Infix
 open Nocrypto
 
+[@@@ocaml.warning "-3"]
+(* Used for hooks, https://github.com/ocsigen/lwt/issues/573 *)
+module Lwt_sequence = Lwt_sequence
+let enter_iter_hooks = Lwt_main.enter_iter_hooks
+[@@@ocaml.warning "+3"]
+
 let chunk  = 32
 and period = 30
 and device = Nocrypto_entropy_unix.sys_rng
@@ -11,8 +17,6 @@ let mvar_map v f =
               (fun exn -> Lwt_mvar.put v x >>= fun () -> Lwt.fail exn)
 
 let some x = Some x
-
-[@@@ocaml.warning "-3"]
 
 type t = {
   fd     : Lwt_unix.file_descr ;
@@ -41,7 +45,7 @@ let attach ~period ?(device = device) g =
   let buf = Cstruct.create chunk in
   let seed () = read_cs fd buf >|= fun () -> Rng.reseed ~g buf in
   let remove =
-      Lwt_sequence.add_r (background ~period seed) Lwt_main.enter_iter_hooks in
+      Lwt_sequence.add_r (background ~period seed) enter_iter_hooks in
   { g ; fd ; remove }
 
 let stop t =
