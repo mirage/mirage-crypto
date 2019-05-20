@@ -1,6 +1,7 @@
 open No_uncommon
 module Numeric = No_numeric
 module Rng = No_rng
+open Sexplib.Conv
 
 type bits = int
 
@@ -10,9 +11,9 @@ type group = {
   p  : Z.t        ;  (* The prime modulus *)
   gg : Z.t        ;  (* Group generator *)
   q  : Z.t option ;  (* `gg`'s order, maybe *)
-}
+} [@@deriving sexp]
 
-type secret = { x : Z.t }
+type secret = { x : Z.t } [@@deriving sexp]
 
 (*
  * Estimates of equivalent-strength exponent sizes for the moduli sizes.
