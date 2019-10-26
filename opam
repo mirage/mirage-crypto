@@ -20,7 +20,8 @@ depends: [
   "ocb-stubblr" {build}
   "ocaml" {>= "4.04.2"}
   "cstruct"
-  "mirage-os-shim"
+  "mirage-runtime"
+  "mirage-unix" {test}
   "lwt"
 ]
 depopts: [

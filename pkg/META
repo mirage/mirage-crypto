@@ -1,6 +1,6 @@
 description = "Entropy provider for MirageOS"
 version = "%%VERSION_NUM%%"
-requires = "lwt cstruct mirage-os-shim"
+requires = "lwt cstruct mirage-runtime"
 archive(byte) = "mirage-entropy.cma"
 archive(native) = "mirage-entropy.cmxa"
 plugin(byte) = "mirage-entropy.cma"
