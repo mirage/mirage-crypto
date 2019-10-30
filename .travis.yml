@@ -1,19 +1,18 @@
 language: c
-install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
-script: bash -ex .travis-opam.sh
-sudo: required
+install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-docker.sh
+script: bash -ex .travis-docker.sh
+sudo: false
+services:
+  - docker
 env:
   global:
     - PACKAGE="mirage-entropy"
-    - UPDATE_GCC_BINUTILS=1
+    - DISTRO=alpine
+    - TESTS=true
   matrix:
-    - OCAML_VERSION=4.04
-    - OCAML_VERSION=4.04 DEPOPTS=mirage-xen
-    - OCAML_VERSION=4.04 DEPOPTS="mirage-solo5 ocaml-freestanding"
-    - OCAML_VERSION=4.05
-    - OCAML_VERSION=4.05 DEPOPTS=mirage-xen
-    - OCAML_VERSION=4.05 DEPOPTS="mirage-solo5 ocaml-freestanding"
-    - OCAML_VERSION=4.06
     - OCAML_VERSION=4.06 DEPOPTS="mirage-solo5 ocaml-freestanding"
+    - OCAML_VERSION=4.07 DEPOPTS=mirage-xen
+    - OCAML_VERSION=4.08
+    - OCAML_VERSION=4.09 DEPOPTS="mirage-solo5 ocaml-freestanding"
 notifications:
   email: false
