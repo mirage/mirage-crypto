@@ -3,8 +3,8 @@ true : warn(+A-4-6-44-48-58)
 true : package(cstruct), package(lwt)
 
 <lib> : include
-<lib/*.ml> : package(mirage-os-shim)
+<lib/*.ml> : package(mirage-runtime)
 <lib/mirage-entropy.{cma,cmxa}> : link_stubs(lib/libmirage-entropy_stubs)
 <**/*.c> : ccopt(-O3 -std=c99 -Wall -Wpedantic)
 
-<test/*>: package(mirage-os-shim), predicate(mirage_unix), use_mirage-entropy
+<test/*>: package(mirage-runtime mirage-unix), use_mirage-entropy

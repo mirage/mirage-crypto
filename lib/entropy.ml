@@ -45,7 +45,6 @@ module Cpu_native = struct
 end
 
 open Lwt.Infix
-open Mirage_OS
 
 type 'a io   = 'a Lwt.t
 type buffer  = Cstruct.t
@@ -117,7 +116,7 @@ let interrupt_hook () =
 let connect () =
   let t    = { handlers = [] ; inits = [ bootstrap ] }
   and hook = interrupt_hook () in
-  OS.Main.at_enter_iter (fun () ->
+  Mirage_runtime.at_enter_iter (fun () ->
     match t.handlers with
     | [] -> ()
     | xs -> let e = hook () in List.iter (fun h -> h ~source:0 e) xs) ;
@@ -134,4 +133,3 @@ let remove_handler t token =
 let disconnect t =
   t.handlers <- [] ;
   Lwt.return_unit
-
