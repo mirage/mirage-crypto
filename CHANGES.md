@@ -1,3 +1,9 @@
+# v0.5.0 (2019-11-01)
+
+* Use mirage-runtime provided hooks (since 3.7.0), see mirage/mirage#1010 (#45 @samoht)
+* Drop mirage-os-shim dependency (#45 @samoht)
+* Raise minimum OCaml version to 4.06.0 (#46 @hannesm)
+
 # 0.4.1 (2018-08-15)
 
 * Aarch64 support (#39 by @reynir)
