@@ -8,7 +8,7 @@
                    no_dsa no_fortuna no_hash no_hmac_drgb no_native no_numeric
                    no_rng no_rsa no_uncommon)
   (c_names misc
-           md5 sha1 sha256 sha512 stubs
+           md5 sha1 sha256 sha512 hash_stubs
            aes_generic aes_aesni ghash_generic ghash_pclmul
            des_generic)
   (c_flags --std=c99 -Wall -Wextra -O3 -D_DEFAULT_SOURCE
