@@ -1,4 +1,4 @@
-# nocrypto - Simpler crypto
+# mirage-crypto - Cryptographic primitives for MirageOS
 
 %%VERSION%%
 
@@ -16,48 +16,8 @@ Kaloper.  It was forked with the permission of the original author in order to
 facilitate changes (e.g. build system) required by Mirage that the upstream
 didn't have time to keep up with.
 
-## Documentation
+# Status
 
-[Interface][nocrypto-mli] is documented. Also [online][doc].
-
-[nocrypto-mli]: https://github.com/mirleft/ocaml-nocrypto/blob/master/src/nocrypto.mli
-[doc]: http://mirleft.github.io/ocaml-nocrypto/doc
-
-## FAQ
-
-#### RNG seeding
-
-If RNG fails with `Fatal error: exception Uncommon.Boot.Unseeded_generator`, you
-need to [seed][doc-entropy] it.
-
-Unix:
-```OCaml
-let () = Nocrypto_entropy_unix.initialize ()
-```
-
-Unix/Lwt:
-```OCaml
-let () = Nocrypto_entropy_lwt.initialize () |> ignore
-```
-
-[doc-entropy]: http://mirleft.github.io/ocaml-nocrypto/Nocrypto_entropy_unix.html
-
-#### Illegal instructions
-
-```
-Program terminated with signal SIGILL, Illegal instruction.
-#0  _mm_aeskeygenassist_si128 (__C=<optimized out>, __X=...)
-```
-
-`Nocrypto` has CPU acceleration support (`SSE2`+`AES-NI`), but no run-time
-autodetection yet. You compiled the library with acceleration, but you are using
-it on a machine that does not support it.
-
-`pkg/pkg.ml build --accelerate false` force-disables non-portable code.
-
-`pkg/pkg.ml build --accelerate true` force-enables non-portable code.
-
-The flag can also be set via the `NOCRYPTO_ACCELERATE` environment variable.
-When unset, it maches the capabilities of the build machine.
-
-[![Build Status](https://travis-ci.org/mirage/mirage-crypto.svg?branch=master)](https://travis-ci.org/mirage/mirage-crypto)
+This is a work in progress repository that is not yet released.  Please see
+https://github.com/mirage/mirage-crypto/issues/1 for our progress towards a
+stable release.
