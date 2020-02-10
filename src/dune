@@ -12,7 +12,6 @@
            aes_generic aes_aesni ghash_generic ghash_pclmul
            des_generic)
   (c_flags --std=c99 -Wall -Wextra -O3 -D_DEFAULT_SOURCE
-           -Wno-implicit-fallthrough
            (:include c_flags.sexp)))
 
 (include_subdirs unqualified)
