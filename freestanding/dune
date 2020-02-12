@@ -1,0 +1,13 @@
+(copy_files# ../src/native/*)
+
+(library
+ (name nocrypto_freestanding)
+ (public_name nocrypto.freestanding)
+ (optional)
+ (libraries ocaml-freestanding)
+ (c_flags (:include ../src/c_flags.sexp) (:include cflags-freestanding.sexp))
+ (c_names misc hash_stubs md5 sha1 sha256 sha512 aes_generic
+          aes_aesni des_generic ghash_pclmul ghash_generic)
+)
+
+(rule (with-stdout-to cflags-freestanding.sexp (run ./cflags.sh)))

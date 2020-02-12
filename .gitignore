@@ -1,12 +1,3 @@
 _build
-*.install
-*.native
-*.byte
-
-*~
-\.\#*
-\#*#
-
-gmon.out
-*.prof
-rondom
+.merlin
+.*.swp
