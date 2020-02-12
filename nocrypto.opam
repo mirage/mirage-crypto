@@ -32,4 +32,5 @@ depopts: [ "unix" "lwt" "mirage-entropy" ]
 conflicts: [
   "mirage-xen" {< "3.1.0"}
   "ocaml-freestanding" {< "0.4.1"}
+  "lwt" {< "4.2.0"}
 ]
