@@ -2,7 +2,7 @@
 #define H__NOCRYPTO
 
 #include <stdint.h>
-#include "endian.h"
+#include "bitfn.h"
 
 #include <caml/mlvalues.h>
 #include <caml/bigarray.h>
