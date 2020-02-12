@@ -10,7 +10,7 @@ synopsis:     "Simple crypto for the modern age"
 
 build: [ ["dune" "subst"] {pinned}
          ["dune" "build" "-p" name "-j" jobs ]
-         ["dune" "runtest"] {with-test} ]
+         ["dune" "runtest" "-p" name "-j" jobs] {with-test} ]
 
 depends: [
   "ocaml" {>= "4.07.0"}
