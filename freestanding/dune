@@ -1,8 +1,8 @@
 (copy_files# ../src/native/*)
 
 (library
- (name nocrypto_freestanding)
- (public_name nocrypto.freestanding)
+ (name mirage_crypto_freestanding)
+ (public_name mirage-crypto.freestanding)
  (optional)
  (libraries ocaml-freestanding)
  (c_flags (:include ../src/c_flags.sexp) (:include cflags-freestanding.sexp))

@@ -1,4 +1,4 @@
-let evar  = "NOCRYPTO_ACCELERATE"
+let evar  = "MIRAGE_CRYPTO_ACCELERATE"
 let needs = [`SSSE3; `AES; `PCLMULQDQ]
 let flags = ["-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul"]
 

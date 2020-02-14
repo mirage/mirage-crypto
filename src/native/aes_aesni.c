@@ -8,8 +8,8 @@
  *   https://software.intel.com/sites/default/files/article/165683/aes-wp-2012-09-22-v01.pdf
  */
 
-#include "nocrypto.h"
-#if defined (__nc_AES_NI__)
+#include "mirage_crypto.h"
+#if defined (__mc_AES_NI__)
 
 /* xmm: [3, 2, 1, 0] */
 #define _S_3333 0xff
@@ -23,7 +23,7 @@
  *
  * XXX Get rid of the correction here.
  */
-int _nc_aesni_rk_size (uint8_t rounds) {
+int _mc_aesni_rk_size (uint8_t rounds) {
   return (rounds + 1) * 16 + 15;
 }
 
@@ -47,7 +47,7 @@ static inline void __pack (__m128i *o1, __m128i *o2, __m128i r1, __m128i r2, __m
   *o2 = (__m128i) _mm_shuffle_pd ((__m128d) r2, (__m128d) r3, 1);
 }
 
-static inline void _nc_aesni_derive_e_key (const uint8_t *key, uint8_t *rk0, uint8_t rounds) {
+static inline void _mc_aesni_derive_e_key (const uint8_t *key, uint8_t *rk0, uint8_t rounds) {
 
   __m128i *rk = __rk (rk0);
   __m128i temp1, temp2;
@@ -132,7 +132,7 @@ static inline void _nc_aesni_derive_e_key (const uint8_t *key, uint8_t *rk0, uin
   }
 }
 
-static inline void _nc_aesni_invert_e_key (const uint8_t *rk0, uint8_t *kr0, uint8_t rounds) {
+static inline void _mc_aesni_invert_e_key (const uint8_t *rk0, uint8_t *kr0, uint8_t rounds) {
 
   __m128i *rk1 = __rk (rk0),
           *kr  = __rk (kr0),
@@ -149,16 +149,16 @@ static inline void _nc_aesni_invert_e_key (const uint8_t *rk0, uint8_t *kr0, uin
   kr[rounds] = rk[0];
 }
 
-static void _nc_aesni_derive_d_key (const uint8_t *key, uint8_t *kr, uint8_t rounds, uint8_t *rk) {
+static void _mc_aesni_derive_d_key (const uint8_t *key, uint8_t *kr, uint8_t rounds, uint8_t *rk) {
   if (!rk) {
-    _nc_aesni_derive_e_key (key, kr, rounds);
+    _mc_aesni_derive_e_key (key, kr, rounds);
     rk = kr;
   }
-  _nc_aesni_invert_e_key (rk, kr, rounds);
+  _mc_aesni_invert_e_key (rk, kr, rounds);
 }
 
 
-static inline void _nc_aesni_enc (const uint8_t src[16], uint8_t dst[16], const uint8_t *rk0, uint8_t rounds) {
+static inline void _mc_aesni_enc (const uint8_t src[16], uint8_t dst[16], const uint8_t *rk0, uint8_t rounds) {
 
   __m128i r   = _mm_loadu_si128 ((__m128i*) src),
           *rk = __rk (rk0);
@@ -172,7 +172,7 @@ static inline void _nc_aesni_enc (const uint8_t src[16], uint8_t dst[16], const 
   _mm_storeu_si128 ((__m128i*) dst, r);
 }
 
-static inline void _nc_aesni_dec (const uint8_t src[16], uint8_t dst[16], const uint8_t *rk0, uint8_t rounds) {
+static inline void _mc_aesni_dec (const uint8_t src[16], uint8_t dst[16], const uint8_t *rk0, uint8_t rounds) {
 
   __m128i r   = _mm_loadu_si128 ((__m128i*) src),
           *rk = __rk (rk0);
@@ -186,7 +186,7 @@ static inline void _nc_aesni_dec (const uint8_t src[16], uint8_t dst[16], const 
   _mm_storeu_si128 ((__m128i*) dst, r);
 }
 
-static inline void _nc_aesni_enc8 (const uint8_t src[128], uint8_t dst[128], const uint8_t *rk0, uint8_t rounds) {
+static inline void _mc_aesni_enc8 (const uint8_t src[128], uint8_t dst[128], const uint8_t *rk0, uint8_t rounds) {
 
   __m128i *in  = (__m128i*) src,
           *out = (__m128i*) dst,
@@ -240,7 +240,7 @@ static inline void _nc_aesni_enc8 (const uint8_t src[128], uint8_t dst[128], con
   _mm_storeu_si128 (out + 7, r7);
 }
 
-static inline void _nc_aesni_dec8 (const uint8_t src[128], uint8_t dst[128], const uint8_t *rk0, uint8_t rounds) {
+static inline void _mc_aesni_dec8 (const uint8_t src[128], uint8_t dst[128], const uint8_t *rk0, uint8_t rounds) {
 
   __m128i *in  = (__m128i*) src,
           *out = (__m128i*) dst,
@@ -328,31 +328,31 @@ static inline void _nc_aesni_dec8 (const uint8_t src[128], uint8_t dst[128], con
     }                                                        \
   }                                                          \
 
-static inline void _nc_aesni_enc_blocks (const uint8_t *src, uint8_t *dst, const uint8_t *rk, uint8_t rounds, size_t blocks) {
-  __blocked_loop (_nc_aesni_enc, _nc_aesni_enc8, src, dst, rk, rounds, blocks);
+static inline void _mc_aesni_enc_blocks (const uint8_t *src, uint8_t *dst, const uint8_t *rk, uint8_t rounds, size_t blocks) {
+  __blocked_loop (_mc_aesni_enc, _mc_aesni_enc8, src, dst, rk, rounds, blocks);
 }
 
-static inline void _nc_aesni_dec_blocks (const uint8_t *src, uint8_t *dst, const uint8_t *rk, uint8_t rounds, size_t blocks) {
-  __blocked_loop (_nc_aesni_dec, _nc_aesni_dec8, src, dst, rk, rounds, blocks);
+static inline void _mc_aesni_dec_blocks (const uint8_t *src, uint8_t *dst, const uint8_t *rk, uint8_t rounds, size_t blocks) {
+  __blocked_loop (_mc_aesni_dec, _mc_aesni_dec8, src, dst, rk, rounds, blocks);
 }
 
 
 CAMLprim value
-caml_nc_aes_rk_size (value rounds) {
-  return Val_int (_nc_aesni_rk_size (Int_val (rounds)));
+mc_aes_rk_size (value rounds) {
+  return Val_int (_mc_aesni_rk_size (Int_val (rounds)));
 }
 
 CAMLprim value
-caml_nc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
-  _nc_aesni_derive_e_key (_ba_uint8_off (key, off1),
+mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
+  _mc_aesni_derive_e_key (_ba_uint8_off (key, off1),
                           _ba_uint8 (rk),
                           Int_val (rounds));
   return Val_unit;
 }
 
 CAMLprim value
-caml_nc_aes_derive_d_key (value key, value off1, value kr, value rounds, value rk) {
-  _nc_aesni_derive_d_key (_ba_uint8_off (key, off1),
+mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value rk) {
+  _mc_aesni_derive_d_key (_ba_uint8_off (key, off1),
                           _ba_uint8 (kr),
                           Int_val (rounds),
                           Is_block(rk) ? _ba_uint8(Field(rk, 0)) : 0);
@@ -360,8 +360,8 @@ caml_nc_aes_derive_d_key (value key, value off1, value kr, value rounds, value r
 }
 
 CAMLprim value
-caml_nc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _nc_aesni_enc_blocks ( _ba_uint8_off (src, off1),
+mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+  _mc_aesni_enc_blocks ( _ba_uint8_off (src, off1),
                          _ba_uint8_off (dst, off2),
                          _ba_uint8 (rk),
                          Int_val (rounds),
@@ -370,8 +370,8 @@ caml_nc_aes_enc (value src, value off1, value dst, value off2, value rk, value r
 }
 
 CAMLprim value
-caml_nc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _nc_aesni_dec_blocks ( _ba_uint8_off (src, off1),
+mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+  _mc_aesni_dec_blocks ( _ba_uint8_off (src, off1),
                          _ba_uint8_off (dst, off2),
                          _ba_uint8 (rk),
                          Int_val (rounds),
@@ -379,9 +379,9 @@ caml_nc_aes_dec (value src, value off1, value dst, value off2, value rk, value r
   return Val_unit;
 }
 
-CAMLprim value caml_nc_aes_mode (__unit ()) { return Val_int (1); }
+CAMLprim value mc_aes_mode (__unit ()) { return Val_int (1); }
 
-__define_bc_7 (caml_nc_aes_enc)
-__define_bc_7 (caml_nc_aes_dec)
+__define_bc_7 (mc_aes_enc)
+__define_bc_7 (mc_aes_dec)
 
-#endif /* __nc_AES_NI__ */
+#endif /* __mc_AES_NI__ */

@@ -1,8 +1,8 @@
 (copy_files# ../src/native/*)
 
 (library
- (name nocrypto_xen)
- (public_name nocrypto.xen)
+ (name mirage_crypto_xen)
+ (public_name mirage-crypto.xen)
  (optional)
  (libraries mirage-xen-posix)
  (c_flags (:include ../src/c_flags.sexp) (:include cflags-xen.sexp))

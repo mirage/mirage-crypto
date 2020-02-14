@@ -27,7 +27,7 @@
 #include "bitfn.h"
 #include "md5.h"
 
-void nc_md5_init(struct md5_ctx *ctx)
+void _mc_md5_init(struct md5_ctx *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
@@ -126,7 +126,7 @@ static void md5_do_chunk(struct md5_ctx *ctx, uint32_t *buf)
 	ctx->h[0] += a; ctx->h[1] += b; ctx->h[2] += c; ctx->h[3] += d;
 }
 
-void nc_md5_update(struct md5_ctx *ctx, uint8_t *data, uint32_t len)
+void _mc_md5_update(struct md5_ctx *ctx, uint8_t *data, uint32_t len)
 {
 	uint32_t index, to_fill;
 
@@ -152,7 +152,7 @@ void nc_md5_update(struct md5_ctx *ctx, uint8_t *data, uint32_t len)
 		memcpy(ctx->buf + index, data, len);
 }
 
-void nc_md5_finalize(struct md5_ctx *ctx, uint8_t *out)
+void _mc_md5_finalize(struct md5_ctx *ctx, uint8_t *out)
 {
 	static uint8_t padding[64] = { 0x80, };
 	uint64_t bits;
@@ -165,10 +165,10 @@ void nc_md5_finalize(struct md5_ctx *ctx, uint8_t *out)
 	/* pad out to 56 */
 	index = (uint32_t) (ctx->sz & 0x3f);
 	padlen = (index < 56) ? (56 - index) : ((64 + 56) - index);
-	nc_md5_update(ctx, padding, padlen);
+	_mc_md5_update(ctx, padding, padlen);
 
 	/* append length */
-	nc_md5_update(ctx, (uint8_t *) &bits, sizeof(bits));
+	_mc_md5_update(ctx, (uint8_t *) &bits, sizeof(bits));
 
 	/* output hash */
 	p[0] = cpu_to_le32(ctx->h[0]);

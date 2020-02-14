@@ -41,14 +41,14 @@ struct sha512_ctx
 #define SHA512_DIGEST_SIZE	64
 #define SHA512_CTX_SIZE		sizeof(struct sha512_ctx)
 
-void nc_sha384_init(struct sha384_ctx *ctx);
-void nc_sha384_update(struct sha384_ctx *ctx, uint8_t *data, uint32_t len);
-void nc_sha384_finalize(struct sha384_ctx *ctx, uint8_t *out);
+void _mc_sha384_init(struct sha384_ctx *ctx);
+void _mc_sha384_update(struct sha384_ctx *ctx, uint8_t *data, uint32_t len);
+void _mc_sha384_finalize(struct sha384_ctx *ctx, uint8_t *out);
 
-void nc_sha512_init(struct sha512_ctx *ctx);
-void nc_sha512_update(struct sha512_ctx *ctx, uint8_t *data, uint32_t len);
-void nc_sha512_finalize(struct sha512_ctx *ctx, uint8_t *out);
+void _mc_sha512_init(struct sha512_ctx *ctx);
+void _mc_sha512_update(struct sha512_ctx *ctx, uint8_t *data, uint32_t len);
+void _mc_sha512_finalize(struct sha512_ctx *ctx, uint8_t *out);
 
-/* void nc_sha512_init_t(struct sha512_ctx *ctx, int t); */
+/* void _mc_sha512_init_t(struct sha512_ctx *ctx, int t); */
 
 #endif
