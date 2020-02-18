@@ -50,10 +50,10 @@ module Int_core = struct
   let (-)  = (-)
   let succ = succ
   let pred = pred
-  let of_int    = id
+  let of_int i  = i
   let of_int32  = Int32.to_int
   let of_int64  = Int64.to_int
-  let to_int    = id
+  let to_int i  = i
   let to_int32  = Int32.of_int
   let to_int64  = Int64.of_int
   let pp_print = Format.pp_print_int
@@ -69,10 +69,10 @@ module Int32_core = struct
   let (lxor) = logxor
   let (+)    = add
   let (-)    = sub
-  let of_int32 = id
-  let of_int64 = Int64.to_int32
-  let to_int32 = id
-  let to_int64 = Int64.of_int32
+  let of_int32 i = i
+  let of_int64   = Int64.to_int32
+  let to_int32 i = i
+  let to_int64   = Int64.of_int32
   let pp_print f x = Format.pp_print_string f (to_string x)
 end
 
@@ -86,8 +86,8 @@ module Int64_core = struct
   let (lxor) = logxor
   let (+)    = add
   let (-)    = sub
-  let of_int64 = id
-  let to_int64 = id
+  let of_int64 i = i
+  let to_int64 i = i
   let pp_print f x = Format.pp_print_string f (to_string x)
 end
 

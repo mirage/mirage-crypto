@@ -18,7 +18,7 @@ depends: [
   "dune-configurator" {>= "2.0.0"}
   "cpuid" {build}
   "ounit" {with-test}
-  "cstruct" {>="3.0.0"}
+  "cstruct" {>="3.2.0"}
   "ocplib-endian"
   "sexplib"
   "ppx_sexp_conv"

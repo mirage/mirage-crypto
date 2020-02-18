@@ -238,7 +238,7 @@ module OAEP (H : Hash.S) = struct
 
   let max_msg_bytes k = k - 2 * hlen - 2
 
-  let eme_oaep_encode ?g ?(label = Cs.empty) k msg =
+  let eme_oaep_encode ?g ?(label = Cstruct.empty) k msg =
     let seed  = Mirage_crypto_rng.generate ?g hlen
     and pad   = Cs.create (max_msg_bytes k - len msg) in
     let db    = cat [ H.digest label ; pad ; bx01 ; msg ] in
@@ -246,7 +246,7 @@ module OAEP (H : Hash.S) = struct
     let mseed = MGF.mask ~seed:mdb seed in
     cat [ bx00 ; mseed ; mdb ]
 
-  let eme_oaep_decode ?(label = Cs.empty) msg =
+  let eme_oaep_decode ?(label = Cstruct.empty) msg =
     let (b0, ms, mdb) = Cs.split3 msg 1 hlen in
     let db = MGF.mask ~seed:(MGF.mask ~seed:mdb ms) mdb in
     let i  = Cs.ct_find_uint8 ~off:hlen ~f:((<>) 0x00) db |> Option.get ~def:0

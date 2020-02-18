@@ -76,7 +76,7 @@ let rec gen_group ?g bits =
 
 module Group = struct
 
-  let f z = Numeric.Z.of_cstruct_be (Cs.of_hex z)
+  let f z = Numeric.Z.of_cstruct_be (Cstruct.of_hex z)
 
   (* Safe-prime-style group: p = 2q + 1 && gg = 2 && gg^q = 1 mod p *)
   let s_group ~p =

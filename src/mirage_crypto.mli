@@ -60,12 +60,6 @@ module Uncommon : sig
   (** Addons to {!Cstruct}. *)
   module Cs : sig
 
-    val empty : Cstruct.t
-    (** [empty] is an empty [Cstruct]. *)
-
-    val null  : Cstruct.t -> bool
-    (** [null cs] tests whether [len cs = 0]. *)
-
     val (<+>) : Cstruct.t -> Cstruct.t -> Cstruct.t
     (** [<+>] is an alias for [Cstruct.append]. *)
 
@@ -83,9 +77,6 @@ module Uncommon : sig
     val clone  : ?off:int -> ?len:int -> Cstruct.t -> Cstruct.t
 
     val (lsl) : Cstruct.t -> int -> Cstruct.t
-    val (lsr) : Cstruct.t -> int -> Cstruct.t
-
-    val of_hex : string -> Cstruct.t
 
     val b : int -> Cstruct.t
 
@@ -111,12 +102,8 @@ module Uncommon : sig
   val xdb : ?address:bool -> ?ascii:bool -> ?w:int -> unit -> Format.formatter -> bytes -> unit
   (** {!xd} for [bytes]. *)
 
-  val bracket : init:(unit -> 'a) -> fini:('a -> unit) -> ('a -> 'b) -> 'b
-  (** Safe acquire-use-release combinator. *)
-
   val imin : int -> int -> int
   val imax : int -> int -> int
-  val id : 'a -> 'a
   val iter2 : 'a -> 'a -> ('a -> unit) -> unit
   val iter3 : 'a -> 'a -> 'a -> ('a -> unit) -> unit
 

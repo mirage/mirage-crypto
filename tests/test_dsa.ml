@@ -6,6 +6,8 @@ open Mirage_crypto_pk
 
 open Test_common
 
+let hex = Cstruct.of_hex
+
 (*
 # CAVS 11.2
 # "SigGen" information for "dsa2_values"
@@ -28,20 +30,20 @@ let dsa_test ~priv ~msg ?k ~r ~s ~hash _ =
   assert_bool "verify of computed r, s"
     (Dsa.verify ~key:pub (r', s') hmsg)
 
-let params ~p ~q ~g = Cs.(of_hex p, of_hex q, of_hex g)
+let params ~p ~q ~g = Cstruct.(of_hex p, of_hex q, of_hex g)
 
 let priv_of f ~p ~q ~gg ~x ~y =
   { Dsa.p = f p ; q = f q ; gg = f gg ; x = f x ; y = f y }
 
 let priv_of_cs  = priv_of Numeric.Z.of_cstruct_be
-let priv_of_hex = priv_of (fun cs -> Cs.of_hex cs |> Numeric.Z.of_cstruct_be)
+let priv_of_hex = priv_of (fun cs -> hex cs |> Numeric.Z.of_cstruct_be)
 
 let case_of ~domain ~hash ~x ~y ~k ~r ~s ~msg =
   let (p, q, gg) = domain in
-  let priv   = priv_of_cs ~p ~q ~gg ~x:(Cs.of_hex x) ~y:(Cs.of_hex y)
-  and (r, s) = Cs.(of_hex r, of_hex s)
-  and k      = Numeric.Z.of_cstruct_be (Cs.of_hex k)
-  and msg    = Cs.of_hex msg in
+  let priv   = priv_of_cs ~p ~q ~gg ~x:(hex x) ~y:(hex y)
+  and (r, s) = Cstruct.(of_hex r, of_hex s)
+  and k      = Numeric.Z.of_cstruct_be (hex k)
+  and msg    = hex msg in
   dsa_test ~priv ~msg ~k ~r ~s ~hash
 
 let sha1_cases =
@@ -2215,7 +2217,7 @@ let rfc6979_dsa_1024 =
   in
 
   let case ~msg ~hash ~k ~r ~s =
-    test_rfc6979 ~priv ~msg:(Cstruct.of_string msg) ~k:(Cs.of_hex k) ~r:(Cs.of_hex r) ~s:(Cs.of_hex s) ~hash
+    test_rfc6979 ~priv ~msg:(Cstruct.of_string msg) ~k:(hex k) ~r:(hex r) ~s:(hex s) ~hash
   in [
     case ~msg:"sample" ~hash:`SHA1
     ~k:"7BDB6B0FF756E1BB5D53583EF979082F9AD5BD5B"
@@ -2299,7 +2301,7 @@ let rfc6979_dsa_2048 =
   in
 
   let case ~msg ~hash ~k ~r ~s =
-    test_rfc6979 ~priv ~msg:(Cstruct.of_string msg) ~k:(Cs.of_hex k) ~r:(Cs.of_hex r) ~s:(Cs.of_hex s) ~hash
+    test_rfc6979 ~priv ~msg:(Cstruct.of_string msg) ~k:(hex k) ~r:(hex r) ~s:(hex s) ~hash
   in [
     case ~hash:`SHA1 ~msg:"sample"
    ~k:"888FA6F7738A41BDC9846466ABDB8174C0338250AE50CE955CA16230F9CBD53E"

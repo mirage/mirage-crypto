@@ -79,7 +79,7 @@ let gen_ctr nonce i =
 let prepare_header nonce adata tlen plen =
   let ada = match adata with
     | Some x -> gen_adata x
-    | None   -> Cs.empty
+    | None   -> Cstruct.empty
   in
   format nonce adata plen tlen <+> ada
 

@@ -36,7 +36,7 @@ let cases_of f =
 
 let any _ = true
 
-let vx = Cs.of_hex
+let vx = Cstruct.of_hex
 
 let f1_eq ?msg f (a, b) _ =
   assert_cs_equal ?msg (f (vx a)) (vx b)
