@@ -28,9 +28,7 @@
 
 type t
 
-type 'a io   = 'a Lwt.t
-type buffer  = Cstruct.t
-type handler = source:int -> buffer -> unit
+type handler = source:int -> Cstruct.t -> unit
 type token
 
 type source = [
@@ -41,7 +39,7 @@ type source = [
 ]
 
 val sources : t -> source list
-val connect : unit -> t io
-val disconnect : t -> unit io
-val add_handler : t -> handler -> token io
+val connect : unit -> t Lwt.t
+val disconnect : t -> unit Lwt.t
+val add_handler : t -> handler -> token Lwt.t
 val remove_handler : t -> token -> unit
