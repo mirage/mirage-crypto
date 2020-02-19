@@ -5,7 +5,7 @@
  (public_name mirage-crypto.freestanding)
  (optional)
  (libraries ocaml-freestanding)
- (c_flags (:include ../src/c_flags.sexp) (:include cflags-freestanding.sexp))
+ (c_flags (:include ../src/cflags.sexp) (:include cflags-freestanding.sexp))
  (c_names misc hash_stubs md5 sha1 sha256 sha512 aes_generic
           aes_aesni des_generic ghash_pclmul ghash_generic)
 )
