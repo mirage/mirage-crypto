@@ -10,9 +10,8 @@ env:
     - DISTRO=alpine
     - TESTS=true
   matrix:
-    - OCAML_VERSION=4.06 DEPOPTS="mirage-solo5 ocaml-freestanding"
-    - OCAML_VERSION=4.07 DEPOPTS=mirage-xen
+    - OCAML_VERSION=4.07 DEPOPTS="mirage-xen-posix"
     - OCAML_VERSION=4.08
-    - OCAML_VERSION=4.09 DEPOPTS="mirage-solo5 ocaml-freestanding"
+    - OCAML_VERSION=4.09 DEPOPTS="ocaml-freestanding"
 notifications:
   email: false
