@@ -46,9 +46,7 @@ end
 
 open Lwt.Infix
 
-type 'a io   = 'a Lwt.t
-type buffer  = Cstruct.t
-type handler = source:int -> buffer -> unit
+type handler = source:int -> Cstruct.t -> unit
 
 type t = {
   mutable handlers : handler list ;
