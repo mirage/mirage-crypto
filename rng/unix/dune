@@ -1,0 +1,5 @@
+(library
+  (name mirage_crypto_rng_unix)
+  (public_name mirage-crypto-rng.unix)
+  (libraries mirage-crypto-rng unix)
+  (c_names mc_getrandom_stubs))

@@ -16,16 +16,16 @@
  */
 
 
-/* #define __NC_GHASH_KARATSUBA */
-#define __NC_GHASH_REFLECTED_REDUCE
-#define __NC_GHASH_AGGREGATED_REDUCE
+/* #define __MC_GHASH_KARATSUBA */
+#define __MC_GHASH_REFLECTED_REDUCE
+#define __MC_GHASH_AGGREGATED_REDUCE
 
-#include "nocrypto.h"
-#if defined (__nc_PCLMUL__)
+#include "mirage_crypto.h"
+#if defined (__mc_PCLMUL__)
 
 #include <string.h>
 
-#define xor(a, b) _mm_xor_si128 (a, b) 
+#define xor(a, b) _mm_xor_si128 (a, b)
 #define xor4(a, b, c, d) xor (xor (a, b), xor (c, d))
 
 #define __reduction_poly (_mm_set_epi64x (0, 0xc200000000000000))
@@ -53,7 +53,7 @@ static inline __m128i __reverse_si128 (__m128i x) {
   return _mm_shuffle_epi8 (x, mask);
 }
 
-#if !defined (__NC_GHASH_KARATSUBA)
+#if !defined (__MC_GHASH_KARATSUBA)
 static inline void __clmul_128 (__m128i *r1, __m128i *r0, __m128i a, __m128i b) {
 
   __m128i w0 = _mm_clmulepi64_si128 (a, b, 0x00),
@@ -76,9 +76,9 @@ static inline void __clmul_128 (__m128i *r1, __m128i *r0, __m128i a, __m128i b) 
   *r0 = xor (w0, _mm_slli_si128 (t, 8));
   *r1 = xor (w1, _mm_srli_si128 (t, 8));
 }
-#endif /* __NC_GHASH_KARATSUBA */
+#endif /* __MC_GHASH_KARATSUBA */
 
-#if !defined (__NC_GHASH_REFLECTED_REDUCE)
+#if !defined (__MC_GHASH_REFLECTED_REDUCE)
 static inline __m128i __slli_128 (__m128i a, uint8_t bits) {
   return _mm_or_si128 (
     _mm_slli_epi64 (a, bits),
@@ -136,7 +136,7 @@ static inline __m128i __gfmul (__m128i a, __m128i b) {
   return __reduce_g (w1, w0);
 }
 
-#if defined (__NC_GHASH_AGGREGATED_REDUCE)
+#if defined (__MC_GHASH_AGGREGATED_REDUCE)
 #define __keys 8
 #else
 #define __keys 1
@@ -154,7 +154,7 @@ static inline void __ghash (__m128i *m, __m128i hash[1], const __m128i *src, siz
   __m128i k[__keys], acc = __load_xform (hash);
   k[0] = _mm_loadu_si128 (m);
 
-#if defined (__NC_GHASH_AGGREGATED_REDUCE)
+#if defined (__MC_GHASH_AGGREGATED_REDUCE)
   if (n >= 128) {
     __m128i a1, a0, b1, b0, c1, c0, d1, d0, e1, e0, f1, f0, g1, g0, h1, h0;
     k[1] = _mm_loadu_si128 (m + 1),
@@ -186,20 +186,20 @@ static inline void __ghash (__m128i *m, __m128i hash[1], const __m128i *src, siz
   _mm_storeu_si128 (hash, __repr_xform (acc));
 }
 
-CAMLprim value caml_nc_ghash_key_size (__unit ()) { return Val_int (__keys * 16); }
+CAMLprim value mc_ghash_key_size (__unit ()) { return Val_int (__keys * 16); }
 
-CAMLprim value caml_nc_ghash_init_key (value key, value off, value m) {
+CAMLprim value mc_ghash_init_key (value key, value off, value m) {
   __derive ((__m128i *) _ba_uint8_off (key, off), (__m128i *) Bp_val (m));
   return Val_unit;
 }
 
 CAMLprim value
-caml_nc_ghash (value k, value hash, value src, value off, value len) {
+mc_ghash (value k, value hash, value src, value off, value len) {
   __ghash ( (__m128i *) Bp_val (k), (__m128i *) Bp_val (hash),
             (__m128i *) _ba_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
 
-CAMLprim value caml_nc_ghash_mode (__unit ()) { return Val_int (1); }
+CAMLprim value mc_ghash_mode (__unit ()) { return Val_int (1); }
 
-#endif /* __nc_PCLMUL__ */
+#endif /* __mc_PCLMUL__ */

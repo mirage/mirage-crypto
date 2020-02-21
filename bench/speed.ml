@@ -1,4 +1,4 @@
-open Nocrypto
+open Mirage_crypto
 
 open Uncommon
 open Cipher_block
@@ -24,16 +24,13 @@ module Time = struct
 
 end
 
-
-let _ = Rng.reseed (Cstruct.of_string "abcd")
-
 let burn_period = 2.0
 
 let sizes = [16; 64; 256; 1024; 8192]
 (* let sizes = [16] *)
 
 let burn f n =
-  let cs = Rng.generate n in
+  let cs = Mirage_crypto_rng.generate n in
   let (t1, i1) =
     let rec loop it =
       let t = Time.time ~n:it f cs in
@@ -58,53 +55,53 @@ let bm name f = (name, fun () -> f name)
 let benchmarks = [
 
   bm "aes-128-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Rng.generate 16) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "aes-128-cbc-e" (fun name ->
-    let key = AES.CBC.of_secret (Rng.generate 16)
-    and iv  = Rng.generate 16 in
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
     throughput name (fun cs -> AES.CBC.encrypt ~key ~iv cs)) ;
 
   bm "aes-128-cbc-d" (fun name ->
-    let key = AES.CBC.of_secret (Rng.generate 16)
-    and iv  = Rng.generate 16 in
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
     throughput name (fun cs -> AES.CBC.decrypt ~key ~iv cs)) ;
 
   bm "aes-128-ctr" (fun name ->
-    let key = Rng.generate 16 |> AES.CTR.of_secret
-    and ctr = Rng.generate 16 |> AES.CTR.ctr_of_cstruct in
+    let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
+    and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_cstruct in
     throughput name (fun cs -> AES.CTR.encrypt ~key ~ctr cs)) ;
 
   bm "aes-128-gcm" (fun name ->
-    let key = AES.GCM.of_secret (Rng.generate 16)
-    and iv  = Rng.generate 12 in
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 12 in
     throughput name (fun cs -> AES.GCM.encrypt ~key ~iv cs));
 
   bm "aes-128-ghash" (fun name ->
-    let key = AES.GCM.of_secret (Rng.generate 16)
-    and iv  = Rng.generate 12 in
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 12 in
     throughput name (fun cs -> AES.GCM.encrypt ~key ~iv ~adata:cs Cs.empty));
 
   bm "aes-128-ccm" (fun name ->
-    let key   = AES.CCM.of_secret ~maclen:16 (Rng.generate 16)
-    and nonce = Rng.generate 10 in
+    let key   = AES.CCM.of_secret ~maclen:16 (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 10 in
     throughput name (fun cs -> AES.CCM.encrypt ~key ~nonce cs));
 
   bm "aes-192-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Rng.generate 24) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "aes-256-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Rng.generate 32) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 32) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "d3des-ecb" (fun name ->
-    let key = DES.ECB.of_secret (Rng.generate 24) in
+    let key = DES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
     throughput name (fun cs -> DES.ECB.encrypt ~key cs)) ;
 
   bm "fortuna" (fun name ->
-    let open Rng.Generators.Fortuna in
+    let open Mirage_crypto_rng.Fortuna in
     let g = create () in
     reseed ~g (Cstruct.of_string "abcd") ;
     throughput name (fun cs -> generate ~g (Cstruct.len cs))) ;
@@ -125,12 +122,14 @@ let runv fs =
     (fun ppf -> List.iter @@ fun x ->
       Format.fprintf ppf "%s " @@
         match x with `XOR -> "XOR" | `AES -> "AES" | `GHASH -> "GHASH")
-    Nocrypto.Cipher_block.accelerated;
+    Cipher_block.accelerated;
   Time.warmup () ;
   List.iter (fun f -> f ()) fs
 
 
-let _ =
+let () =
+  let seed = Cstruct.of_string "abcd" in
+  Mirage_crypto_rng.(generator := create ~seed (module Fortuna));
   match Array.to_list Sys.argv with
   | _::(_::_ as args) -> begin
       try

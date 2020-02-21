@@ -1,0 +1,6 @@
+(library
+  (name mirage_crypto_rng_mirage)
+  (public_name mirage-crypto-rng.mirage)
+  (synopsis "Mirage entropy seeding")
+  (libraries mirage-crypto-rng lwt mirage-entropy)
+  (optional))

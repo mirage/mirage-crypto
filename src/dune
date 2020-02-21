@@ -1,19 +1,15 @@
 (library
-  (public_name nocrypto)
-  (synopsis "Simple crypto for the modern age")
-  (libraries cstruct zarith ocplib-endian sexplib)
+  (name mirage_crypto)
+  (public_name mirage-crypto)
+  (libraries cstruct ocplib-endian sexplib)
   (preprocess (pps ppx_sexp_conv))
-  (wrapped false)
-  (private_modules no_base64 no_ccm no_cipher_block no_cipher_stream no_dh
-                   no_dsa no_fortuna no_hash no_hmac_drgb no_native no_numeric
-                   no_rng no_rsa no_uncommon)
+  (private_modules base64 ccm cipher_block cipher_stream hash native uncommon)
   (c_names misc
            md5 sha1 sha256 sha512 hash_stubs
            aes_generic aes_aesni ghash_generic ghash_pclmul
            des_generic)
-  (c_flags --std=c99 -Wall -Wextra -O3 -D_DEFAULT_SOURCE
-           (:include c_flags.sexp)))
+  (c_flags (:include cflags.sexp)))
 
 (include_subdirs unqualified)
 
-(rule (with-stdout-to c_flags.sexp (run ../config/cfg.exe)))
+(rule (with-stdout-to cflags.sexp (run ../config/cfg.exe)))

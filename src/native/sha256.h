@@ -42,12 +42,12 @@ struct sha256_ctx
 #define SHA256_DIGEST_SIZE	32
 #define SHA256_CTX_SIZE		sizeof(struct sha256_ctx)
 
-void nc_sha224_init(struct sha224_ctx *ctx);
-void nc_sha224_update(struct sha224_ctx *ctx, uint8_t *data, uint32_t len);
-void nc_sha224_finalize(struct sha224_ctx *ctx, uint8_t *out);
+void _mc_sha224_init(struct sha224_ctx *ctx);
+void _mc_sha224_update(struct sha224_ctx *ctx, uint8_t *data, uint32_t len);
+void _mc_sha224_finalize(struct sha224_ctx *ctx, uint8_t *out);
 
-void nc_sha256_init(struct sha256_ctx *ctx);
-void nc_sha256_update(struct sha256_ctx *ctx, uint8_t *data, uint32_t len);
-void nc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out);
+void _mc_sha256_init(struct sha256_ctx *ctx);
+void _mc_sha256_update(struct sha256_ctx *ctx, uint8_t *data, uint32_t len);
+void _mc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out);
 
 #endif

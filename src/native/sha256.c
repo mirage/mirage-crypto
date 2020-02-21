@@ -26,7 +26,7 @@
 #include "sha256.h"
 #include "bitfn.h"
 
-void nc_sha224_init(struct sha224_ctx *ctx)
+void _mc_sha224_init(struct sha224_ctx *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
@@ -40,7 +40,7 @@ void nc_sha224_init(struct sha224_ctx *ctx)
 	ctx->h[7] = 0xbefa4fa4;
 }
 
-void nc_sha256_init(struct sha256_ctx *ctx)
+void _mc_sha256_init(struct sha256_ctx *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
@@ -110,12 +110,12 @@ static void sha256_do_chunk(struct sha256_ctx *ctx, uint32_t buf[])
 	ctx->h[4] += e; ctx->h[5] += f; ctx->h[6] += g; ctx->h[7] += h;
 }
 
-void nc_sha224_update(struct sha224_ctx *ctx, uint8_t *data, uint32_t len)
+void _mc_sha224_update(struct sha224_ctx *ctx, uint8_t *data, uint32_t len)
 {
-	nc_sha256_update(ctx, data, len);
+	_mc_sha256_update(ctx, data, len);
 }
 
-void nc_sha256_update(struct sha256_ctx *ctx, uint8_t *data, uint32_t len)
+void _mc_sha256_update(struct sha256_ctx *ctx, uint8_t *data, uint32_t len)
 {
 	uint32_t index, to_fill;
 
@@ -143,15 +143,15 @@ void nc_sha256_update(struct sha256_ctx *ctx, uint8_t *data, uint32_t len)
 		memcpy(ctx->buf + index, data, len);
 }
 
-void nc_sha224_finalize(struct sha224_ctx *ctx, uint8_t *out)
+void _mc_sha224_finalize(struct sha224_ctx *ctx, uint8_t *out)
 {
 	uint8_t intermediate[SHA256_DIGEST_SIZE];
 
-	nc_sha256_finalize(ctx, intermediate);
+	_mc_sha256_finalize(ctx, intermediate);
 	memcpy(out, intermediate, SHA224_DIGEST_SIZE);
 }
 
-void nc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out)
+void _mc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out)
 {
 	static uint8_t padding[64] = { 0x80, };
 	uint64_t bits;
@@ -164,10 +164,10 @@ void nc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out)
 	/* pad out to 56 */
 	index = (uint32_t) (ctx->sz & 0x3f);
 	padlen = (index < 56) ? (56 - index) : ((64 + 56) - index);
-	nc_sha256_update(ctx, padding, padlen);
+	_mc_sha256_update(ctx, padding, padlen);
 
 	/* append length */
-	nc_sha256_update(ctx, (uint8_t *) &bits, sizeof(bits));
+	_mc_sha256_update(ctx, (uint8_t *) &bits, sizeof(bits));
 
 	/* store to digest */
 	for (i = 0; i < 8; i++)

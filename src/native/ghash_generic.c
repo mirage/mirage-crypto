@@ -11,10 +11,10 @@
 
 /*  LARGE_TABLES -> 65K per key
  * !LARGE_TABLES -> 8K per key, ~3x slower. */
-#define __NC_GHASH_LARGE_TABLES
+#define __MC_GHASH_LARGE_TABLES
 
-#include "nocrypto.h"
-#if !defined (__nc_PCLMUL__)
+#include "mirage_crypto.h"
+#if !defined (__mc_PCLMUL__)
 
 #include <string.h>
 
@@ -37,7 +37,7 @@ static inline void __store_128_t (uint64_t s[2], __uint128_t x) {
   s[1] = cpu_to_be64 (x);
 }
 
-#if defined (__NC_GHASH_LARGE_TABLES)
+#if defined (__MC_GHASH_LARGE_TABLES)
 #define __t_width  8     // coefficient window
 #define __t_tables 16    // 128 / t_width
 #define __t_size   4096  // 2^t_width * t_tables
@@ -87,22 +87,22 @@ static inline void __ghash (__uint128_t m[__t_size], uint64_t hash[2], const uin
   __store_128_t (hash, acc);
 }
 
-CAMLprim value caml_nc_ghash_key_size (__unit ()) {
+CAMLprim value mc_ghash_key_size (__unit ()) {
   return Val_int (sizeof (__uint128_t) * __t_size);
 }
 
-CAMLprim value caml_nc_ghash_init_key (value key, value off, value m) {
+CAMLprim value mc_ghash_init_key (value key, value off, value m) {
   __derive ((uint64_t *) _ba_uint8_off (key, off), (__uint128_t *) Bp_val (m));
   return Val_unit;
 }
 
 CAMLprim value
-caml_nc_ghash (value m, value hash, value src, value off, value len) {
+mc_ghash (value m, value hash, value src, value off, value len) {
   __ghash ((__uint128_t *) Bp_val (m), (uint64_t *) Bp_val (hash),
            _ba_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
 
-CAMLprim value caml_nc_ghash_mode (__unit ()) { return Val_int (0); }
+CAMLprim value mc_ghash_mode (__unit ()) { return Val_int (0); }
 
-#endif /* __nc_PCLMUL__ */
+#endif /* __mc_PCLMUL__ */

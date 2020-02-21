@@ -4,9 +4,9 @@
  * http://www.efgh.com/software/rijndael.htm
  */
 
-#include "nocrypto.h"
+#include "mirage_crypto.h"
 
-#if defined (__nc_AES_GENERIC__)
+#if defined (__mc_AES_GENERIC__)
 
 #define KEYLENGTH(keybits) ((keybits)/8)
 #define RKLENGTH(keybits)  ((keybits)/8+28)
@@ -717,7 +717,7 @@ static const uint32_t rcon[] =
  *
  * @return the number of rounds for the given cipher key size.
  */
-static int nc_rijndaelSetupEncrypt(uint32_t *rk, const uint8_t *key, int keybits)
+static int mc_rijndaelSetupEncrypt(uint32_t *rk, const uint8_t *key, int keybits)
 {
   int i = 0;
   uint32_t temp;
@@ -806,12 +806,12 @@ static int nc_rijndaelSetupEncrypt(uint32_t *rk, const uint8_t *key, int keybits
  *
  * @return the number of rounds for the given cipher key size.
  */
-static int nc_rijndaelSetupDecrypt(uint32_t *rk, const uint8_t *key, int keybits) {
+static int mc_rijndaelSetupDecrypt(uint32_t *rk, const uint8_t *key, int keybits) {
   int nrounds, i, j;
   uint32_t temp;
 
   /* expand the cipher key: */
-  nrounds = nc_rijndaelSetupEncrypt(rk, key, keybits);
+  nrounds = mc_rijndaelSetupEncrypt(rk, key, keybits);
   /* invert the order of the round keys: */
   for (i = 0, j = 4*nrounds; i < j; i += 4, j -= 4)
   {
@@ -848,7 +848,7 @@ static int nc_rijndaelSetupDecrypt(uint32_t *rk, const uint8_t *key, int keybits
   return nrounds;
 }
 
-static void nc_rijndaelEncrypt(const uint32_t *rk, int nrounds, const uint8_t plaintext[16], uint8_t ciphertext[16]) {
+static void mc_rijndaelEncrypt(const uint32_t *rk, int nrounds, const uint8_t plaintext[16], uint8_t ciphertext[16]) {
   uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
   #ifndef FULL_UNROLL
     int r;
@@ -1028,7 +1028,7 @@ static void nc_rijndaelEncrypt(const uint32_t *rk, int nrounds, const uint8_t pl
   PUTU32(ciphertext + 12, s3);
 }
 
-static void nc_rijndaelDecrypt(const uint32_t *rk, int nrounds, const uint8_t ciphertext[16], uint8_t plaintext[16]) {
+static void mc_rijndaelDecrypt(const uint32_t *rk, int nrounds, const uint8_t ciphertext[16], uint8_t plaintext[16]) {
   uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
   #ifndef FULL_UNROLL
     int r;
@@ -1220,38 +1220,38 @@ static void nc_rijndaelDecrypt(const uint32_t *rk, int nrounds, const uint8_t ci
     src += 16 ; dst += 16 ;                             \
   }
 
-static inline void _nc_aes_enc_blocks (const uint8_t *src, uint8_t *dst, const uint32_t *rk, uint8_t rounds, size_t blocks) {
-  __blocked_loop (nc_rijndaelEncrypt, src, dst, rk, rounds, blocks);
+static inline void _mc_aes_enc_blocks (const uint8_t *src, uint8_t *dst, const uint32_t *rk, uint8_t rounds, size_t blocks) {
+  __blocked_loop (mc_rijndaelEncrypt, src, dst, rk, rounds, blocks);
 }
 
-static inline void _nc_aes_dec_blocks (const uint8_t *src, uint8_t *dst, const uint32_t *rk, uint8_t rounds, size_t blocks) {
-  __blocked_loop (nc_rijndaelDecrypt, src, dst, rk, rounds, blocks);
+static inline void _mc_aes_dec_blocks (const uint8_t *src, uint8_t *dst, const uint32_t *rk, uint8_t rounds, size_t blocks) {
+  __blocked_loop (mc_rijndaelDecrypt, src, dst, rk, rounds, blocks);
 }
 
 CAMLprim value
-caml_nc_aes_rk_size (value rounds) {
+mc_aes_rk_size (value rounds) {
   return Val_int (RKLENGTH (keybits_of_r (Int_val (rounds))) * sizeof(uint32_t));
 }
 
 CAMLprim value
-caml_nc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
-  nc_rijndaelSetupEncrypt (_ba_uint32 (rk),
+mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
+  mc_rijndaelSetupEncrypt (_ba_uint32 (rk),
                            _ba_uint8_off (key, off1),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
 
 CAMLprim value
-caml_nc_aes_derive_d_key (value key, value off1, value kr, value rounds, value __unused (rk)) {
-  nc_rijndaelSetupDecrypt (_ba_uint32 (kr),
+mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value __unused (rk)) {
+  mc_rijndaelSetupDecrypt (_ba_uint32 (kr),
                            _ba_uint8_off (key, off1),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
 
 CAMLprim value
-caml_nc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _nc_aes_enc_blocks ( _ba_uint8_off (src, off1),
+mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+  _mc_aes_enc_blocks ( _ba_uint8_off (src, off1),
                        _ba_uint8_off (dst, off2),
                        _ba_uint32 (rk),
                        Int_val (rounds),
@@ -1260,8 +1260,8 @@ caml_nc_aes_enc (value src, value off1, value dst, value off2, value rk, value r
 }
 
 CAMLprim value
-caml_nc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _nc_aes_dec_blocks ( _ba_uint8_off (src, off1),
+mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+  _mc_aes_dec_blocks ( _ba_uint8_off (src, off1),
                        _ba_uint8_off (dst, off2),
                        _ba_uint32 (rk),
                        Int_val (rounds),
@@ -1269,9 +1269,9 @@ caml_nc_aes_dec (value src, value off1, value dst, value off2, value rk, value r
   return Val_unit;
 }
 
-CAMLprim value caml_nc_aes_mode (__unit ()) { return Val_int (0); }
+CAMLprim value mc_aes_mode (__unit ()) { return Val_int (0); }
 
-__define_bc_7 (caml_nc_aes_enc)
-__define_bc_7 (caml_nc_aes_dec)
+__define_bc_7 (mc_aes_enc)
+__define_bc_7 (mc_aes_dec)
 
-#endif /* __nc_AES_GENERIC__ */
+#endif /* __mc_AES_GENERIC__ */

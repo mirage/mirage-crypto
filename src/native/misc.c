@@ -1,9 +1,9 @@
-#include "nocrypto.h"
+#include "mirage_crypto.h"
 
 
 static inline void xor_into (uint8_t *src, uint8_t *dst, size_t n) {
 
-#if defined (__nc_SSE__)
+#if defined (__mc_SSE__)
   for (; n >= 16; n -= 16, src += 16, dst += 16)
     _mm_storeu_si128 (
         (__m128i*) dst,
@@ -18,7 +18,7 @@ static inline void xor_into (uint8_t *src, uint8_t *dst, size_t n) {
   for (; n --; ++ src, ++ dst) *dst = *src ^ *dst;
 }
 
-static inline void _nc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks) {
+static inline void _mc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks) {
   uint64_t qw = be64_to_cpu (*init);
   while (blocks --) *(dst ++) = cpu_to_be64 (qw ++);
 }
@@ -33,7 +33,7 @@ static inline void _nc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks)
  *   - Loop unrolling.
  *   - SSE carry bit handling.
  */
-static inline void _nc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks) {
+static inline void _mc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks) {
   uint64_t qw1 = init[0],
            qw2 = be64_to_cpu (init[1]);
   for (; blocks --; dst += 2) {
@@ -44,9 +44,9 @@ static inline void _nc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks
 }
 
 /* The GCM counter. Counts on the last 32 bits, ignoring carry. */
-static inline void _nc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t blocks) {
+static inline void _mc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t blocks) {
 
-#if defined (__nc_SSE__)
+#if defined (__mc_SSE__)
   __m128i ctr, c1   = _mm_set_epi32 (1, 0, 0, 0),
                mask = _mm_set_epi64x (0x0c0d0e0f0b0a0908, 0x0706050403020100);
   ctr = _mm_shuffle_epi8 (_mm_loadu_si128 ((__m128i *) init), mask);
@@ -68,7 +68,7 @@ static inline void _nc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t bloc
 }
 
 CAMLprim value
-caml_nc_xor_into (value b1, value off1, value b2, value off2, value n) {
+mc_xor_into (value b1, value off1, value b2, value off2, value n) {
   xor_into (_ba_uint8_off (b1, off1), _ba_uint8_off (b2, off2), Int_val (n));
   return Val_unit;
 }
@@ -80,6 +80,6 @@ caml_nc_xor_into (value b1, value off1, value b2, value off2, value n) {
     return Val_unit;                                                     \
   }
 
-__export_counter (caml_nc_count_8_be, _nc_count_8_be);
-__export_counter (caml_nc_count_16_be, _nc_count_16_be);
-__export_counter (caml_nc_count_16_be_4, _nc_count_16_be_4);
+__export_counter (mc_count_8_be, _mc_count_8_be);
+__export_counter (mc_count_16_be, _mc_count_16_be);
+__export_counter (mc_count_16_be_4, _mc_count_16_be_4);
