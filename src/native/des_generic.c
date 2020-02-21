@@ -59,7 +59,7 @@ static unsigned char pc2[48] = {
 	40, 51, 30, 36, 46, 54,	29, 39, 50, 44, 32, 47,
 	43, 48, 38, 55, 33, 52,	45, 41, 49, 35, 28, 31 };
 
-void deskey(unsigned char *key, short edf) /* Thanks to James Gillogly & Phil Karn! */
+void mc_deskey(unsigned char *key, short edf) /* Thanks to James Gillogly & Phil Karn! */
 {
 	int i, j, l, m, n;
 	unsigned char pc1m[56], pcr[56];
@@ -113,11 +113,11 @@ unsigned long *raw1;
 		*cook	|= (*raw1 & 0x0003f000L) >> 4;
 		*cook++	|= (*raw1 & 0x0000003fL);
 		}
-	usekey(dough);
+	mc_usekey(dough);
 	return;
 	}
 
-void cpkey(into)
+void mc_cpkey(into)
 unsigned long *into;
 {
 	unsigned long *from, *endp;
@@ -127,7 +127,7 @@ unsigned long *into;
 	return;
 	}
 
-void usekey(from)
+void mc_usekey(from)
 unsigned long *from;
 {
 	unsigned long *to, *endp;
@@ -137,7 +137,7 @@ unsigned long *from;
 	return;
 	}
 
-void des(inblock, outblock)
+void mc_des(inblock, outblock)
 unsigned char *inblock, *outblock;
 {
 	unsigned long work[2];
@@ -401,19 +401,19 @@ unsigned long *block, *keys;
 
 #ifdef D2_DES
 
-void des2key(unsigned char hexkey[16], short mode) /* stomps on Kn3 too */
+void mc_des2key(unsigned char hexkey[16], short mode) /* stomps on Kn3 too */
 {
 	short revmod;
 
 	revmod = (mode == EN0) ? DE1 : EN0;
-	deskey(&hexkey[8], revmod);
-	cpkey(KnR);
-	deskey(hexkey, mode);
-	cpkey(Kn3);					/* Kn3 = KnL */
+	mc_deskey(&hexkey[8], revmod);
+	mc_cpkey(KnR);
+	mc_deskey(hexkey, mode);
+	mc_cpkey(Kn3);					/* Kn3 = KnL */
 	return;
 	}
 
-void Ddes(from, into)
+void mc_Ddes(from, into)
 unsigned char *from, *into;		/* unsigned char[8] */
 {
 	unsigned long work[2];
@@ -426,7 +426,7 @@ unsigned char *from, *into;		/* unsigned char[8] */
 	return;
 	}
 
-void D2des(from, into)
+void mc_D2des(from, into)
 unsigned char *from;			/* unsigned char[16] */
 unsigned char *into;			/* unsigned char[16] */
 {
@@ -454,7 +454,7 @@ unsigned char *into;			/* unsigned char[16] */
 	return;
 	}
 
-void makekey(aptr, kptr)
+void mc_makekey(aptr, kptr)
 char *aptr;				/* NULL-terminated  */
 unsigned char *kptr;		/* unsigned char[8] */
 {
@@ -463,7 +463,7 @@ unsigned char *kptr;		/* unsigned char[8] */
 	unsigned long savek[96];
 
 	cpDkey(savek);
-	des2key(Df_Key, EN0);
+	mc_des2key(Df_Key, EN0);
 	for( i = 0; i < 8; i++ ) kptr[i] = Df_Key[i];
 	first = 1;
 	while( (*aptr != '\0') || first ) {
@@ -472,14 +472,14 @@ unsigned char *kptr;		/* unsigned char[8] */
 			*store++ ^= *aptr & 0x7f;
 			*aptr++ = '\0';
 			}
-		Ddes(kptr, kptr);
+		mc_Ddes(kptr, kptr);
 		first = 0;
 		}
 	useDkey(savek);
 	return;
 	}
 
-void make2key(aptr, kptr)
+void mc_make2key(aptr, kptr)
 char *aptr;				/* NULL-terminated   */
 unsigned char *kptr;		/* unsigned char[16] */
 {
@@ -488,7 +488,7 @@ unsigned char *kptr;		/* unsigned char[16] */
 	unsigned long savek[96];
 
 	cpDkey(savek);
-	des2key(Df_Key, EN0);
+	mc_des2key(Df_Key, EN0);
 	for( i = 0; i < 16; i++ ) kptr[i] = Df_Key[i];
 	first = 1;
 	while( (*aptr != '\0') || first ) {
@@ -497,7 +497,7 @@ unsigned char *kptr;		/* unsigned char[16] */
 			*store++ ^= *aptr & 0x7f;
 			*aptr++ = '\0';
 			}
-		D2des(kptr, kptr);
+		mc_D2des(kptr, kptr);
 		first = 0;
 		}
 	useDkey(savek);
@@ -506,7 +506,7 @@ unsigned char *kptr;		/* unsigned char[16] */
 
 #ifndef D3_DES	/* D2_DES only */
 
-void cp2key(into)
+void mc_cp2key(into)
 unsigned long *into;	/* unsigned long[64] */
 {
 	unsigned long *from, *endp;
@@ -518,7 +518,7 @@ unsigned long *into;	/* unsigned long[64] */
 	return;
 	}
 
-void use2key(from)				/* stomps on Kn3 too */
+void mc_use2key(from)				/* stomps on Kn3 too */
 unsigned long *from;	/* unsigned long[64] */
 {
 	unsigned long *to, *endp;
@@ -533,7 +533,7 @@ unsigned long *from;	/* unsigned long[64] */
 
 #else	/* D3_DES too */
 
-void des3key(unsigned char hexkey[24], short mode)
+void mc_des3key(unsigned char hexkey[24], short mode)
 {
 	unsigned char *first, *third;
 	short revmod;
@@ -548,20 +548,20 @@ void des3key(unsigned char hexkey[24], short mode)
 		first = &hexkey[16];
 		third = hexkey;
 		}
-	deskey(&hexkey[8], revmod);
-	cpkey(KnR);
-	deskey(third, mode);
-	cpkey(Kn3);
-	deskey(first, mode);
+	mc_deskey(&hexkey[8], revmod);
+	mc_cpkey(KnR);
+	mc_deskey(third, mode);
+	mc_cpkey(Kn3);
+	mc_deskey(first, mode);
 	return;
 	}
 
-void cp3key(into)
+void mc_cp3key(into)
 unsigned long *into;	/* unsigned long[96] */
 {
 	unsigned long *from, *endp;
 
-	cpkey(into);
+	mc_cpkey(into);
 	into = &into[32];
 	from = KnR, endp = &KnR[32];
 	while( from < endp ) *into++ = *from++;
@@ -570,12 +570,12 @@ unsigned long *into;	/* unsigned long[96] */
 	return;
 	}
 
-void use3key(from)
+void mc_use3key(from)
 unsigned long *from;	/* unsigned long[96] */
 {
 	unsigned long *to, *endp;
 
-	usekey(from);
+	mc_usekey(from);
 	from = &from[32];
 	to = KnR, endp = &KnR[32];
 	while( to < endp ) *to++ = *from++;
@@ -622,7 +622,7 @@ unsigned char *into;			/* unsigned char[24] */
 	return;
 	}
 
-void make3key(aptr, kptr)
+void mc_make3key(aptr, kptr)
 char *aptr;				/* NULL-terminated   */
 unsigned char *kptr;		/* unsigned char[24] */
 {
@@ -630,8 +630,8 @@ unsigned char *kptr;		/* unsigned char[24] */
 	int first, i;
 	unsigned long savek[96];
 
-	cp3key(savek);
-	des3key(Df_Key, EN0);
+	mc_cp3key(savek);
+	mc_des3key(Df_Key, EN0);
 	for( i = 0; i < 24; i++ ) kptr[i] = Df_Key[i];
 	first = 1;
 	while( (*aptr != '\0') || first ) {
@@ -643,7 +643,7 @@ unsigned char *kptr;		/* unsigned char[24] */
 		D3des(kptr, kptr);
 		first = 0;
 		}
-	use3key(savek);
+	mc_use3key(savek);
 	return;
 	}
 
@@ -685,7 +685,7 @@ unsigned char *kptr;		/* unsigned char[24] */
 
 static inline void _mc_ddes (unsigned char *src, unsigned char *dst, unsigned int blocks) {
   while (blocks --) {
-    Ddes (src, dst);
+    mc_Ddes (src, dst);
     src += 8 ; dst += 8;
   }
 }
@@ -697,19 +697,19 @@ mc_des_key_size (__unit ()) {
 
 CAMLprim value
 mc_des_des3key (value key, value off, value direction) {
-  des3key (_ba_uint8_off (key, off), Int_val (direction));
+  mc_des3key (_ba_uint8_off (key, off), Int_val (direction));
   return Val_unit;
 }
 
 CAMLprim value
 mc_des_cp3key (value dst) {
-  cp3key ((unsigned long *) _ba_uint8 (dst));
+  mc_cp3key ((unsigned long *) _ba_uint8 (dst));
   return Val_unit;
 }
 
 CAMLprim value
 mc_des_use3key (value src) {
-  use3key ((unsigned long *) _ba_uint8 (src));
+  mc_use3key ((unsigned long *) _ba_uint8 (src));
   return Val_unit;
 }
 
