@@ -35,14 +35,14 @@ let params ~p ~q ~g = Cstruct.(of_hex p, of_hex q, of_hex g)
 let priv_of f ~p ~q ~gg ~x ~y =
   { Dsa.p = f p ; q = f q ; gg = f gg ; x = f x ; y = f y }
 
-let priv_of_cs  = priv_of Numeric.Z.of_cstruct_be
-let priv_of_hex = priv_of (fun cs -> hex cs |> Numeric.Z.of_cstruct_be)
+let priv_of_cs  = priv_of Z_extra.of_cstruct_be
+let priv_of_hex = priv_of (fun cs -> hex cs |> Z_extra.of_cstruct_be)
 
 let case_of ~domain ~hash ~x ~y ~k ~r ~s ~msg =
   let (p, q, gg) = domain in
   let priv   = priv_of_cs ~p ~q ~gg ~x:(hex x) ~y:(hex y)
   and (r, s) = Cstruct.(of_hex r, of_hex s)
-  and k      = Numeric.Z.of_cstruct_be (hex k)
+  and k      = Z_extra.of_cstruct_be (hex k)
   and msg    = hex msg in
   dsa_test ~priv ~msg ~k ~r ~s ~hash
 
@@ -2194,7 +2194,7 @@ let test_rfc6979 ~priv ~msg ~hash ~k ~r ~s  _ =
     K.generate ~key:priv h1 in
   assert_cs_equal
     ~msg:"computed k" k
-    Numeric.Z.(to_cstruct_be ~size:(bits priv.Dsa.q // 8) k') ;
+    (Z_extra.to_cstruct_be ~size:(Z.numbits priv.Dsa.q // 8) k') ;
   dsa_test ~priv ~msg ~k:k' ~r ~s ~hash ()
 
 

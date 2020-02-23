@@ -3,17 +3,15 @@ open Sexplib.Conv
 
 open Common
 
-type bits = int
-
 exception Invalid_public_key
 
 type group = {
-  p  : Z.t        ;  (* The prime modulus *)
-  gg : Z.t        ;  (* Group generator *)
-  q  : Z.t option ;  (* `gg`'s order, maybe *)
+  p  : Z_sexp.t        ;  (* The prime modulus *)
+  gg : Z_sexp.t        ;  (* Group generator *)
+  q  : Z_sexp.t option ;  (* `gg`'s order, maybe *)
 } [@@deriving sexp]
 
-type secret = { x : Z.t } [@@deriving sexp]
+type secret = { x : Z_sexp.t } [@@deriving sexp]
 
 (*
  * Estimates of equivalent-strength exponent sizes for the moduli sizes.
@@ -29,7 +27,7 @@ let exp_size bits =
   try snd @@ List.find (fun (g, _) -> g >= bits) exp_equivalent
   with Not_found -> exp_equivalent_max
 
-let modulus_size { p; _ } = Numeric.Z.bits p
+let modulus_size { p; _ } = Z.numbits p
 
 (*
  * Current thinking:
@@ -45,38 +43,38 @@ let key_of_secret_z ({ p; gg; _ } as group) x =
   match Z.(powm gg x p) with
   | ggx when bad_public_key group ggx
         -> raise Invalid_public_key
-  | ggx -> ({ x }, Numeric.Z.to_cstruct_be ggx)
+  | ggx -> ({ x }, Z_extra.to_cstruct_be ggx)
 
 let key_of_secret group ~s =
-  key_of_secret_z group (Numeric.Z.of_cstruct_be s)
+  key_of_secret_z group (Z_extra.of_cstruct_be s)
 
 (* XXX
  * - slightly weird distribution when bits > |q|
  * - exponentiation time
  *)
 let rec gen_key ?g ?bits ({ p; q; _ } as group) =
-  let pb = Numeric.Z.bits p in
+  let pb = Z.numbits p in
   let s = Option.(
     imin (get_or exp_size pb bits)
-         (q >>| Numeric.Z.bits |> get ~def:pb))
-    |> Rng.Z.gen_bits ?g ~msb:1 in
+         (q >>| Z.numbits |> get ~def:pb))
+    |> Z_extra.gen_bits ?g ~msb:1 in
   try key_of_secret_z group s with Invalid_public_key -> gen_key ?g ?bits group
 
 (* No time-masking. Does it matter in case of ephemeral DH??  *)
 let shared ({ p; _ } as group) { x } cs =
-  match Numeric.Z.of_cstruct_be cs with
+  match Z_extra.of_cstruct_be cs with
   | ggy when bad_public_key group ggy -> None
-  | ggy -> Some (Numeric.Z.to_cstruct_be (Z.powm ggy x p))
+  | ggy -> Some (Z_extra.to_cstruct_be (Z.powm ggy x p))
 
 (* Finds a safe prime with [p = 2q + 1] and [2^q = 1 mod p]. *)
 let rec gen_group ?g bits =
-  let gg     = Z.two
-  and (q, p) = Rng.safe_prime ?g (imax bits 1) in
+  let gg     = Z.(~$2)
+  and (q, p) = Z_extra.safe_prime ?g (imax bits 1) in
   if Z.(powm gg q p = one) then { p; gg; q = Some q } else gen_group ?g bits
 
 module Group = struct
 
-  let f z = Numeric.Z.of_cstruct_be (Cstruct.of_hex z)
+  let f z = Z_extra.of_cstruct_be (Cstruct.of_hex z)
 
   (* Safe-prime-style group: p = 2q + 1 && gg = 2 && gg^q = 1 mod p *)
   let s_group ~p =

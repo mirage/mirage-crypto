@@ -9,9 +9,9 @@ exceptions.
 
 Private-key operations are optionally protected through RSA blinding. *)
 
-module Rsa : sig
+type bits = int
 
-  type bits = int
+module Rsa : sig
 
   (** {1 Keys}
 
@@ -283,8 +283,6 @@ end
 (** {b DSA} digital signature algorithm. *)
 module Dsa : sig
 
-  type bits = int
-
   (** {1 DSA signature algorithm} *)
 
   type priv = {
@@ -379,8 +377,6 @@ end
 (** Diffie-Hellman, MODP version. *)
 module Dh : sig
 
-  type bits = int
-
   (** {1 Diffie-Hellman key exchange} *)
 
   exception Invalid_public_key
@@ -474,150 +470,43 @@ module Dh : sig
 
 end
 
-(** Numeric utilities. *)
-module Numeric : sig
+module Z_extra : sig
+  val of_cstruct_be : ?bits:bits -> Cstruct.t -> Z.t
+  (** [of_cstruct_be ~bits cs] interprets the bit pattern of [cs] as a
+      {{!t}[t]} in big-endian.
 
-  type bits = int
+      If [~bits] is not given, the operation considers the entire [cs],
+      otherwise the initial [min ~bits (bit-length cs)] bits of [cs].
 
-  (** Augmented numeric type.
+      Assuming [n] is the number of bits to extract, the [n]-bit in [cs] is
+      always the least significant bit of the result. Therefore:
+      {ul
+      {- if the bit size [k] of [t] is larger than [n], [k - n] most
+         significant bits in the result are [0]; and}
+      {- if [k] is smaller than [n], the result contains [k] last of the [n]
+         first bits of [cs].}} *)
 
-      Includes basic common numeric ops, range of conversions to and from
-      variously-sized int types, and a few basic function for representing such
-      numbers as {!Cstruct.t}. *)
-  module type S = sig
+  val to_cstruct_be : ?size:int -> Z.t -> Cstruct.t
+  (** [to_cstruct_be ~size t] is the big-endian representation of [t].
 
-    (** {1 Base}
+      If [~size] is not given, it defaults to the minimal number of bytes
+      needed to represent [t], which is [bits t / 8] rounded up.
 
-        Type [t] with the basic bit-twiddling related operations. *)
+      The least-significant bit of [t] is always the last bit in the result.
+      If the size is larger than needed, the output is padded with zero bits.
+      If it is smaller, the high bits in [t] are dropped. *)
 
-    type t
+  val into_cstruct_be : Z.t -> Cstruct.t -> unit
+  (** [into_cstruct_be t cs] writes the big-endian representation of [t] into
+      [cs]. It behaves like {{!to_cstruct_be}[to_cstruct_be]}, with [~size]
+      spanning the entire [cs]. *)
 
-    val zero : t
-    val one  : t
+  (** {1 Random generation} *)
 
-    val (lsr)  : t -> int -> t
-    val (lsl)  : t -> int -> t
-    val (land) : t -> t -> t
-    val (lor)  : t -> t -> t
-    val (lxor) : t -> t -> t
+  val gen : ?g:Mirage_crypto_rng.g -> Z.t -> Z.t
+  (** [gen ~g n] picks a value in the interval [\[0, n - 1\]] uniformly at random. *)
 
-    val (+)  : t -> t -> t
-    val (-)  : t -> t -> t
-
-    val succ : t -> t
-    val pred : t -> t
-
-    (** {1 Conversion} *)
-
-    val of_int   : int -> t
-    val of_int32 : int32 -> t
-    val of_int64 : int64 -> t
-    val to_int   : t -> int
-    val to_int32 : t -> int32
-    val to_int64 : t -> int64
-
-    (** {1 External representation} *)
-
-    val bit_bound : t -> bits
-    (** [bit_bound t] computes the upper bound of {{!bits}[bits]} quickly. *)
-
-    val pp_print : Format.formatter -> t -> unit
-    (** [pp_print ppf t] pretty-prints [t] on [ppf]. *)
-
-    val bits : t -> bits
-    (** [bits t] is the minimal number of bits needed to describe [t].
-
-        [(2^(bits t)) / 2 <= t < 2^(bits t)]. *)
-
-    val of_cstruct_be : ?bits:bits -> Cstruct.t -> t
-    (** [of_cstruct_be ~bits cs] interprets the bit pattern of [cs] as a
-        {{!t}[t]} in big-endian.
-
-        If [~bits] is not given, the operation considers the entire [cs],
-        otherwise the initial [min ~bits (bit-length cs)] bits of [cs].
-
-        Assuming [n] is the number of bits to extract, the [n]-bit in [cs] is
-        always the least significant bit of the result. Therefore:
-        {ul
-        {- if the bit size [k] of [t] is larger than [n], [k - n] most
-           significant bits in the result are [0]; and}
-        {- if [k] is smaller than [n], the result contains [k] last of the [n]
-           first bits of [cs].}} *)
-
-    val to_cstruct_be : ?size:int -> t -> Cstruct.t
-    (** [to_cstruct_be ~size t] is the big-endian representation of [t].
-
-        If [~size] is not given, it defaults to the minimal number of bytes
-        needed to represent [t], which is [bits t / 8] rounded up.
-
-        The least-significant bit of [t] is always the last bit in the result.
-        If the size is larger than needed, the output is padded with zero bits.
-        If it is smaller, the high bits in [t] are dropped. *)
-
-    val into_cstruct_be : t -> Cstruct.t -> unit
-    (** [into_cstruct_be t cs] writes the big-endian representation of [t] into
-        [cs]. It behaves like {{!to_cstruct_be}[to_cstruct_be]}, with [~size]
-        spanning the entire [cs]. *)
-  end
-
-  module Int   : S with type t = int
-  module Int32 : S with type t = int32
-  module Int64 : S with type t = int64
-  module Z     : S with type t = Z.t
-
-  (** {1 Misc elementary number theory} *)
-
-  val pseudoprime : Z.t -> bool
-  (** Miller-Rabin with sane rounds parameter. *)
-
-end
-
-module Rng : sig
-  type bits = int
-
-  (** Typed generation of a particular numeric type. *)
-  module type N = sig
-
-    type t
-    (** The type of extracted values. *)
-
-    val gen : ?g:Mirage_crypto_rng.g -> t -> t
-    (** [gen ~g n] picks a value in the interval [\[0, n - 1\]] uniformly at random. *)
-
-    val gen_r : ?g:Mirage_crypto_rng.g -> t -> t -> t
-    (** [gen_r ~g low high] picks a value from the interval [\[low, high - 1\]]
-        uniformly at random. *)
-
-    val gen_bits : ?g:Mirage_crypto_rng.g -> ?msb:bits -> bits -> t
-    (** [gen_bits ~g ~msb n] picks a bit-string [n] bits long, with [msb] most
-        significant bits set, and interprets it as a {{!t}t} in big-endidan.
-        This yields a value in the interval
-        [\[2^(n-1) + ... + 2^(n-msb), 2^n - 1\]].
-
-        [msb] defaults to [0] which reduces [gen_bits k] to [gen 2^k]. *)
-  end
-
-  (** {1 Generation of common numeric types} *)
-
-  module Make_N (N : Numeric.S) : N with type t = N.t
-    (** Creates a suite of generating functions over a numeric type. *)
-
-  module Int   : N with type t = int
-  module Int32 : N with type t = int32
-  module Int64 : N with type t = int64
-  module Z     : N with type t = Z.t
-
-
-  (** {1 Specialized generation} *)
-
-  val prime : ?g:Mirage_crypto_rng.g -> ?msb:bits -> bits -> Z.t
-  (** [prime ~g ~msb bits] generates a prime smaller than [2^bits], with [msb]
-      most significant bits set.
-
-      [prime ~g ~msb:1 bits] (the default) yields a prime in the interval
-      [\[2^(bits - 1), 2^bits - 1\]]. *)
-
-  val safe_prime : ?g:Mirage_crypto_rng.g -> bits -> Z.t * Z.t
-  (** [safe_prime ~g bits] gives a prime pair [(g, p)] such that [p = 2g + 1]
-      and [p] has [bits] significant bits. *)
+  val gen_r : ?g:Mirage_crypto_rng.g -> Z.t -> Z.t -> Z.t
+  (** [gen_r ~g low high] picks a value from the interval [\[low, high - 1\]]
+      uniformly at random. *)
 end

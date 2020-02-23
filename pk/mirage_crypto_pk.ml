@@ -1,5 +1,6 @@
+type bits = int
+
 module Dh = Dh
 module Dsa = Dsa
 module Rsa = Rsa
-module Numeric = Numeric
-module Rng = Rng
+module Z_extra = Z_extra
