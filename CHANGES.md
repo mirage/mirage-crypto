@@ -1,3 +1,7 @@
+# v0.5.1 (2020-02-24)
+
+* use dune for building this package (#47 @hannesm)
+
 # v0.5.0 (2019-11-01)
 
 * Use mirage-runtime provided hooks (since 3.7.0), see mirage/mirage#1010 (#45 @samoht)
