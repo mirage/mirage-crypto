@@ -1,0 +1,11 @@
+(copy_files# ../lib/native/*)
+
+(library
+ (name mirage_entropy_freestanding)
+ (public_name mirage-entropy.freestanding)
+ (optional)
+ (libraries ocaml-freestanding)
+ (c_flags (:include ../lib/cflags.sexp) (:include cflags-freestanding.sexp))
+ (c_names entropy_cpu_stubs))
+
+(rule (with-stdout-to cflags-freestanding.sexp (run ./cflags.sh)))
