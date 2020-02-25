@@ -8,7 +8,7 @@ module Getrandom = struct
 
   let block = 256
 
-  open Bigarray
+  open Stdlib.Bigarray
   type buffer = (char, int8_unsigned_elt, c_layout) Array1.t
   external getrandom : buffer -> int -> unit = "mc_getrandom" [@@noalloc]
 

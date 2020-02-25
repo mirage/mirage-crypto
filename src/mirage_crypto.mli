@@ -14,12 +14,6 @@
     public key cryptography.
 *)
 
-(*
- * Doc note: Sexplib conversions are noted explicitly instead of using
- * `[@@deriving sexp]` because the syntax extension interacts badly with
- * ocamldoc.
- *)
-
 (** {1 Utilities} *)
 
 (** Base64 conversion.
@@ -201,9 +195,7 @@ module Hash : sig
   (** {1 Codes-based interface} *)
 
   type hash = [ `MD5 | `SHA1 | `SHA224 | `SHA256 | `SHA384 | `SHA512 ]
-  (** Algorithm codes.
-
-      {e [Sexplib] convertible}. *)
+  (** Algorithm codes. *)
 
   val hashes : hash list
 
@@ -218,12 +210,6 @@ module Hash : sig
   val mac         : [< hash ] -> key:Cstruct.t -> Cstruct.t -> digest
   val maci        : [< hash ] -> key:Cstruct.t -> Cstruct.t iter -> digest
   val digest_size : [< hash ] -> int
-
-  (**/**)
-  val hash_of_sexp : Sexplib.Sexp.t -> hash
-  val sexp_of_hash : hash -> Sexplib.Sexp.t
-  (**/**)
-
 end
 
 
