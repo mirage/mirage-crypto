@@ -16,6 +16,11 @@ Kaloper.  It was forked with the permission of the original author in order to
 facilitate changes (e.g. build system) required by Mirage that the upstream
 didn't have time to keep up with.
 
+Mirage-crypto-entropy embeds the former mirage-entropy opam package, which
+implements various entropy sources for MirageOS unikernels:
+- timer based ones (see [whirlwind RNG paper](https://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf))
+- rdseed and rdrand (x86/x86-64 only)
+
 # Status
 
 This is a work in progress repository that is not yet released.  Please see

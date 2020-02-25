@@ -13,11 +13,11 @@ let handler ~source buf =
   Format.printf "recv: (src:%d) %a%!" source pp_cs buf
 
 let with_entropy act =
-  Entropy.connect () >>= fun t ->
-    Entropy.add_handler t handler >>= fun _tok ->
-      act () >>= fun res ->
-        Entropy.disconnect t >|= fun () -> res
+  Mirage_crypto_entropy.connect () >>= fun t ->
+  Mirage_crypto_entropy.add_handler t handler >>= fun _tok ->
+  act () >>= fun res ->
+  Mirage_crypto_entropy.disconnect t >|= fun () -> res
 
 let () =
   OS.(Main.run (with_entropy (fun () ->
-    Time.sleep_ns 1_000L)))
+      Time.sleep_ns 1_000L)))

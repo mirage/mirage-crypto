@@ -25,3 +25,9 @@
  (libraries test_common test_common_pk mirage-crypto-pk mirage-crypto-rng.unix oUnit)
  (package mirage-crypto-pk)
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
+
+(test
+ (name test_entropy)
+ (modules test_entropy)
+ (package mirage-crypto-entropy)
+ (libraries mirage-crypto-entropy mirage-unix))

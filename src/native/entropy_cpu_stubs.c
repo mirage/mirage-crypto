@@ -4,6 +4,8 @@
 
 #include <caml/mlvalues.h>
 
+#include "mirage_crypto.h"
+
 #if defined (__i386__) || defined (__x86_64__)
 #define __x86__
 
@@ -76,7 +78,7 @@ static void detect () {
 #endif
 }
 
-CAMLprim value caml_cycle_counter (value unit) {
+CAMLprim value caml_cycle_counter (value __unused(unit)) {
 #if defined (__x86__)
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
@@ -86,7 +88,7 @@ CAMLprim value caml_cycle_counter (value unit) {
 #endif
 }
 
-CAMLprim value caml_cpu_random (value unit) {
+CAMLprim value caml_cpu_random (value __unused(unit)) {
 #if defined (__x86__)
   random_t r = 0;
   if (__cpu_rng == RNG_RDSEED) {
@@ -101,11 +103,11 @@ CAMLprim value caml_cpu_random (value unit) {
 #endif
 }
 
-CAMLprim value caml_cpu_rng_type (value unit) {
+CAMLprim value caml_cpu_rng_type (value __unused(unit)) {
   return Val_int (__cpu_rng);
 }
 
-CAMLprim value caml_entropy_detect (value unit) {
+CAMLprim value caml_entropy_detect (value __unused(unit)) {
   detect ();
   return Val_unit;
 }

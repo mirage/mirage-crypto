@@ -7,7 +7,8 @@
   (c_names misc
            md5 sha1 sha256 sha512 hash_stubs
            aes_generic aes_aesni ghash_generic ghash_pclmul
-           des_generic)
+           des_generic
+           entropy_cpu_stubs)
   (c_flags (:include cflags.sexp)))
 
 (include_subdirs unqualified)
