@@ -1,23 +1,34 @@
 open Lwt.Infix
 
-let fpr ppf fmt = Format.fprintf ppf fmt
+module Printing_rng = struct
+  type g = unit
 
-let pp_cs ppf cs =
-  fpr ppf "@,";
-  for i = 0 to Cstruct.len cs - 1 do
-    fpr ppf "%02x" (Cstruct.get_uint8 cs i)
-  done;
-  fpr ppf "@,"
+  let block = 16
 
-let handler ~source buf =
-  Format.printf "recv: (src:%d) %a%!" source pp_cs buf
+  let create () = ()
+
+  let generate ~g:_ _n = assert false
+
+  let reseed ~g:_ data =
+    Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
+
+  let accumulate ~g:_ =
+    let print ~source data =
+      Format.printf "accumulate: (src:%d) %a@.%!" source Cstruct.hexdump_pp data
+    in
+    `Acc print
+
+  let seeded ~g:_ = true
+end
 
 let with_entropy act =
-  Mirage_crypto_entropy.connect () >>= fun t ->
-  Mirage_crypto_entropy.add_handler t handler >>= fun _tok ->
-  act () >>= fun res ->
-  Mirage_crypto_entropy.disconnect t >|= fun () -> res
+  Mirage_crypto_entropy.initialize (module Printing_rng) >>= fun _ ->
+  Format.printf "entropy sources: %a@,%!"
+    (fun ppf -> List.iter (fun x ->
+         Mirage_crypto_entropy.pp_source ppf x;
+         Format.pp_print_space ppf ()))
+    (Mirage_crypto_entropy.sources ());
+  act ()
 
 let () =
-  OS.(Main.run (with_entropy (fun () ->
-      Time.sleep_ns 1_000L)))
+  OS.(Main.run (with_entropy (fun () -> Time.sleep_ns 1_000L)))

@@ -27,19 +27,23 @@
  *)
 
 type t
-
-type handler = source:int -> Cstruct.t -> unit
-type token
+(** The type of the entropy device. *)
 
 type source = [
-    `Timer
+  | `Timer
   | `Rdseed
   | `Rdrand
-  | `Xentropyd
 ]
+(** A polymorphic variant of entropy sources. *)
 
-val sources : t -> source list
-val connect : unit -> t Lwt.t
-val disconnect : t -> unit Lwt.t
-val add_handler : t -> handler -> token Lwt.t
-val remove_handler : t -> token -> unit
+val pp_source : Format.formatter -> source -> unit
+(** [pp_source ppf source] pretty-prints [source] on [ppf]. *)
+
+val sources : unit -> source list
+(** [sources ()] is a list of supported entropy sources on your platform. *)
+
+val initialize :
+  ?g:'a -> (module Mirage_crypto_rng.Generator with type g = 'a) -> t Lwt.t
+(** [initialize ~g rng_module] sets the default generator to the [rng_module]
+    and sets up periodic entropy feeding for that rng. This function raises if
+    called a second time. *)

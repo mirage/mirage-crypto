@@ -22,8 +22,7 @@
 
     Suitable generators are provided by sub-libraries
     {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}
-    and {{!Mirage_crypto_rng_mirage}mirage-crypto-rng.mirage}. Entropy
-    harvesting for MirageOS is provided by the mirage-entropy opam packages.
+    and {{!Mirage_crypto_entropy}mirage-crypto-entropy} (for MirageOS).
     Although this module exposes a more fine-grained interface, allowing manual
     seeding of generators, this is intended either for implementing
     entropy-harvesting modules, or very specialized purposes. Users of this
@@ -127,7 +126,9 @@ val generator : g ref
     explicitly supplied one.
 
     Swapping the [generator] is a way to subvert the random-generation process
-    e.g. to make it fully deterministic.
+    e.g. to make it fully deterministic. Don't do that unless you know what
+    you're doing, but use [Mirage_crypto_entropy.initialize] or
+    [Mirage_crypto_rng_unix.initialize ()].
 
     [generator] defaults to {{!Null}Null}. *)
 
