@@ -73,7 +73,7 @@ let gen_ctr nonce i =
   let pre, _, q = gen_ctr_prefix nonce in
   pre <+> encode_len q i
 
-let prepare_header nonce adata tlen plen =
+let prepare_header nonce adata plen tlen =
   let ada = if Cstruct.len adata = 0 then Cstruct.empty else gen_adata adata in
   format nonce adata plen tlen <+> ada
 
@@ -81,7 +81,7 @@ type mode = Encrypt | Decrypt
 
 let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?(adata = Cstruct.empty) data =
   let datalen = Cstruct.len data in
-  let cbcheader = prepare_header nonce adata maclen datalen in
+  let cbcheader = prepare_header nonce adata datalen maclen in
   let target = Cstruct.create datalen in
 
   let blkprefix, blkpreflen, preflen = gen_ctr_prefix nonce in
