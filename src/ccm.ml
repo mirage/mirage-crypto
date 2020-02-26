@@ -5,7 +5,6 @@ let (<+>) = Cs.(<+>)
 let block_size = 16
 
 let flags bit6 len1 len2 =
-  assert (len1 < 8 && len2 < 8);
   let byte = Cstruct.create 1
   and data = bit6 lsl 6 + len1 lsl 3 + len2 in
   Cstruct.set_uint8 byte 0 data ;
@@ -142,16 +141,19 @@ let crypto_t t nonce cipher key =
   cipher ~key ctr ctr ;
   Cs.xor_into ctr t (Cstruct.len t)
 
+let valid_nonce nonce =
+  let nsize = Cstruct.len nonce in
+  if nsize < 7 || nsize > 13 then
+    invalid_arg "CCM: nonce length not between 7 and 13: %d" nsize
+
 let generation_encryption ~cipher ~key ~nonce ~maclen ?adata data =
+  valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Encrypt ~key ~nonce ~maclen ?adata data in
   crypto_t t nonce cipher key ;
   cdata <+> t
 
 let decryption_verification ~cipher ~key ~nonce ~maclen ?adata data =
-  let () =
-    let nsize = Cstruct.len nonce in
-    if nsize < 7 || nsize > 13 then
-      invalid_arg "CCM: nonce length %d" nsize in
+  valid_nonce nonce;
   if Cstruct.len data <= maclen then
     None
   else
