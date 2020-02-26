@@ -391,6 +391,28 @@ let ccm_regressions =
     test_case enc_dec_empty_message ;
   ]
 
+let gcm_regressions =
+  let open Cipher_block.AES.GCM in
+  let msg = vx "000102030405060708090a0b0c0d0e0f" in
+  let key = of_secret msg
+  and iv = Cstruct.empty
+  in
+  let iv_zero_length_enc _ =
+    (* reported in https://github.com/mirleft/ocaml-nocrypto/issues/169 *)
+    assert_raises ~msg:"GCM with iv of length 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
+      (fun () -> encrypt ~key ~iv msg)
+  and iv_zero_length_dec _ =
+    assert_raises ~msg:"GCM with iv of 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
+      (fun () -> decrypt ~key ~iv msg)
+  in
+  [
+    test_case iv_zero_length_enc ;
+    test_case iv_zero_length_dec ;
+  ]
+
+
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
@@ -398,4 +420,5 @@ let suite = [
   "AES-GCM" >::: gcm_cases ;
   "AES-CCM" >::: ccm_cases ;
   "AES-CCM-REGRESSION" >::: ccm_regressions ;
+  "AES-GCM-REGRESSION" >::: gcm_regressions ;
 ]
