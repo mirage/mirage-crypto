@@ -32,10 +32,7 @@ let format nonce adata q t (* mac len *) =
   let small_q = 15 - n in
   (* first byte (flags): *)
   (* reserved | adata | (t - 2) / 2 | q - 1 *)
-  let b6 = match adata with
-    | Some _ -> 1
-    | None   -> 0
-  in
+  let b6 = if Cstruct.len adata = 0 then 0 else 1 in
   let flag = flags b6 ((t - 2) / 2) (small_q - 1) in
   (* first octet block:
      0          : flags
@@ -77,15 +74,12 @@ let gen_ctr nonce i =
   pre <+> encode_len q i
 
 let prepare_header nonce adata tlen plen =
-  let ada = match adata with
-    | Some x -> gen_adata x
-    | None   -> Cstruct.empty
-  in
+  let ada = if Cstruct.len adata = 0 then Cstruct.empty else gen_adata adata in
   format nonce adata plen tlen <+> ada
 
 type mode = Encrypt | Decrypt
 
-let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?adata data =
+let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?(adata = Cstruct.empty) data =
   let datalen = Cstruct.len data in
   let cbcheader = prepare_header nonce adata maclen datalen in
   let target = Cstruct.create datalen in

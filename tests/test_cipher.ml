@@ -323,10 +323,26 @@ let ccm_cases =
          ~maclen: 8
   ]
 
+let ccm_regressions =
+  let open Cipher_block.AES.CCM in
+  let no_vs_empty_ad _ =
+    (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/166 *)
+    (* see RFC 3610 Section 2.1, AD of length 0 should be same as no AD *)
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "0001020304050607"
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_cs_equal ~msg:"CCM no vs empty ad"
+      (encrypt ~key ~nonce plaintext)
+      (encrypt ~adata:Cstruct.empty ~key ~nonce plaintext)
+  in
+  [ test_case no_vs_empty_ad ]
+
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
   "AES-CTR" >::: [ "SP 300-38A" >::: aes_ctr_cases; ] ;
   "AES-GCM" >::: gcm_cases ;
   "AES-CCM" >::: ccm_cases ;
+  "AES-CCM-REGRESSION" >::: ccm_regressions ;
 ]
