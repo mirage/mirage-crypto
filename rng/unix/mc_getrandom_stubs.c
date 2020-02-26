@@ -6,9 +6,16 @@
 #include <caml/bigarray.h>
 
 #if defined(__linux)
+# include <errno.h>
 // on Linux, we use getrandom and loop
-#include <sys/random.h>
-#include <errno.h>
+
+# if __GLIBC__ && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 25
+# include <sys/syscall.h>
+# define getrandom(buf, len, flags) syscall(SYS_getrandom, (buf), (len), (flags))
+# else
+# include <sys/random.h>
+# define getrandom(buf, len, flags) getrandom((buf), (len), (flags))
+# endif
 
 void raw_getrandom (uint8_t *data, uint32_t len) {
   int r, off = 0;
@@ -19,7 +26,6 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
     off += r;
   }
 }
-
 #elif (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__))
 // on BSD and macOS, loop (in pieces of 256) getentropy
 #if defined(__APPLE__)
