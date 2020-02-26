@@ -59,17 +59,27 @@ enum cpu_rng_t {
 
 static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
+#define RETRIES 10
+
 static void detect () {
 #if defined (__x86__)
 
   unsigned int sig, eax, ebx, ecx, edx;
   int max = __get_cpuid_max (0, &sig);
+  random_t r = 0;
 
   if (max < 1) return;
 
   if (sig == signature_INTEL_ebx || sig == signature_AMD_ebx) {
     __cpuid (1, eax, ebx, ecx, edx);
-    if (ecx & bit_RDRND) __cpu_rng = RNG_RDRAND;
+    if (ecx & bit_RDRND) {
+      /* AMD Ryzen 3000 bug where RDRAND always returns 0xFFFFFFFF */
+      for (int i = 0; i < RETRIES; i++)
+        if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
+          __cpu_rng = RNG_RDRAND;
+          break;
+        }
+    }
     if (max > 7) {
       __cpuid_count (7, 0, eax, ebx, ecx, edx);
       if (ebx & bit_RDSEED) __cpu_rng = RNG_RDSEED;
@@ -91,12 +101,14 @@ CAMLprim value caml_cycle_counter (value __unused(unit)) {
 CAMLprim value caml_cpu_random (value __unused(unit)) {
 #if defined (__x86__)
   random_t r = 0;
-  if (__cpu_rng == RNG_RDSEED) {
-    _rdseed_step (&r);
-  } else if (__cpu_rng == RNG_RDRAND) {
-    _rdrand_step (&r);
+  for (int i = 0; i < RETRIES; i++) {
+    if (__cpu_rng == RNG_RDSEED) {
+      if (_rdseed_step (&r) == 1) return Val_long (r);
+    } else if (__cpu_rng == RNG_RDRAND) {
+      if (_rdrand_step (&r) == 1) return Val_long (r);
+    }
   }
-  return Val_long (r); /* Zeroed-out if carry == 0. */
+  return Val_long (0);
 #else
   /* ARM: CPU-assisted randomness here. */
   return Val_long (0);
