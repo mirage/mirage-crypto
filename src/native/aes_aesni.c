@@ -28,7 +28,7 @@ int _mc_aesni_rk_size (uint8_t rounds) {
 }
 
 static inline __m128i* __rk (const void *rk) {
-  return (__m128i *) ((uint64_t) (rk + 15) & -16);
+  return (__m128i *) (((uint64_t)rk + 15) & -16);
 }
 
 static inline __m128i __mix (__m128i r1, __m128i r2) {

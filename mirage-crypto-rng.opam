@@ -18,8 +18,4 @@ depends: [
   "ounit" {with-test}
   "cstruct" {>="3.2.0"}
   "mirage-crypto" {=version}
-
-#needed for the mirage subpackage - may move to a separate package
-  "lwt"
-  "mirage-entropy"
 ]

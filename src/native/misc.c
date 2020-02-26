@@ -80,6 +80,6 @@ mc_xor_into (value b1, value off1, value b2, value off2, value n) {
     return Val_unit;                                                     \
   }
 
-__export_counter (mc_count_8_be, _mc_count_8_be);
-__export_counter (mc_count_16_be, _mc_count_16_be);
-__export_counter (mc_count_16_be_4, _mc_count_16_be_4);
+__export_counter (mc_count_8_be, _mc_count_8_be)
+__export_counter (mc_count_16_be, _mc_count_16_be)
+__export_counter (mc_count_16_be_4, _mc_count_16_be_4)
