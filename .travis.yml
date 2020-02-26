@@ -11,5 +11,7 @@ matrix:
   include:
   - os: osx
     env: OCAML_VERSION=4.08
+  - dist: xenial
+    env: OCAML_VERSION=4.08
 notifications:
   email: false
