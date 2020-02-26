@@ -154,7 +154,7 @@ let generation_encryption ~cipher ~key ~nonce ~maclen ?adata data =
 
 let decryption_verification ~cipher ~key ~nonce ~maclen ?adata data =
   valid_nonce nonce;
-  if Cstruct.len data <= maclen then
+  if Cstruct.len data < maclen then
     None
   else
     let pclen = Cstruct.len data - maclen in

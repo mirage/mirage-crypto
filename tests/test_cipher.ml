@@ -370,6 +370,17 @@ let ccm_regressions =
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 14")
       (fun () -> encrypt ~key ~nonce plaintext)
+  and enc_dec_empty_message _ =
+    (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/168 *)
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "0001020304050607"
+    and adata = Cstruct.of_string "hello"
+    and p = Cstruct.empty
+    in
+    let cipher = encrypt ~adata ~key ~nonce p in
+    match decrypt ~key ~nonce ~adata cipher with
+    | Some x -> assert_cs_equal ~msg:"CCM decrypt of empty message" p x
+    | None -> assert_failure "decryption broken"
   in
   [
     test_case no_vs_empty_ad ;
@@ -377,6 +388,7 @@ let ccm_regressions =
     test_case short_nonce_enc2 ;
     test_case short_nonce_enc3 ;
     test_case long_nonce_enc ;
+    test_case enc_dec_empty_message ;
   ]
 
 let suite = [
