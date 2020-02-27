@@ -1,13 +1,8 @@
 let rec until p f = let r = f () in if p r then r else until p f
 
 (* The Sexplib hack... *)
-module Z = struct
-  include Z
-
-  let two   = ~$2
-  let three = ~$3
-
-  let pp = pp_print
+module Z_sexp = struct
+  type t = Z.t
 
   open Sexplib.Conv
   let sexp_of_t z = sexp_of_string (Z.to_string z)

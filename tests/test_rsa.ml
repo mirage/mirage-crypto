@@ -5,7 +5,12 @@ open Mirage_crypto
 open Mirage_crypto_pk
 
 open Test_common
-open Test_common_pk
+open Test_common_random
+
+let vz = Z.of_string_base 16
+
+let random_is seed =
+  Mirage_crypto_rng.create ~seed (module Mirage_crypto_rng.Null)
 
 let gen_rsa ~bits =
   let e     = Z.(if bits < 24 then ~$3 else ~$0x10001) in
@@ -21,7 +26,7 @@ let rsa_selftest ~bits n =
     let msg =
       let size = bits // 8 in
       let cs = Mirage_crypto_rng.generate size
-      and i  = Rng.Int.gen_r 1 size in
+      and i  = 1 + Randomconv.int ~bound:(pred size) Mirage_crypto_rng.generate in
       Cstruct.set_uint8 cs 0 0;
       Cstruct.(set_uint8 cs i (get_uint8 cs i lor 2));
       cs in

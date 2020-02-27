@@ -3,7 +3,7 @@ open OUnit2
 open Mirage_crypto
 
 open Test_common
-open Test_common_pk
+open Test_common_random
 
 (* randomized selfies *)
 
@@ -38,12 +38,12 @@ let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
   "selftest" >:: times ~n @@ fun _ ->
     let key  = M.of_secret @@ Mirage_crypto_rng.generate (sample M.key_sizes)
     and ctr  = Mirage_crypto_rng.generate bs |> M.ctr_of_cstruct
-    and data = Mirage_crypto_rng.(generate @@ bs + Mirage_crypto_pk.Rng.Int.gen (20 * bs)) in
+    and data = Mirage_crypto_rng.(generate @@ bs + Randomconv.int ~bound:(20 * bs) Mirage_crypto_rng.generate) in
     let enc = M.encrypt ~key ~ctr data in
     let dec = M.decrypt ~key ~ctr enc in
     assert_cs_equal ~msg:"CTR e->d" data dec;
     let (d1, d2) =
-      Cstruct.split data @@ bs * Mirage_crypto_pk.Rng.Int.gen (Cstruct.len data / bs) in
+      Cstruct.split data @@ bs * Randomconv.int ~bound:(Cstruct.len data / bs) Mirage_crypto_rng.generate in
     assert_cs_equal ~msg:"CTR chain" enc @@
       Cstruct.append (M.encrypt ~key ~ctr d1)
                      (M.encrypt ~key ~ctr:(M.next_ctr ~ctr d1) d2)
@@ -56,7 +56,7 @@ let ctr_offsets (type c) ~zero (m : (module Cipher_block.S.CTR with type ctr = c
       let ctr = match i with
         | 0 -> M.add_ctr zero (-1L)
         | _ -> Mirage_crypto_rng.generate M.block_size |> M.ctr_of_cstruct
-      and gap = Mirage_crypto_pk.Rng.Int.gen 64 in
+      and gap = Randomconv.int ~bound:64 Mirage_crypto_rng.generate in
       let s1 = M.stream ~key ~ctr ((gap + 1) * M.block_size)
       and s2 = M.stream ~key ~ctr:(M.add_ctr ctr (Int64.of_int gap)) M.block_size in
       assert_cs_equal ~msg:"shifted stream"
@@ -66,7 +66,7 @@ let ctr_offsets (type c) ~zero (m : (module Cipher_block.S.CTR with type ctr = c
 let xor_selftest n =
   "selftest" >:: times ~n @@ fun _ ->
 
-    let n         = Mirage_crypto_pk.Rng.Int.gen 30 in
+    let n         = Randomconv.int ~bound:30 Mirage_crypto_rng.generate in
     let (x, y, z) = Mirage_crypto_rng.(generate n, generate n, generate n) in
 
     let xyz  = Uncommon.Cs.(xor (xor x y) z)
@@ -80,7 +80,7 @@ let xor_selftest n =
 
 let b64_selftest n =
   "selftest" >:: times ~n @@ fun _ ->
-    let n   = Mirage_crypto_pk.Rng.Int.gen 1024 in
+    let n   = Randomconv.int ~bound:1024 Mirage_crypto_rng.generate in
     let x   = Mirage_crypto_rng.generate n in
 
     let enc = Base64.encode x in

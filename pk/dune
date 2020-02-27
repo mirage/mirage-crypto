@@ -3,4 +3,4 @@
   (public_name mirage-crypto-pk)
   (libraries cstruct zarith mirage-crypto mirage-crypto-rng sexplib)
   (preprocess (pps ppx_sexp_conv))
-  (private_modules common dh dsa numeric rng rsa))
+  (private_modules common dh dsa rsa z_extra))
