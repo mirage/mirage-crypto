@@ -112,7 +112,7 @@ CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
   int i = RETRIES;
   switch (__cpu_rng) {
   case RNG_RDSEED:
-    do { ok = _rdseed_step (&r); } while ( !(ok | !--i) );
+    do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
     break;
   case RNG_RDRAND:
     do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
