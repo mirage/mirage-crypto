@@ -1,9 +1,7 @@
 open Mirage_crypto
 
-open Uncommon
 open Cipher_block
 open Hash
-
 
 module Time = struct
 
@@ -81,7 +79,7 @@ let benchmarks = [
   bm "aes-128-ghash" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
     and iv  = Mirage_crypto_rng.generate 12 in
-    throughput name (fun cs -> AES.GCM.encrypt ~key ~iv ~adata:cs Cs.empty));
+    throughput name (fun cs -> AES.GCM.encrypt ~key ~iv ~adata:cs Cstruct.empty));
 
   bm "aes-128-ccm" (fun name ->
     let key   = AES.CCM.of_secret ~maclen:16 (Mirage_crypto_rng.generate 16)
