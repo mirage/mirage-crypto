@@ -46,4 +46,4 @@ val initialize :
   ?g:'a -> (module Mirage_crypto_rng.Generator with type g = 'a) -> t Lwt.t
 (** [initialize ~g rng_module] sets the default generator to the [rng_module]
     and sets up periodic entropy feeding for that rng. This function raises if
-    called a second time. *)
+    it is called a second time. *)

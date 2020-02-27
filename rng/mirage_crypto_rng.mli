@@ -9,7 +9,7 @@
        facility to convert such modules into actual {{!g}generators}, and
        functions that operate on this representation.}
     {- A global generator instance, the default is {{!Null}Null}, used
-       when one is not explicitly supplied.}
+       when one is not explicitly supplied.}}
 *)
 
 (** {1 Usage notes} *)
@@ -162,25 +162,11 @@ val strict : g option -> bool
 {[let rec f1 ?g ~n i =
   if i < 1 then [] else Rng.generate ?g n :: f1 ?g ~n (i - 1)]}
 
-    Generating a [Z.t] smaller than [10] and an [int64] in the range [\[3, 7\]]:
-{[let f2 ?g () = Rng.(Z.gen ?g ~$10, Int64.gen_r 3L 8L)]}
+    Generating a [Z.t] smaller than [10]:
+{[let f2 ?g () = Mirage_crypto_pk.Z_extra.gen ?g Z.(~$10)]}
 
     Creating a local Fortuna instance and using it as a key-derivation function:
 {[let f3 secret =
   let g = Rng.(create ~seed:secret (module Generators.Fortuna)) in
   Rng.generate ~g 32]}
-
-    Generating a 17-bit prime with two leading bits set:
-{[let p = Rng.prime ~msb:2 17]}
-
-    Fisher-Yates shuffle:
-{[let f4 ?g arr =
-  let n = Array.length arr in
-  arr |> Array.iter @@ fun i ->
-    let j = Rng.Int.gen_r ?g i n in
-    let (a, b) = (arr.(i), arr.(j)) in
-    arr.(i) <- b ; arr.(j) <- a ]}
-      *)
-
-type buffer = Cstruct.t
-(** Type definition to satisfy MirageOS RANDOM signature *)
+*)

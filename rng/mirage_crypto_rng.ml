@@ -68,5 +68,3 @@ let block g =
 
 let strict g =
   let Generator (_, s, _) = get g in s
-
-type buffer = Cstruct.t

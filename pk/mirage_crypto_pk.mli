@@ -1,16 +1,8 @@
 (** {1 Public-key cryptography} *)
 
-(** {b RSA} public-key cryptography.
-
-Keys are taken to be trusted material, and their properties are not checked.
-
-Messages are checked not to exceed the key size, and this is signalled via
-exceptions.
-
-Private-key operations are optionally protected through RSA blinding. *)
-
 type bits = int
 
+(** {b RSA} public-key cryptography algorithm. *)
 module Rsa : sig
 
   (** {1 Keys}
@@ -20,7 +12,12 @@ module Rsa : sig
       the client to ensure the trustworthiness of keys.
 
       The two anchoring points provided are {{!generate}[generate]} and
-      {{!well_formed}[well_formed]}. *)
+      {{!well_formed}[well_formed]}.
+
+      Messages are checked not to exceed the key size, and this is signalled via
+      the {!Insufficient_key} exception.
+
+      Private-key operations are optionally protected through RSA blinding. *)
 
   exception Insufficient_key
   (** Raised if the key is too small to transform the given message, i.e. if the
@@ -143,8 +140,8 @@ module Rsa : sig
       result is correct. This is to counter Chinese remainder theorem attacks to
       factorize primes. If the computed signature is incorrect, it is again
       computed in the classical way (c ^ d mod n) without the Chinese remainder
-      theorem optimization. The deterministic PKCS1 signing, which is at danger,
-      uses [true] as default.
+      theorem optimization. The deterministic {{!PKCS1.sign}PKCS1 signing},
+      which is at danger, uses [true] as default.
 
       [~mask] defaults to [`Yes].
 
@@ -234,6 +231,8 @@ module Rsa : sig
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
   end
 
+  (** {1 OAEP padded modes} *)
+
   (** {b OAEP}-padded encryption, as defined by {b PKCS #1 v2.1}.
 
       The same hash function is used for padding and MGF. MGF is {b MGF1} as
@@ -258,6 +257,8 @@ module Rsa : sig
         defaults to [false]. *)
   end
 
+  (** {1 PSS signing} *)
+
   (** {b PSS}-based signing, as defined by {b PKCS #1 v2.1}.
 
       The same hash function is used for padding, MGF and computing message
@@ -269,7 +270,7 @@ module Rsa : sig
 
     val sign : ?g:Mirage_crypto_rng.g -> ?rsa_crt_hardening:bool ->
       ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ~g ~rsa_crt_hardening ~mask ~slen ~key message] the {p PSS}-padded
+    (** [sign ~g ~rsa_crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
         digest of [message], signed with the [key]. [rsa_crt_hardening] defaults
         to [false].
 
@@ -492,7 +493,10 @@ module Dh : sig
 
 end
 
+(** {b Z} Convert Z to big endian Cstruct.t and generate random Z values. *)
 module Z_extra : sig
+  (** {1 Conversion to and from Cstruct.t} *)
+
   val of_cstruct_be : ?bits:bits -> Cstruct.t -> Z.t
   (** [of_cstruct_be ~bits cs] interprets the bit pattern of [cs] as a
       {{!t}[t]} in big-endian.
