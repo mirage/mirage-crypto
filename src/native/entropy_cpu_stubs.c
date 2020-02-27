@@ -72,17 +72,24 @@ static void detect () {
 
   if (sig == signature_INTEL_ebx || sig == signature_AMD_ebx) {
     __cpuid (1, eax, ebx, ecx, edx);
-    if (ecx & bit_RDRND) {
-      /* AMD Ryzen 3000 bug where RDRAND always returns 0xFFFFFFFF */
+    if (ecx & bit_RDRND)
+      /* AMD Ryzen 3000 bug where RDRAND always returns -1
+         https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
       for (int i = 0; i < RETRIES; i++)
         if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
           __cpu_rng = RNG_RDRAND;
           break;
         }
-    }
     if (max > 7) {
       __cpuid_count (7, 0, eax, ebx, ecx, edx);
-      if (ebx & bit_RDSEED) __cpu_rng = RNG_RDSEED;
+      if (ebx & bit_RDSEED)
+        /* RDSEED could return -1 as well, thus we test it here as well
+           https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
+        for (int i = 0; i < RETRIES; i++)
+          if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
+            __cpu_rng = RNG_RDSEED;
+            break;
+          }
     }
   }
 #endif
