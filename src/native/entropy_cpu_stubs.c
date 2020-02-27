@@ -59,20 +59,37 @@ enum cpu_rng_t {
 
 static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
+#define RETRIES 10
+
 static void detect () {
 #if defined (__x86__)
 
   unsigned int sig, eax, ebx, ecx, edx;
   int max = __get_cpuid_max (0, &sig);
+  random_t r = 0;
 
   if (max < 1) return;
 
   if (sig == signature_INTEL_ebx || sig == signature_AMD_ebx) {
     __cpuid (1, eax, ebx, ecx, edx);
-    if (ecx & bit_RDRND) __cpu_rng = RNG_RDRAND;
+    if (ecx & bit_RDRND)
+      /* AMD Ryzen 3000 bug where RDRAND always returns -1
+         https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
+      for (int i = 0; i < RETRIES; i++)
+        if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
+          __cpu_rng = RNG_RDRAND;
+          break;
+        }
     if (max > 7) {
       __cpuid_count (7, 0, eax, ebx, ecx, edx);
-      if (ebx & bit_RDSEED) __cpu_rng = RNG_RDSEED;
+      if (ebx & bit_RDSEED)
+        /* RDSEED could return -1 as well, thus we test it here as well
+           https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
+        for (int i = 0; i < RETRIES; i++)
+          if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
+            __cpu_rng = RNG_RDSEED;
+            break;
+          }
     }
   }
 #endif
@@ -88,15 +105,50 @@ CAMLprim value caml_cycle_counter (value __unused(unit)) {
 #endif
 }
 
-CAMLprim value caml_cpu_random (value __unused(unit)) {
+CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
 #if defined (__x86__)
   random_t r = 0;
-  if (__cpu_rng == RNG_RDSEED) {
-    _rdseed_step (&r);
-  } else if (__cpu_rng == RNG_RDRAND) {
-    _rdrand_step (&r);
+  int ok = 0;
+  int i = RETRIES;
+  switch (__cpu_rng) {
+  case RNG_RDSEED:
+    do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
+    break;
+  case RNG_RDRAND:
+    do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
+    break;
+  case RNG_NONE:
+    break;
   }
-  return Val_long (r); /* Zeroed-out if carry == 0. */
+  return Val_long(r);
+#else
+  /* ARM: CPU-assisted randomness here. */
+  return Val_long (0);
+#endif
+}
+
+CAMLprim value caml_cpu_unchecked_random (value __unused(unit)) {
+#if defined (__x86__)
+  random_t r = 0;
+  /* rdrand/rdseed may fail (and return CR = 0) if insufficient entropy is
+     available (or the hardware DRNG is in the middle of reseeding).
+
+     we could handle these by retrying in a loop - which would be
+     computationally expensive, but since this code is run whenever the Lwt
+     event loop is entered, and only used to feed entropy into the pool, it is
+     fine to add not-so-random entropy.
+ */
+  switch (__cpu_rng) {
+  case RNG_RDSEED:
+    _rdseed_step (&r);
+    break;
+  case RNG_RDRAND:
+    _rdrand_step (&r);
+    break;
+  case RNG_NONE:
+    break;
+  }
+  return Val_long (r);
 #else
   /* ARM: CPU-assisted randomness here. */
   return Val_long (0);

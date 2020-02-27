@@ -29,10 +29,11 @@
 
 module Cpu_native = struct
 
-  external cycles     : unit -> int  = "caml_cycle_counter" [@@noalloc]
-  external random     : unit -> int  = "caml_cpu_random"    [@@noalloc]
-  external rng_type   : unit -> int  = "caml_cpu_rng_type"  [@@noalloc]
-  external detect     : unit -> unit = "caml_entropy_detect"
+  external cycles : unit -> int  = "caml_cycle_counter" [@@noalloc]
+  external unchecked_random : unit -> int  = "caml_cpu_unchecked_random" [@@noalloc]
+  external checked_random : unit -> int  = "caml_cpu_checked_random" [@@noalloc]
+  external rng_type : unit -> int  = "caml_cpu_rng_type" [@@noalloc]
+  external detect : unit -> unit = "caml_entropy_detect"
 
   let () = detect ()
 
@@ -74,7 +75,7 @@ let sources () =
  * See Whirlwind RNG:
  *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
  *)
-let bootstrap f =
+let whirlwind_bootstrap f =
   let outer     = 100
   and inner_max = 1024
   and a         = ref 0
@@ -98,7 +99,7 @@ let interrupt_hook () =
   | Some _ ->
       let buf = Cstruct.create 12 in fun () ->
         let a = Cpu_native.cycles ()
-        and b = Cpu_native.random () in
+        and b = Cpu_native.unchecked_random () in
         Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
         Cstruct.LE.set_uint64 buf 4 (Int64.of_int b) ;
         buf
@@ -111,7 +112,18 @@ let interrupt_hook () =
  *
  * Compile-time entropy. A function returning it could go into `t.inits`.
  *)
-let bootstrap_functions = [ bootstrap ]
+
+let checked_rdrand_rdseed f =
+  let cs = Cstruct.create 8 in
+  let random = Cpu_native.checked_random () in
+  Cstruct.LE.set_uint64 cs 0 (Int64.of_int random);
+  f cs;
+  Lwt.return_unit
+
+let bootstrap_functions () =
+  match Cpu_native.cpu_rng with
+  | None -> [ whirlwind_bootstrap ; whirlwind_bootstrap ; whirlwind_bootstrap ]
+  | Some _ -> [ checked_rdrand_rdseed ; checked_rdrand_rdseed ; whirlwind_bootstrap ; checked_rdrand_rdseed ; checked_rdrand_rdseed ]
 
 let running = ref false
 
@@ -125,7 +137,7 @@ let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
     let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) in
     Lwt_list.iteri_p
       (fun i boot -> boot (handler ~source:i))
-      bootstrap_functions >|= fun () ->
+      (bootstrap_functions ()) >|= fun () ->
     let hook = interrupt_hook () in
     Mirage_runtime.at_enter_iter (fun () ->
         let e = hook () in
