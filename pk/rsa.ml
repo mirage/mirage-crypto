@@ -218,7 +218,7 @@ module PKCS1 = struct
   let verify ~hashp ~key ~signature msg =
     let open Option in
     ( sig_decode ~key signature >>= fun cs -> detect cs >>| fun (hash, asn) ->
-        hashp hash && Cs.(ct_eq (asn <+> digest_or ~hash msg)) cs )
+        hashp hash && Eqaf_cstruct.equal Cs.(asn <+> digest_or ~hash msg) cs )
     |> get ~def:false
 
   let min_key hash =
@@ -266,7 +266,7 @@ module OAEP (H : Hash.S) = struct
     let db = MGF.mask ~seed:(MGF.mask ~seed:mdb ms) mdb in
     let i  = Cs.ct_find_uint8 ~off:hlen ~f:((<>) 0x00) db |> Option.get ~def:0
     in
-    let c1 = Cs.ct_eq (sub db 0 hlen) H.(digest label)
+    let c1 = Eqaf_cstruct.equal (sub db 0 hlen) H.(digest label)
     and c2 = get_uint8 b0 0 = 0x00
     and c3 = get_uint8 db i = 0x01 in
     if c1 && c2 && c3 then Some (shift db (i + 1)) else None
@@ -326,7 +326,7 @@ module PSS (H: Hash.S) = struct
     and c2 = i = em.len - hlen - slen - 2
     and c3 = get_uint8 db  i = 0x01
     and c4 = get_uint8 bxx 0 = 0xbc
-    and c5 = Cs.ct_eq h h' in
+    and c5 = Eqaf_cstruct.equal h h' in
     c1 && c2 && c3 && c4 && c5
 
   let sufficient_key ~slen kbits =

@@ -57,9 +57,6 @@ module Uncommon : sig
     val (<+>) : Cstruct.t -> Cstruct.t -> Cstruct.t
     (** [<+>] is an alias for [Cstruct.append]. *)
 
-    val ct_eq : Cstruct.t -> Cstruct.t -> bool
-    (** Constant-time equality. *)
-
     val ct_find_uint8 : ?off:int -> f:(Cstruct.uint8 -> bool) -> Cstruct.t -> int option
 
     val xor_into : Cstruct.t -> Cstruct.t -> int -> unit
