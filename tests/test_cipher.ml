@@ -323,10 +323,102 @@ let ccm_cases =
          ~maclen: 8
   ]
 
+let ccm_regressions =
+  let open Cipher_block.AES.CCM in
+  let no_vs_empty_ad _ =
+    (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/166 *)
+    (* see RFC 3610 Section 2.1, AD of length 0 should be same as no AD *)
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "0001020304050607"
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_cs_equal ~msg:"CCM no vs empty ad"
+      (encrypt ~key ~nonce plaintext)
+      (encrypt ~adata:Cstruct.empty ~key ~nonce plaintext)
+  and short_nonce_enc _ =
+    (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/167 *)
+    (* valid nonce sizes for CCM are 7..13 (L can be 2..8, nonce is 15 - L)*)
+    (* see RFC3610 Section 2.1 *)
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = Cstruct.empty
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_raises ~msg:"CCM with short nonce raises"
+      (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 0")
+      (fun () -> encrypt ~key ~nonce plaintext)
+  and short_nonce_enc2 _ =
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "00"
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_raises ~msg:"CCM with short nonce raises"
+      (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 1")
+      (fun () -> encrypt ~key ~nonce plaintext)
+  and short_nonce_enc3 _ =
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "000102030405"
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_raises ~msg:"CCM with short nonce raises"
+      (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 6")
+      (fun () -> encrypt ~key ~nonce plaintext)
+  and long_nonce_enc _ =
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "000102030405060708090a0b0c0d"
+    and plaintext = Cstruct.of_string "hello"
+    in
+    assert_raises ~msg:"CCM with short nonce raises"
+      (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 14")
+      (fun () -> encrypt ~key ~nonce plaintext)
+  and enc_dec_empty_message _ =
+    (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/168 *)
+    let key = of_secret ~maclen:16 (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "0001020304050607"
+    and adata = Cstruct.of_string "hello"
+    and p = Cstruct.empty
+    in
+    let cipher = encrypt ~adata ~key ~nonce p in
+    match decrypt ~key ~nonce ~adata cipher with
+    | Some x -> assert_cs_equal ~msg:"CCM decrypt of empty message" p x
+    | None -> assert_failure "decryption broken"
+  in
+  [
+    test_case no_vs_empty_ad ;
+    test_case short_nonce_enc ;
+    test_case short_nonce_enc2 ;
+    test_case short_nonce_enc3 ;
+    test_case long_nonce_enc ;
+    test_case enc_dec_empty_message ;
+  ]
+
+let gcm_regressions =
+  let open Cipher_block.AES.GCM in
+  let msg = vx "000102030405060708090a0b0c0d0e0f" in
+  let key = of_secret msg
+  and iv = Cstruct.empty
+  in
+  let iv_zero_length_enc _ =
+    (* reported in https://github.com/mirleft/ocaml-nocrypto/issues/169 *)
+    assert_raises ~msg:"GCM with iv of length 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
+      (fun () -> encrypt ~key ~iv msg)
+  and iv_zero_length_dec _ =
+    assert_raises ~msg:"GCM with iv of 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
+      (fun () -> decrypt ~key ~iv msg)
+  in
+  [
+    test_case iv_zero_length_enc ;
+    test_case iv_zero_length_dec ;
+  ]
+
+
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
   "AES-CTR" >::: [ "SP 300-38A" >::: aes_ctr_cases; ] ;
   "AES-GCM" >::: gcm_cases ;
   "AES-CCM" >::: ccm_cases ;
+  "AES-CCM-REGRESSION" >::: ccm_regressions ;
+  "AES-GCM-REGRESSION" >::: gcm_regressions ;
 ]

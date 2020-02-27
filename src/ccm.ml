@@ -5,7 +5,6 @@ let (<+>) = Cs.(<+>)
 let block_size = 16
 
 let flags bit6 len1 len2 =
-  assert (len1 < 8 && len2 < 8);
   let byte = Cstruct.create 1
   and data = bit6 lsl 6 + len1 lsl 3 + len2 in
   Cstruct.set_uint8 byte 0 data ;
@@ -32,10 +31,7 @@ let format nonce adata q t (* mac len *) =
   let small_q = 15 - n in
   (* first byte (flags): *)
   (* reserved | adata | (t - 2) / 2 | q - 1 *)
-  let b6 = match adata with
-    | Some _ -> 1
-    | None   -> 0
-  in
+  let b6 = if Cstruct.len adata = 0 then 0 else 1 in
   let flag = flags b6 ((t - 2) / 2) (small_q - 1) in
   (* first octet block:
      0          : flags
@@ -76,18 +72,15 @@ let gen_ctr nonce i =
   let pre, _, q = gen_ctr_prefix nonce in
   pre <+> encode_len q i
 
-let prepare_header nonce adata tlen plen =
-  let ada = match adata with
-    | Some x -> gen_adata x
-    | None   -> Cstruct.empty
-  in
+let prepare_header nonce adata plen tlen =
+  let ada = if Cstruct.len adata = 0 then Cstruct.empty else gen_adata adata in
   format nonce adata plen tlen <+> ada
 
 type mode = Encrypt | Decrypt
 
-let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?adata data =
+let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?(adata = Cstruct.empty) data =
   let datalen = Cstruct.len data in
-  let cbcheader = prepare_header nonce adata maclen datalen in
+  let cbcheader = prepare_header nonce adata datalen maclen in
   let target = Cstruct.create datalen in
 
   let blkprefix, blkpreflen, preflen = gen_ctr_prefix nonce in
@@ -148,17 +141,20 @@ let crypto_t t nonce cipher key =
   cipher ~key ctr ctr ;
   Cs.xor_into ctr t (Cstruct.len t)
 
+let valid_nonce nonce =
+  let nsize = Cstruct.len nonce in
+  if nsize < 7 || nsize > 13 then
+    invalid_arg "CCM: nonce length not between 7 and 13: %d" nsize
+
 let generation_encryption ~cipher ~key ~nonce ~maclen ?adata data =
+  valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Encrypt ~key ~nonce ~maclen ?adata data in
   crypto_t t nonce cipher key ;
   cdata <+> t
 
 let decryption_verification ~cipher ~key ~nonce ~maclen ?adata data =
-  let () =
-    let nsize = Cstruct.len nonce in
-    if nsize < 7 || nsize > 13 then
-      invalid_arg "CCM: nonce length %d" nsize in
-  if Cstruct.len data <= maclen then
+  valid_nonce nonce;
+  if Cstruct.len data < maclen then
     None
   else
     let pclen = Cstruct.len data - maclen in

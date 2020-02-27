@@ -341,7 +341,8 @@ module Modes2 = struct
                     BE.set_uint64 _cs 0 a; BE.set_uint64 _cs 8 b; _cs
 
     let counter ~hkey iv = match len iv with
-      | 12 -> let (w1, w2) = BE.(get_uint64 iv 0, BE.get_uint32 iv 8) in
+      | 0 -> invalid_arg "GCM: invalid IV of length 0"
+      | 12 -> let (w1, w2) = BE.get_uint64 iv 0, BE.get_uint32 iv 8 in
               (w1, Int64.(shift_left (of_int32 w2) 32 |> add 1L))
       | _  -> CTR.ctr_of_cstruct @@
                 GHASH.digesti ~key:hkey @@ iter2 iv (pack64s 0L (bits64 iv))

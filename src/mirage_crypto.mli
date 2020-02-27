@@ -390,11 +390,17 @@ module Cipher_block : sig
       val encrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
       (** [encrypt ~key ~iv ?adata msg] is the {{!result}[result]} containing
           [msg] encrypted under [key], with [iv] as the initialization vector,
-          and the authentication tag computed over both [adata] and [msg]. *)
+          and the authentication tag computed over both [adata] and [msg].
+
+          @raise Invalid_argument if the length [iv] is 0.
+      *)
 
       val decrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
       (** [decrypt ~key ~iv ?adata msg] is the result containing the inversion
-          of [encrypt] and the same authentication tag. *)
+          of [encrypt] and the same authentication tag.
+
+          @raise Invalid_argument if the length [iv] is 0.
+      *)
     end
 
     (** {e Counter with CBC-MAC} mode. *)
