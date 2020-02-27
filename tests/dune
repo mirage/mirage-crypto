@@ -12,7 +12,8 @@
 (library
  (name test_common_random)
  (libraries randomconv mirage-crypto-rng)
- (modules test_common_random))
+ (modules test_common_random)
+ (optional))
 
 (test
  (name test_random_runner)
