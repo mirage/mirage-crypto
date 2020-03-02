@@ -26,6 +26,7 @@ depends: [
   "sexplib"
   "ppx_sexp_conv"
   "zarith"
+  "eqaf" {>= "0.5"}
   ("mirage-no-xen" | "zarith-xen")
   ("mirage-no-solo5" | "zarith-freestanding")
 ]

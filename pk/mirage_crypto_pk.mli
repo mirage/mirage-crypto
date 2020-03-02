@@ -134,9 +134,17 @@ module Rsa : sig
 
       @raise Invalid_argument if [message] is [0x00] or [0x01]. *)
 
-  val decrypt : ?mask:mask -> key:priv -> Cstruct.t -> Cstruct.t
-  (** [decrypt ~mask key ciphertext] is the decrypted [ciphertext], left-padded
-      with [0x00] up to [key] size.
+  val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+    Cstruct.t -> Cstruct.t
+  (** [decrypt ~rsa_crt_hardening ~mask key ciphertext] is the decrypted
+      [ciphertext], left-padded with [0x00] up to [key] size.
+
+      [~rsa_crt_hardening] defaults to [false]. If [true] verifies that the
+      result is correct. This is to counter Chinese remainder theorem attacks to
+      factorize primes. If the computed signature is incorrect, it is again
+      computed in the classical way (c ^ d mod n) without the Chinese remainder
+      theorem optimization. The deterministic PKCS1 signing, which is at danger,
+      uses [true] as default.
 
       [~mask] defaults to [`Yes].
 
@@ -171,14 +179,18 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?mask:mask -> key:priv -> Cstruct.t -> Cstruct.t option
-    (** [decrypt mask key ciphertext] is [Some message] if the [ciphertext] was
-        produced by the corresponding {{!encrypt}encrypt} operation, or [None]
-        otherwise. *)
+    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+      Cstruct.t -> Cstruct.t option
+    (** [decrypt ~rsa_crt_hardening ~mask ~key ciphertext] is [Some message] if
+        the [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
+        operation, or [None] otherwise. [rsa_crt_hardening] defaults to
+        [false]. *)
 
-    val sig_encode : ?mask:mask -> key:priv -> Cstruct.t -> Cstruct.t
-    (** [sig_encode ?mask ~key message] is the PKCS1-padded (type 1) [message]
-        signed by the [key].
+    val sig_encode : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+      Cstruct.t -> Cstruct.t
+    (** [sig_encode ~rsa_crt_hardening ~mask ~key message] is the PKCS1-padded
+        (type 1) [message] signed by the [key]. [rsa_crt_hardening] defaults to
+        [true] and verifies that the computed signature is correct.
 
         {b Note} This operation performs only the padding and RSA transformation
         steps of the PKCS 1.5 signature. The full signature is implemented by
@@ -194,10 +206,14 @@ module Rsa : sig
     val min_key : Mirage_crypto.Hash.hash -> bits
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
-    val sign : ?mask:mask -> hash:Mirage_crypto.Hash.hash -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ?mask ~hash ~key message] is the PKCS 1.5 signature of
-        [message], signed by the [key], using the hash function [hash]. This is
-        the full signature, with the ASN-encoded message digest as the payload.
+    val sign : ?rsa_crt_hardening:bool -> ?mask:mask ->
+      hash:Mirage_crypto.Hash.hash -> key:priv -> Cstruct.t or_digest ->
+      Cstruct.t
+    (** [sign ~rsa_crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
+        signature of [message], signed by the [key], using the hash function
+        [hash]. This is the full signature, with the ASN-encoded message digest
+        as the payload. [rsa_crt_hardening] defaults to [true] and verifies that
+        the computed signature is correct.
 
         [message] is either the actual message, or its digest.
 
@@ -205,7 +221,8 @@ module Rsa : sig
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
 
-    val verify : hashp:(Mirage_crypto.Hash.hash -> bool) -> key:pub -> signature:Cstruct.t -> Cstruct.t or_digest -> bool
+    val verify : hashp:(Mirage_crypto.Hash.hash -> bool) -> key:pub ->
+      signature:Cstruct.t -> Cstruct.t or_digest -> bool
     (** [verify ~hashp ~key ~signature message] checks that [signature] is the
         PKCS 1.5 signature of the [message] under the given [key].
 
@@ -226,16 +243,19 @@ module Rsa : sig
       [hlen] is the hash length. *)
   module OAEP (H : Mirage_crypto.Hash.S) : sig
 
-    val encrypt : ?g:Mirage_crypto_rng.g -> ?label:Cstruct.t -> key:pub -> Cstruct.t -> Cstruct.t
+    val encrypt : ?g:Mirage_crypto_rng.g -> ?label:Cstruct.t -> key:pub ->
+      Cstruct.t -> Cstruct.t
     (** [encrypt ~g ~label ~key message] is {b OAEP}-padded and encrypted
         [message], using the optional [label].
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?mask:mask -> ?label:Cstruct.t -> key:priv -> Cstruct.t -> Cstruct.t option
-    (** [decrypt ~mask ~label ~key ciphertext] is [Some message] if the
-        [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
-        operation, or [None] otherwise. *)
+    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
+      key:priv -> Cstruct.t -> Cstruct.t option
+    (** [decrypt ~rsa_crt_hardening ~mask ~label ~key ciphertext] is
+        [Some message] if the [ciphertext] was produced by the corresponding
+        {{!encrypt}encrypt} operation, or [None] otherwise. [rsa_crt_hardening]
+        defaults to [false]. *)
   end
 
   (** {b PSS}-based signing, as defined by {b PKCS #1 v2.1}.
@@ -247,9 +267,11 @@ module Rsa : sig
       hash length and [slen] is the seed length. *)
   module PSS (H: Mirage_crypto.Hash.S) : sig
 
-    val sign : ?g:Mirage_crypto_rng.g -> ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ~g ~mask ~slen ~key message] the {p PSS}-padded digest of
-        [message], signed with the [key].
+    val sign : ?g:Mirage_crypto_rng.g -> ?rsa_crt_hardening:bool ->
+      ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
+    (** [sign ~g ~rsa_crt_hardening ~mask ~slen ~key message] the {p PSS}-padded
+        digest of [message], signed with the [key]. [rsa_crt_hardening] defaults
+        to [false].
 
         [slen] is the optional seed length and defaults to the size of the
         underlying hash function.
