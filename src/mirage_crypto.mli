@@ -102,6 +102,8 @@ module Uncommon : sig
   val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
 end
 
+(**/**)
+
 (** {1 Hashing} *)
 
 (** Hashes.
@@ -145,7 +147,7 @@ module Hash : sig
     (** [feed t msg] adds the information in [msg] to [t].
 
         [feed] is analogous to appending:
-        [feed (feed t msg1) msg2 = feed t (append msg1 msg2)]. *)
+        [feed (feed t msg1) msg2 = feed t (Cstruct.append msg1 msg2)]. *)
 
     val get : t -> digest
     (** [get t] is the digest corresponding to [t]. *)
@@ -164,7 +166,7 @@ module Hash : sig
         secret [key], generated using the standard HMAC construction over this
         hash algorithm. *)
 
-    (** {1:hashing_funs Functions over iterators}
+    (** {1 Functions over iterators}
 
         Functions that operate on arbitrary {{!iter}iterators}. They can serve
         as a basis for other, more specialized aggregate hashing operations.
@@ -173,7 +175,7 @@ module Hash : sig
 
     val feedi : t -> Cstruct.t iter -> t
     (** [feedi t iter =
-  (let r = ref t in iter (fun msg -> r := feed !r msg); !r)] *)
+        (let r = ref t in iter (fun msg -> r := feed !r msg); !r)] *)
 
     val digesti : Cstruct.t iter -> digest
     (** [digesti iter = feedi empty iter |> get] *)
@@ -195,6 +197,7 @@ module Hash : sig
   (** Algorithm codes. *)
 
   val hashes : hash list
+  (** [hashes] is a list of all implemented hash algorithms. *)
 
   val module_of   : [< hash ] -> (module S)
   (** [module_of hash] is the (first-class) module corresponding to the code
@@ -202,11 +205,24 @@ module Hash : sig
 
       This is the most convenient way to go from a code to a module. *)
 
+  (** {1:hashing_funs Hash functions} *)
+
   val digest      : [< hash ] -> Cstruct.t -> digest
+  (** [digest algorithm bytes] is [algorithm] applied to [bytes]. *)
+
   val digesti     : [< hash ] -> Cstruct.t iter -> digest
+  (** [digesti algorithm iter] is [algorithm] applied to [iter]. *)
+
   val mac         : [< hash ] -> key:Cstruct.t -> Cstruct.t -> digest
+  (** [mac algorithm ~key bytes] is the mac [algorithm] applied to [bytes]
+      under [key]. *)
+
   val maci        : [< hash ] -> key:Cstruct.t -> Cstruct.t iter -> digest
+  (** [maci algorithm ~key iter] is the mac [algorithm] applied to [iter] under
+      [key]. *)
+
   val digest_size : [< hash ] -> int
+  (** [digest_size algorithm] is the size of the [algorithm] in bytes. *)
 end
 
 
@@ -345,6 +361,7 @@ module Cipher_block : sig
       (** [decrypt] is [encrypt]. *)
 
       val add_ctr : ctr -> int64 -> ctr
+      (** [add_ctr ctr n] adds [n] to [ctr]. *)
 
       val next_ctr : ctr:ctr -> Cstruct.t -> ctr
       (** [next_ctr ~ctr msg] is the state of the counter after encrypting or
@@ -362,6 +379,7 @@ module Cipher_block : sig
           *)
 
       val ctr_of_cstruct : Cstruct.t -> ctr
+      (** [ctr_of_cstruct cs] converts the value of [cs] into a counter. *)
     end
 
     (** {e Galois/Counter Mode}. *)
