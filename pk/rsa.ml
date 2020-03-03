@@ -90,7 +90,7 @@ let decrypt_unsafe ~rsa_crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv)
   if not rsa_crt_hardening || Z.(powm m e n) = c then
     m
   else
-    Z.(powm_sec c d n)
+    Z.(powm c d n)
 
 let decrypt_blinded_unsafe ~rsa_crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
   let r  = until (rprime n) (fun _ -> Z_extra.gen_r ?g two n) in
