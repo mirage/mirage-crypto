@@ -386,7 +386,7 @@ module Dh : sig
   (** Raised if the public key is degenerate. Implies either badly malfunctioning
       DH on the other side, or an attack attempt. *)
 
-  type group = {
+  type group = private {
     p  : Z.t ;        (** modulus *)
     gg : Z.t ;        (** generator *)
     q  : Z.t option ; (** subgroup order; potentially unknown *)
@@ -394,6 +394,11 @@ module Dh : sig
   (** A DH group.
 
       {e [Sexplib] convertible}. *)
+
+  val group : p:Z.t -> gg:Z.t -> ?q:Z.t -> unit ->
+    (group, [> `Msg of string ]) result
+  (** [group ~p ~gg ~q ()] constructs a group if [p] is odd, a prime number,
+      and greater than [zero]. [gg] must be in the range [1 < gg < p]. *)
 
   type secret = private { x : Z.t }
   (** A private secret.
@@ -421,10 +426,10 @@ module Dh : sig
       group, a previously generated {!secret} and the other party's public
       message. It is [None] if [message] is degenerate. *)
 
-  val gen_group : ?g:Mirage_crypto_rng.g -> bits -> group
-  (** [gen_group bits] generates a random {!group} with modulus size [bits].
-      Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus and [2]
-      for the generator, such that [2^q = 1 mod p].
+  val gen_group : ?g:Mirage_crypto_rng.g -> bits:bits -> unit -> group
+  (** [gen_group ~g ~bits ()] generates a random {!group} with modulus size
+      [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
+      and [2] for the generator, such that [2^q = 1 mod p].
       Runtime is on the order of minute for 1024 bits.
 
       {b Note} The process might diverge if there are no suitable groups. This

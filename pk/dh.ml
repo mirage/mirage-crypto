@@ -11,6 +11,21 @@ type group = {
   q  : Z_sexp.t option ;  (* `gg`'s order, maybe *)
 } [@@deriving sexp]
 
+let group ~p ~gg ?q () =
+  if Z.(p > zero && is_odd p) && Z_extra.pseudoprime p then
+    if Z.(one < gg && gg < p) then
+      Ok { p ; gg ; q }
+    else
+      Error (`Msg "invalid generator")
+  else
+    Error (`Msg "invalid prime")
+
+let group_of_sexp s =
+  let g = group_of_sexp s in
+  match group ~p:g.p ~gg:g.gg ?q:g.q () with
+  | Error (`Msg m) -> invalid_arg "bad group: %s" m
+  | Ok g -> g
+
 type secret = { x : Z_sexp.t } [@@deriving sexp]
 
 (*
@@ -67,10 +82,10 @@ let shared ({ p; _ } as group) { x } cs =
   | ggy -> Some (Z_extra.to_cstruct_be (Z.powm ggy x p))
 
 (* Finds a safe prime with [p = 2q + 1] and [2^q = 1 mod p]. *)
-let rec gen_group ?g bits =
-  let gg     = Z.(~$2)
+let rec gen_group ?g ~bits () =
+  let gg = Z.(~$2)
   and (q, p) = Z_extra.safe_prime ?g (imax bits 1) in
-  if Z.(powm gg q p = one) then { p; gg; q = Some q } else gen_group ?g bits
+  if Z.(powm gg q p = one) then { p; gg; q = Some q } else gen_group ?g ~bits ()
 
 module Group = struct
 
@@ -79,12 +94,15 @@ module Group = struct
   (* Safe-prime-style group: p = 2q + 1 && gg = 2 && gg^q = 1 mod p *)
   let s_group ~p =
     let p = f p in
-    { p; gg = Z.(~$2); q = Some Z.(pred p / ~$2) }
+    match group ~p ~gg:Z.(~$2) ~q:Z.(pred p / ~$2) () with
+    | Error (`Msg m) -> invalid_arg "bad group %s" m
+    | Ok g -> g
 
   (* Any old group. *)
   let group ~p ~gg ~q =
-    { p = f p; gg = f gg; q = Some (f q) }
-
+    match group ~p:(f p) ~gg:(f gg) ~q:(f q) () with
+    | Error (`Msg m) -> invalid_arg "bad group %s" m
+    | Ok g -> g
 
   (* RFC2409 *)
 
