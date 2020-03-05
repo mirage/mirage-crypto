@@ -1,23 +1,15 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
+open Rresult
 
-module Hash = Mirage_crypto.Hash
+open Common
 
 let two = Z.(~$2)
 and three = Z.(~$3)
 
-open Common
-
 let (&.) f g = fun h -> f (g h)
 
-exception Insufficient_key
-
-type pub  = { e : Z_sexp.t ; n : Z_sexp.t } [@@deriving sexp]
-
-type priv = {
-  e : Z_sexp.t ; d : Z_sexp.t ; n  : Z_sexp.t ;
-  p : Z_sexp.t ; q : Z_sexp.t ; dp : Z_sexp.t ; dq : Z_sexp.t ; q' : Z_sexp.t
-} [@@deriving sexp]
+module Hash = Mirage_crypto.Hash
 
 type 'a or_digest = [ `Message of 'a | `Digest of Hash.digest ]
 
@@ -35,47 +27,141 @@ let digest_or ~hash =
   let module D = Digest_or (H) in
   D.digest_or
 
-type mask = [ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ]
+exception Insufficient_key
+
+type pub = { e : Z_sexp.t ; n : Z_sexp.t } [@@deriving sexp]
+
+(* due to PKCS1 *)
+let minimum_octets = 12
+let minimum_bits = 8 * minimum_octets - 7
+
+let guard p err = if p then Ok () else Error err
+
+let pub ~e ~n =
+  (* We cannot verify a public key being good (this would require to verify "n"
+     being the multiplication of two prime numbers - figuring out which primes
+     were used is the security property of RSA).
+
+     but we validate to ensure our usage of powm_sec does not lead to
+     exceptions, and we avoid tiny public keys where PKCS1 / PSS would lead to
+     infinite loops or not work due to insufficient space for the header. *)
+  guard Z.(n > zero && is_odd n && numbits n >= minimum_bits)
+    (`Msg "invalid modulus") >>= fun () ->
+  guard Z.(one < e && e < n) (`Msg "invalid exponent") >>= fun () ->
+  (* NOTE that we could check for e being odd, or a prime, or 2^16+1, but
+          these are not requirements, neither for RSA nor for powm_sec *)
+  Ok { e ; n }
+
+let pub_of_sexp s =
+  let p = pub_of_sexp s in
+  match pub ~e:p.e ~n:p.n with
+  | Ok p -> p
+  | Error (`Msg m) -> failwith "bad public key: %s" m
+
+type priv = {
+  e : Z_sexp.t ; d : Z_sexp.t ; n  : Z_sexp.t ;
+  p : Z_sexp.t ; q : Z_sexp.t ; dp : Z_sexp.t ; dq : Z_sexp.t ; q' : Z_sexp.t
+} [@@deriving sexp]
+
+let valid_prime name p =
+  guard Z.(p > zero && is_odd p && Z_extra.pseudoprime p)
+    (R.msgf "invalid prime %s" name)
 
 let rprime a b = Z.(gcd a b = one)
 
+let valid_e ~e ~p ~q =
+  guard (rprime e (Z.pred p) && rprime e (Z.pred q))
+    (`Msg "e is not coprime of p and q") >>= fun () ->
+  guard (Z_extra.pseudoprime e) (`Msg "exponent e is not a pseudoprime")
+
+let priv ~e ~d ~n ~p ~q ~dp ~dq ~q' =
+  pub ~e ~n >>= fun _pub ->
+  valid_prime "p" p >>= fun () ->
+  valid_prime "q" q >>= fun () ->
+  guard (p <> q) (`Msg "p and q are the same number") >>= fun () ->
+  valid_e ~e ~p ~q >>= fun () ->
+  (* p and q are prime, and not equal -> multiplicative inverse exists *)
+  guard Z.(q' = invert q p) (`Msg "q' <> q ^ -1 mod p") >>= fun () ->
+  guard Z.(n = p * q) (`Msg "modulus is not the product of p and q") >>= fun () ->
+  guard Z.(one < d && d < n) (`Msg "invalid private exponent") >>= fun () ->
+  guard Z.(dp = d mod (pred p)) (`Msg "dp <> d mod (p - 1)") >>= fun () ->
+  guard Z.(dq = d mod (pred q)) (`Msg "dq <> d mod (q - 1)") >>= fun () ->
+  (* e has been checked (valid_e) to be coprime to p-1 and q-1 ->
+     muliplicative inverse exists *)
+  guard Z.(d = invert e (pred p * pred q))
+    (`Msg "d <> e ^ -1 mod (p - 1) * (q - 1)") >>= fun () ->
+  Ok { e ; d ; n ; p ; q ; dp ; dq ; q' }
+
+let priv_of_sexp s =
+  let p = priv_of_sexp s in
+  match priv ~e:p.e ~d:p.d ~n:p.n ~p:p.p ~q:p.q ~dp:p.dp ~dq:p.dq ~q':p.q' with
+  | Error (`Msg m) -> failwith "invalid private key %s" m
+  | Ok p -> p
+
 let priv_of_primes ~e ~p ~q =
-  let n  = Z.(p * q)
-  and d  = Z.(invert e (pred p * pred q)) in
+  valid_prime "p" p >>= fun () ->
+  valid_prime "q" q >>= fun () ->
+  guard (p <> q) (`Msg "p and q are the same prime") >>= fun () ->
+  valid_e ~e ~p ~q >>= fun () ->
+  let n  = Z.(p * q) in
+  pub ~e ~n >>= fun _pub ->
+  (* valid_e checks e coprime to p-1 and q-1, a multiplicative inverse exists *)
+  let d = Z.(invert e (pred p * pred q)) in
   let dp = Z.(d mod (pred p))
   and dq = Z.(d mod (pred q))
-  and q' = Z.(invert q p) in
-  { e; d; n; p; q; dp; dq; q' }
+  in
+  (* above we checked that p and q both are primes and not equal -> there
+     should be a multiplicate inverse *)
+  let q' = Z.invert q p in
+  (* does not need to check valid_priv, since it is valid by construction *)
+  Ok { e; d; n; p; q; dp; dq; q' }
 
 (* Handbook of applied cryptography, 8.2.2 (i). *)
-let rec priv_of_exp ?g ?(attempts=100) ~e ~d n =
-  let factor s t =
-    let rec go ax = function
-      | 0  -> None
-      | i' -> let ax2 = Z.(ax * ax mod n) in
-              if Z.(ax <> one && ax <> pred n && ax2 = one) then
-                Some ax
-              else go ax2 (i' - 1) in
-    Option.(go Z.(powm (Z_extra.gen ?g n) t n) s >>| Z.(gcd n &. pred)) in
-  let err (k : _ format4 -> _) =
-    Z.(k "Rsa.priv_of_exp: e: %a, d: %a, n: %a" pp_print e pp_print d pp_print n)
-  in
-  if attempts > 0 then
-    if two < n && two < e && two < d && e < n && d < n then
-      match Z_extra.strip_factor ~f:two Z.(e * d |> pred) with
-      | (0, _) -> err invalid_arg
+let priv_of_exp ?g ?(attempts=100) ~e ~d ~n () =
+  pub ~e ~n >>= fun _ ->
+  guard Z.(one < d && d < n) (`Msg "invalid private exponent") >>= fun () ->
+  let rec doit ~attempts =
+    let factor s t =
+      let rec go ax = function
+        | 0 -> None
+        | i' ->
+          let ax2 = Z.(ax * ax mod n) in
+          if Z.(ax <> one && ax <> pred n && ax2 = one) then
+            Some ax
+          else
+            go ax2 (i' - 1)
+      in
+      Option.(go Z.(powm (Z_extra.gen ?g n) t n) s >>| Z.(gcd n &. pred))
+    in
+    if attempts > 0 then
+      Z_extra.strip_factor ~f:two Z.(e * d |> pred) >>= function
+      | (0, _) -> R.error_msgf "invalid factor 0"
       | (s, t) -> match factor s t with
-        | None   -> priv_of_exp ?g ~attempts:(attempts - 1) ~e ~d n
-        | Some p -> let q = Z.(div n p) in
-                    priv_of_primes ~e ~p:(max p q) ~q:(min p q)
-    else err invalid_arg
-  else err failwith
+        | None -> doit ~attempts:(attempts - 1)
+        | Some p ->
+          let q = Z.(div n p) in
+          priv_of_primes ~e ~p:(max p q) ~q:(min p q)
+    else Error (`Msg "attempts exceeded")
+  in
+  doit ~attempts
+
+let rec generate ?g ?(e = Z.(~$0x10001)) ~bits () =
+  if bits < minimum_bits || e < three ||
+     (bits <= Z.numbits e || not (Z_extra.pseudoprime e))
+  then
+    invalid_arg "Rsa.generate: e: %a, bits: %d" Z.pp_print e bits;
+  let (pb, qb) = (bits / 2, bits - bits / 2) in
+  let (p, q) = Z_extra.(prime ?g ~msb:2 pb, prime ?g ~msb:2 qb) in
+  match priv_of_primes ~e ~p:(max p q) ~q:(min p q) with
+  | Error _ -> generate ?g ~e ~bits ()
+  | Ok priv -> priv
 
 let pub_of_priv ({ e; n; _ } : priv) = { e ; n }
 
-(* XXX handle this more gracefully... *)
 let pub_bits  ({ n; _ } : pub)  = Z.numbits n
 and priv_bits ({ n; _ } : priv) = Z.numbits n
+
+type mask = [ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ]
 
 let encrypt_unsafe ~key: ({ e; n } : pub) msg = Z.(powm msg e n)
 
@@ -94,6 +180,7 @@ let decrypt_unsafe ~rsa_crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv)
 
 let decrypt_blinded_unsafe ~rsa_crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
   let r  = until (rprime n) (fun _ -> Z_extra.gen_r ?g two n) in
+  (* since r and n are coprime, there must be a multiplicative inverse *)
   let r' = Z.(invert r n) in
   let x  = decrypt_unsafe ~rsa_crt_hardening ~key Z.(powm r e n * c mod n) in
   Z.(r' * x mod n)
@@ -117,20 +204,6 @@ let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 
 let decrypt ?(rsa_crt_hardening=false) ?(mask=`Yes) ~key =
   reformat (priv_bits key) (decrypt_z ~rsa_crt_hardening ~mask ~key)
-
-let well_formed ~e ~p ~q =
-  three <= e && p <> q &&
-  Z_extra.(pseudoprime e && pseudoprime p && pseudoprime q) &&
-  rprime e Z.(pred p) && rprime e Z.(pred q)
-
-let rec generate ?g ?(e = Z.(~$0x10001)) bits =
-  if e < three || (bits <= Z.numbits e || not (Z_extra.pseudoprime e)) then
-    invalid_arg "Rsa.generate: e: %a, bits: %d" Z.pp_print e bits;
-  let (pb, qb) = (bits / 2, bits - bits / 2) in
-  let (p, q)   = Z_extra.(prime ?g ~msb:2 pb, prime ?g ~msb:2 qb) in
-  if (p <> q) && rprime e Z.(pred p) && rprime e Z.(pred q) then
-    priv_of_primes ~e ~p:(max p q) ~q:(min p q)
-  else generate ?g ~e bits
 
 let b   = Cs.b
 let cat = Cstruct.concat

@@ -7,13 +7,6 @@ module Rsa : sig
 
   (** {1 Keys}
 
-      {b Warning} The behavior of functions in this module is undefined if the
-      key material is not numerically well-formed. It is the responsibility of
-      the client to ensure the trustworthiness of keys.
-
-      The two anchoring points provided are {{!generate}[generate]} and
-      {{!well_formed}[well_formed]}.
-
       Messages are checked not to exceed the key size, and this is signalled via
       the {!Insufficient_key} exception.
 
@@ -24,7 +17,7 @@ module Rsa : sig
       numerical interpretation of the (potentially padded) message is not
       smaller than the modulus. *)
 
-  type pub  = {
+  type pub = private {
     e : Z.t ; (** Public exponent *)
     n : Z.t ; (** Modulus *)
   }
@@ -32,7 +25,11 @@ module Rsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  type priv = {
+  val pub : e:Z.t -> n:Z.t -> (pub, [> `Msg of string ]) result
+  (** [pub ~e ~n] validates the public key: [1 < e < n], [n > 0],
+      [is_odd n], and [numbits n >= 89] (a requirement for PKCS1 operations). *)
+
+  type priv = private {
     e  : Z.t ; (** Public exponent *)
     d  : Z.t ; (** Private exponent *)
     n  : Z.t ; (** Modulus ([p q])*)
@@ -53,23 +50,28 @@ module Rsa : sig
 
       {e [Sexplib] convertible}. *)
 
+  val priv : e:Z.t -> d:Z.t -> n:Z.t -> p:Z.t -> q:Z.t -> dp:Z.t -> dq:Z.t ->
+    q':Z.t -> (priv, [> `Msg of string ]) result
+  (** [priv ~e ~d ~n ~p ~q ~dp ~dq ~q'] validates the private key: [e, n] must
+      be a valid {!pub}, [p] and [q] valid prime numbers [> 0], [odd],
+      probabilistically prime, [p <> q], [n = p * q], [e] probabilistically
+      prime and coprime to both [p] and [q], [q' = q ^ -1 mod p], [1 < d < n],
+      [dp = d mod (p - 1)], [dq = d mod (q - 1)],
+      and [d = e ^ -1 mod (p - 1) (q - 1)]. *)
+
   val pub_bits : pub -> bits
   (** Bit-size of a public key. *)
 
   val priv_bits : priv -> bits
   (** Bit-size of a private key. *)
 
-  val priv_of_primes : e:Z.t -> p:Z.t -> q:Z.t -> priv
+  val priv_of_primes : e:Z.t -> p:Z.t -> q:Z.t ->
+    (priv, [> `Msg of string ]) result
   (** [priv_of_primes ~e ~p ~q] is the {{!priv}private key} derived from the
-      minimal description [(e, p, q)].
+      minimal description [(e, p, q)]. *)
 
-      The triple is not checked for well-formedness.
-
-      [p] is assumed to be the smaller factor. While the key will function
-      correctly in either case, derived quantities will be different. See
-      {{!priv} private keys}. *)
-
-  val priv_of_exp : ?g:Mirage_crypto_rng.g -> ?attempts:int -> e:Z.t -> d:Z.t -> Z.t -> priv
+  val priv_of_exp : ?g:Mirage_crypto_rng.g -> ?attempts:int -> e:Z.t -> d:Z.t ->
+    n:Z.t -> unit -> (priv, [> `Msg of string ]) result
   (** [priv_of_exp ?g ?attempts ~e ~d n] is the unique {{!priv}private key}
       characterized by the public ([e]) and private ([d]) exponents, and modulus
       [n]. This operation uses a probabilistic process that can fail to recover
@@ -78,34 +80,10 @@ module Rsa : sig
       [~attempts] is the number of trials. For triplets that form an RSA key,
       the probability of failure is at most [2^(-attempts)]. [attempts] defaults
       to an unspecified number that yields a very high probability of recovering
-      valid keys.
-
-      @raise Invalid_argument when [(e, d, n)] certainly do not form an RSA key.
-      This includes violating [2 < e < n], [2 < d < n] or [2 < n].
-
-      @raise Failure when the key has not been recovered after the given number
-      of attempts. *)
+      valid keys. *)
 
   val pub_of_priv : priv -> pub
   (** Extract the public component from a private key. *)
-
-  val well_formed : e:Z.t -> p:Z.t -> q:Z.t -> bool
-  (** [well_formed ~e ~p ~q] indicates whether the triplet [(e, p, q)] can be
-      used as an RSA key.
-
-      It can, if:
-      {ul
-      {- [3 <= e];}
-      {- [p != q];}
-      {- [e], [p] and [q] are all primes; and}
-      {- [e] is not a divisor of either [p - 1] or [q - 1].}}
-
-      These are sufficient conditions to ensure that the behavior of other
-      operations in this module is defined.
-
-      This will not help with maliciously crafted keys that are simply
-      numerically well-formed, however. Carefully consider which sources of keys
-      to trust. *)
 
   (** {1 The RSA transformation} *)
 
@@ -149,16 +127,18 @@ module Rsa : sig
 
   (** {1 Key generation} *)
 
-  val generate : ?g:Mirage_crypto_rng.g -> ?e:Z.t -> bits -> priv
-  (** [generate g e bits] is a new {{!priv}private key}. The new key is
-      guaranteed to be {{!well_formed}well formed}.
+  val generate : ?g:Mirage_crypto_rng.g -> ?e:Z.t -> bits:bits -> unit -> priv
+  (** [generate ~g ~e ~bits ()] is a new {{!priv}private key}. The new key is
+      guaranteed to be well formed, see {!priv}.
 
       [e] defaults to [2^16+1].
 
       {b Note} This process might diverge if there are no keys for the given
       bit size. This can happen when [bits] is extremely small.
 
-      @raise Invalid_argument if [e] is not prime [3 <= e < 2^bits]. *)
+      @raise Invalid_argument if [e] is not a prime number (checked
+      probabilistically) or not in the range [1 < e < 2^bits], or if
+      [bits < 89] (as above, required for PKCS1 operations).  *)
 
   (** {1 PKCS#1 padded modes} *)
 

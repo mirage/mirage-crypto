@@ -75,9 +75,12 @@ let pseudoprime z =
 let strip_factor ~f x =
   let rec go n x =
     let (x1, r) = Z.div_rem x f in
-    if r = Z.zero then go (succ n) x1 else (n, x) in
-  if Z.(~$2) <= f then go 0 x else invalid_arg "factor_count: f: %a" Z.pp_print f
-
+    if r = Z.zero then go (succ n) x1 else Ok (n, x)
+  in
+  if Z.(~$2) <= f then
+    go 0 x
+  else
+    Rresult.R.error_msgf "factor_count: f: %a" Z.pp_print f
 
 let gen ?g n =
   if n < Z.one then invalid_arg "Rng.gen: non-positive: %a" Z.pp_print n;
