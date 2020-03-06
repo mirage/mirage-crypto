@@ -14,18 +14,6 @@
     public key cryptography.
 *)
 
-(** {1 Utilities} *)
-
-(** Base64 conversion.
-
-    It is here only temporary, until we find it a proper home. *)
-module Base64 : sig
-  val encode : Cstruct.t -> Cstruct.t
-  val decode : Cstruct.t -> Cstruct.t option
-  val is_base64_char : char -> bool
-end
-
-
 (**/**)
 
 (** A treasure-trove of random utilities.

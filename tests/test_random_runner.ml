@@ -78,20 +78,9 @@ let xor_selftest n =
     assert_cs_equal ~msg:"invert" x x1 ;
     assert_cs_equal ~msg:"commut" x1 x2
 
-let b64_selftest n =
-  "selftest" >:: times ~n @@ fun _ ->
-    let n   = Randomconv.int ~bound:1024 Mirage_crypto_rng.generate in
-    let x   = Mirage_crypto_rng.generate n in
-
-    let enc = Base64.encode x in
-    match Base64.decode enc with
-    | Some dec -> assert_cs_equal ~msg:"b64 mismatch" dec x
-    | None -> assert_failure "couldn't decode b64"
-
 let suite =
   "All" >::: [
     "XOR" >::: [ xor_selftest 300 ] ;
-    "B64" >::: [ b64_selftest 300 ] ;
     "3DES-ECB" >::: [ ecb_selftest (module Cipher_block.DES.ECB) 100 ] ;
 
     "3DES-CBC" >::: [ cbc_selftest (module Cipher_block.DES.CBC) 100 ] ;
