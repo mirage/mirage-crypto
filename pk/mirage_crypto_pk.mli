@@ -348,16 +348,19 @@ module Dsa : sig
       [n] is ridiculously small. *)
 
   val sign : ?mask:mask -> ?k:Z.t -> key:priv -> Cstruct.t -> Cstruct.t * Cstruct.t
-  (** [sign mask k fips key digest] is the signature, a pair of {!Cstruct.t}s
+  (** [sign ~mask ~k ~key digest] is the signature, a pair of {!Cstruct.t}s
       representing [r] and [s] in big-endian.
 
       [digest] is the full digest of the actual message.
 
       [k], the random component, can either be provided, or is deterministically
-      derived as per RFC6979, using SHA256.  *)
+      derived as per RFC6979, using SHA256.
+
+      @raise Invalid_argument if [k] is unsuitable (leading to r or s being 0).
+ *)
 
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
-  (** [verify fips key (r, s) digest] verifies that the pair [(r, s)] is the signature
+  (** [verify ~key (r, s) digest] verifies that the pair [(r, s)] is the signature
       of [digest], the message digest, under the private counterpart to [key]. *)
 
   val massage : key:pub -> Cstruct.t -> Cstruct.t

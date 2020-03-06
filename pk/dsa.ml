@@ -113,17 +113,31 @@ end
 
 module K_gen_sha256 = K_gen (Mirage_crypto.Hash.SHA256)
 
-let rec sign_z ?(mask = `Yes) ?k:k0 ~key:({ p; q; gg; x; _ } as key) z =
-  let k  = match k0 with Some k -> k | None -> K_gen_sha256.z_gen ~key z in
+let sign_z ?(mask = `Yes) ?k:k0 ~key:({ p; q; gg; x; _ } as key) z =
+  let k = match k0 with Some k -> k | None -> K_gen_sha256.z_gen ~key z in
   let k' = Z.invert k q
-  and r  = match expand_mask mask with
-    | `No    -> Z.(powm gg k p mod q)
+  and b, b' = match expand_mask mask with
+    | `No -> Z.one, Z.one
     | `Yes g ->
-        let m  = Z_extra.gen_r ?g Z.one q in
-        let m' = Z.invert m q in
-        Z.(powm (powm gg m p) (m' * k mod q) p mod q) in
-  let s = Z.(k' * (z + x * r) mod q) in
-  if r = Z.zero || s = Z.zero then sign_z ~mask ?k:k0 ~key z else (r, s)
+      let m  = Z_extra.gen_r ?g Z.one q in
+      m, Z.invert m q
+  in
+  let r = Z.(powm gg k p mod q) in
+  (* normal DSA sign is: s = k^-1 * (z + r * x) mod q *)
+  (* we apply blinding where possible and compute:
+     s = k^-1 * b^-1 * (b * z + b * r * x) mod q
+     see https://github.com/openssl/openssl/pull/6524 for further details *)
+  let s =
+    let t1 =
+      let t11 = Z.(b * x mod q) in
+      Z.(t11 * r mod q)
+    in
+    let t2 = Z.(b * z mod q) in
+    let t3 = Z.((t1 + t2) mod q) in
+    let t4 = Z.(k' * t3 mod q) in
+    Z.(b' * t4 mod q)
+  in
+  if r = Z.zero || s = Z.zero then invalid_arg "k unsuitable" else (r, s)
 
 let verify_z ~key:({ p; q; gg; y }: pub ) (r, s) z =
   let v () =
