@@ -1,14 +1,48 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
+open Rresult
 
 open Common
 
 type pub = { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; y : Z_sexp.t }
 [@@deriving sexp]
 
+let pub ?(fips = false) ~p ~q ~gg ~y =
+  guard Z.(one < gg && gg < p) (`Msg "bad generator") >>= fun () ->
+  guard (Z_extra.pseudoprime q) (`Msg "q is not prime") >>= fun () ->
+  guard (Z.is_odd p && Z_extra.pseudoprime p) (`Msg "p is not prime") >>= fun () ->
+  guard Z.(zero < y && y < p) (`Msg "y not in 0..p-1") >>= fun () ->
+  guard (q < p) (`Msg "q is not smaller than p") >>= fun () ->
+  guard Z.(zero = (pred p) mod q) (`Msg "p - 1 mod q <> 0") >>= fun () ->
+  (if fips then
+     match Z.numbits p, Z.numbits q with
+     | 1024, 160 | 2048, 224 | 2048, 256 | 3072, 256 -> Ok ()
+     | _ -> Error (`Msg "bit length of p or q not FIPS specified")
+   else
+     Ok ()) >>= fun () ->
+  Ok { p ; q ; gg ; y }
+
+let pub_of_sexp s =
+  let p = pub_of_sexp s in
+  match pub ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~y:p.y with
+  | Ok p -> p
+  | Error (`Msg m) -> invalid_arg "bad public %s" m
+
 type priv =
   { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; x : Z_sexp.t ; y : Z_sexp.t }
 [@@deriving sexp]
+
+let priv ?fips ~p ~q ~gg ~x ~y =
+  pub ?fips ~p ~q ~gg ~y >>= fun _ ->
+  guard Z.(zero < x && x < q) (`Msg "x not in 1..q-1") >>= fun () ->
+  guard Z.(y = powm gg x p) (`Msg "y <> g ^ x mod p") >>= fun () ->
+  Ok { p ; q ; gg ; x ; y }
+
+let priv_of_sexp s =
+  let p = priv_of_sexp s in
+  match priv ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~x:p.x ~y:p.y with
+  | Ok p -> p
+  | Error (`Msg m) -> invalid_arg "bad private %s" m
 
 let pub_of_priv { p; q; gg; y; _ } = { p; q; gg; y }
 
@@ -43,18 +77,22 @@ let params ?g size =
     let q_q  = Z.(q * two) in
     until Z_extra.pseudoprime @@ fun () ->
       let x = Z_extra.gen_bits ?g ~msb:1 l in
-      Z.(x - (x mod q_q) + one) in
+      Z.(x - (x mod q_q) + one)
+  in
   let gg =
     let e = Z.(pred p / q) in
     until ((<>) Z.one) @@ fun () ->
       let h = Z_extra.gen_r ?g two Z.(pred p) in
-      Z.(powm h e p) in
+      Z.(powm h e p)
+  in
+  (* all checks above are already satisfied *)
   (p, q, gg)
 
 let generate ?g size =
   let (p, q, gg) = params ?g size in
   let x = Z_extra.gen_r ?g Z.one q in
   let y = Z.(powm gg x p) in
+  (* checks are satisfied due to construction *)
   { p; q; gg; x; y }
 
 

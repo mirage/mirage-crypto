@@ -288,7 +288,7 @@ module Dsa : sig
 
   (** {1 DSA signature algorithm} *)
 
-  type priv = {
+  type priv = private {
     p  : Z.t ; (** Modulus *)
     q  : Z.t ; (** Subgroup order *)
     gg : Z.t ; (** Group Generator *)
@@ -299,7 +299,13 @@ module Dsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  type pub  = {
+  val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t ->
+    (priv, [> `Msg of string ]) result
+  (** [priv ~fips ~p ~q ~gg ~x ~y] constructs a private DSA key from the given
+      numbers. Will result in an error if parameters are ill-formed: same as
+      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. *)
+
+  type pub = private {
     p  : Z.t ;
     q  : Z.t ;
     gg : Z.t ;
@@ -308,6 +314,15 @@ module Dsa : sig
   (** Public key, a subset of {{!priv}private key}.
 
       {e [Sexplib] convertible}. *)
+
+  val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t ->
+    (pub, [> `Msg of string ]) result
+  (** [pub ~fips ~p ~q ~gg ~y] constructs a public DSA key from the given
+      numbers. Will result in an error if the parameters are not well-formed:
+      [one < gg < p], [q] probabilistically a prime, [p] probabilistically
+      prime and odd, [0 < y < p], [q < p], and [p - 1 mod q = 0]. If [fips] is
+      specified and [true] (defaults to [false]), only FIPS-specified bit length
+      for [p] and [q] are accepted. *)
 
   type keysize = [ `Fips1024 | `Fips2048 | `Fips3072 | `Exactly of bits * bits ]
   (** Key size request. Three {e Fips} variants refer to FIPS-standardized

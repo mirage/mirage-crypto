@@ -35,8 +35,6 @@ type pub = { e : Z_sexp.t ; n : Z_sexp.t } [@@deriving sexp]
 let minimum_octets = 12
 let minimum_bits = 8 * minimum_octets - 7
 
-let guard p err = if p then Ok () else Error err
-
 let pub ~e ~n =
   (* We cannot verify a public key being good (this would require to verify "n"
      being the multiplication of two prime numbers - figuring out which primes
