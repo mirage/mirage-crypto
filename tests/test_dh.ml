@@ -6,7 +6,7 @@ open Test_common
 
 let dh_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
-    let p = Dh.gen_group bits in
+    let p = Dh.gen_group ~bits () in
     let (s1, m1) = Dh.gen_key p
     and (s2, m2) = Dh.gen_key p in
     let sh1 = Dh.shared p s1 m2

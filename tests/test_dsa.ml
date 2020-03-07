@@ -33,7 +33,9 @@ let dsa_test ~priv ~msg ?k ~r ~s ~hash _ =
 let params ~p ~q ~g = Cstruct.(of_hex p, of_hex q, of_hex g)
 
 let priv_of f ~p ~q ~gg ~x ~y =
-  { Dsa.p = f p ; q = f q ; gg = f gg ; x = f x ; y = f y }
+  match Dsa.priv ~fips:true ~p:(f p) ~q:(f q) ~gg:(f gg) ~x:(f x) ~y:(f y) with
+  | Ok dsa -> dsa
+  | Error (`Msg m) -> invalid_arg "bad DSA private key %s" m
 
 let priv_of_cs  = priv_of Z_extra.of_cstruct_be
 let priv_of_hex = priv_of (fun cs -> hex cs |> Z_extra.of_cstruct_be)
