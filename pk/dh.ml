@@ -1,5 +1,6 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
+open Rresult
 
 open Common
 
@@ -12,13 +13,10 @@ type group = {
 } [@@deriving sexp]
 
 let group ~p ~gg ?q () =
-  if Z.(p > zero && is_odd p) && Z_extra.pseudoprime p then
-    if Z.(one < gg && gg < p) then
-      Ok { p ; gg ; q }
-    else
-      Error (`Msg "invalid generator")
-  else
-    Error (`Msg "invalid prime")
+  guard (Z.(p > zero && is_odd p) && Z_extra.pseudoprime p)
+    (`Msg "invalid prime") >>= fun () ->
+  guard Z.(one < gg && gg < p) (`Msg "invalid generator") >>= fun () ->
+  Ok { p ; gg ; q }
 
 let group_of_sexp s =
   let g = group_of_sexp s in
