@@ -164,23 +164,26 @@ type mask = [ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ]
 let encrypt_unsafe ~key: ({ e; n } : pub) msg = Z.(powm msg e n)
 
 let decrypt_unsafe ~rsa_crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv) c =
-  let m1 = Z.(powm c dp p)
-  and m2 = Z.(powm c dq q) in
+  let m1 = Z.(powm_sec c dp p)
+  and m2 = Z.(powm_sec c dq q) in
+  (* NOTE: neither erem, nor the multiplications (addition, subtraction) are
+     guaranteed to be constant time by gmp *)
   let h  = Z.(erem (q' * (m1 - m2)) p) in
   let m  = Z.(h * q + m2) in
   (* counter Arjen Lenstra's CRT attack by verifying the signature. Since the
      public exponent is small, this is not very expensive. Mentioned again
      "Factoring RSA keys with TLS Perfect Forward Secrecy" (Weimer, 2015). *)
-  if not rsa_crt_hardening || Z.(powm m e n) = c then
+  if not rsa_crt_hardening || Z.(powm_sec m e n) = c then
     m
   else
-    Z.(powm c d n)
+    Z.(powm_sec c d n)
 
 let decrypt_blinded_unsafe ~rsa_crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
   let r  = until (rprime n) (fun _ -> Z_extra.gen_r ?g two n) in
   (* since r and n are coprime, there must be a multiplicative inverse *)
   let r' = Z.(invert r n) in
-  let x  = decrypt_unsafe ~rsa_crt_hardening ~key Z.(powm r e n * c mod n) in
+  let c' = Z.(powm_sec r e n * c mod n) in
+  let x  = decrypt_unsafe ~rsa_crt_hardening ~key c' in
   Z.(r' * x mod n)
 
 let (encrypt_z, decrypt_z) =

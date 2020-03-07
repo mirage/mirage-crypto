@@ -1,5 +1,14 @@
 (** {1 Public-key cryptography} *)
 
+(** Public and private key types are private, the constructors validate their
+    well-formedness as much as possible, esp. so that [powm_sec] will not raise
+    an exception (exponent > 1, or odd modulus). All modular exponentiations
+    (unless otherwise noted) use the {!Z.powm_sec} function, which uses a static
+    access pattern and operates in constant time (of the bit size of the input),
+    independent of which bits are set and not set. The performance is up to 20%
+    worse than [powm]. Additionally, blinding is applied to RSA and DSA by
+    default. *)
+
 type bits = int
 
 (** {b RSA} public-key cryptography algorithm. *)
@@ -80,7 +89,9 @@ module Rsa : sig
       [~attempts] is the number of trials. For triplets that form an RSA key,
       the probability of failure is at most [2^(-attempts)]. [attempts] defaults
       to an unspecified number that yields a very high probability of recovering
-      valid keys. *)
+      valid keys.
+
+      Note that no time masking is done for the computations in this function. *)
 
   val pub_of_priv : priv -> pub
   (** Extract the public component from a private key. *)
@@ -303,7 +314,8 @@ module Dsa : sig
     (priv, [> `Msg of string ]) result
   (** [priv ~fips ~p ~q ~gg ~x ~y] constructs a private DSA key from the given
       numbers. Will result in an error if parameters are ill-formed: same as
-      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. *)
+      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
+      time masking is done on the modular exponentiation. *)
 
   type pub = private {
     p  : Z.t ;
@@ -338,7 +350,8 @@ module Dsa : sig
   val generate : ?g:Mirage_crypto_rng.g -> keysize -> priv
   (** [generate g size] is a fresh {{!priv}private} key. The domain parameters
       are derived using a modified FIPS.186-4 probabilistic process, but the
-      derivation can not be validated.
+      derivation can not be validated. Note that no time masking is done for the
+      modular exponentiations.
 
       {b Note} The process might diverge if it is impossible to find parameters
       with the given bit sizes. This happens when [n] gets too big for [l], if
@@ -448,7 +461,8 @@ module Dh : sig
   (** [gen_group ~g ~bits ()] generates a random {!group} with modulus size
       [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
       and [2] for the generator, such that [2^q = 1 mod p].
-      Runtime is on the order of minute for 1024 bits.
+      Runtime is on the order of a minute for 1024 bits. Note that no time masking
+      is done for the modular exponentiation.
 
       {b Note} The process might diverge if there are no suitable groups. This
       happens with extremely small [bits] values. *)
