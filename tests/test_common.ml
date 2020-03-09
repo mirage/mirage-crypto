@@ -1,7 +1,5 @@
 open OUnit2
 
-open Mirage_crypto.Uncommon
-
 let (prf, strf) = Format.(fprintf, asprintf)
 let pp_map pp f ppf x = pp ppf (f x)
 let pp_diff pp ppf (a, b) = prf ppf "@[<v>want: %a@,have: %a@]" pp a pp b
@@ -27,7 +25,7 @@ let eq_opt eq a b = match (a, b) with
 
 let assert_cs_equal ?msg =
   assert_equal ~cmp:Cstruct.equal ?msg
-    ~pp_diff:(pp_diff (xd ~ascii:true ()))
+    ~pp_diff:(pp_diff Cstruct.hexdump_pp)
 
 let iter_list xs f = List.iter f xs
 
@@ -51,6 +49,6 @@ let f1_opt_eq ?msg f (a, b) _ =
   in
   assert_equal b (f a) ?msg
     ~cmp:(eq_opt Cstruct.equal)
-    ~pp_diff:(pp_diff (pp_opt (xd ())))
+    ~pp_diff:(pp_diff (pp_opt Cstruct.hexdump_pp))
 
 let f2_eq ?msg f (a, b, c) = f1_eq ?msg (f (vx a)) (b, c)
