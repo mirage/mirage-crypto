@@ -310,9 +310,9 @@ module Dsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t ->
+  val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t -> unit ->
     (priv, [> `Msg of string ]) result
-  (** [priv ~fips ~p ~q ~gg ~x ~y] constructs a private DSA key from the given
+  (** [priv ~fips ~p ~q ~gg ~x ~y ()] constructs a private DSA key from the given
       numbers. Will result in an error if parameters are ill-formed: same as
       {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
       time masking is done on the modular exponentiation. *)
@@ -327,9 +327,9 @@ module Dsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t ->
+  val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t -> unit ->
     (pub, [> `Msg of string ]) result
-  (** [pub ~fips ~p ~q ~gg ~y] constructs a public DSA key from the given
+  (** [pub ~fips ~p ~q ~gg ~y ()] constructs a public DSA key from the given
       numbers. Will result in an error if the parameters are not well-formed:
       [one < gg < p], [q] probabilistically a prime, [p] probabilistically
       prime and odd, [0 < y < p], [q < p], and [p - 1 mod q = 0]. If [fips] is

@@ -7,7 +7,7 @@ open Common
 type pub = { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; y : Z_sexp.t }
 [@@deriving sexp]
 
-let pub ?(fips = false) ~p ~q ~gg ~y =
+let pub ?(fips = false) ~p ~q ~gg ~y () =
   guard Z.(one < gg && gg < p) (`Msg "bad generator") >>= fun () ->
   guard (Z_extra.pseudoprime q) (`Msg "q is not prime") >>= fun () ->
   guard (Z.is_odd p && Z_extra.pseudoprime p) (`Msg "p is not prime") >>= fun () ->
@@ -24,7 +24,7 @@ let pub ?(fips = false) ~p ~q ~gg ~y =
 
 let pub_of_sexp s =
   let p = pub_of_sexp s in
-  match pub ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~y:p.y with
+  match pub ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~y:p.y () with
   | Ok p -> p
   | Error (`Msg m) -> invalid_arg "bad public %s" m
 
@@ -32,15 +32,15 @@ type priv =
   { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; x : Z_sexp.t ; y : Z_sexp.t }
 [@@deriving sexp]
 
-let priv ?fips ~p ~q ~gg ~x ~y =
-  pub ?fips ~p ~q ~gg ~y >>= fun _ ->
+let priv ?fips ~p ~q ~gg ~x ~y () =
+  pub ?fips ~p ~q ~gg ~y () >>= fun _ ->
   guard Z.(zero < x && x < q) (`Msg "x not in 1..q-1") >>= fun () ->
   guard Z.(y = powm gg x p) (`Msg "y <> g ^ x mod p") >>= fun () ->
   Ok { p ; q ; gg ; x ; y }
 
 let priv_of_sexp s =
   let p = priv_of_sexp s in
-  match priv ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~x:p.x ~y:p.y with
+  match priv ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~x:p.x ~y:p.y () with
   | Ok p -> p
   | Error (`Msg m) -> invalid_arg "bad private %s" m
 
