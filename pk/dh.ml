@@ -1,5 +1,6 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
+open Rresult
 
 open Common
 
@@ -12,13 +13,10 @@ type group = {
 } [@@deriving sexp]
 
 let group ~p ~gg ?q () =
-  if Z.(p > zero && is_odd p) && Z_extra.pseudoprime p then
-    if Z.(one < gg && gg < p) then
-      Ok { p ; gg ; q }
-    else
-      Error (`Msg "invalid generator")
-  else
-    Error (`Msg "invalid prime")
+  guard (Z.(p > zero && is_odd p) && Z_extra.pseudoprime p)
+    (`Msg "invalid prime") >>= fun () ->
+  guard Z.(one < gg && gg < p) (`Msg "invalid generator") >>= fun () ->
+  Ok { p ; gg ; q }
 
 let group_of_sexp s =
   let g = group_of_sexp s in
@@ -55,7 +53,7 @@ let bad_public_key { p; gg; _ } ggx =
   ggx <= Z.one || ggx >= Z.(pred p) || ggx = gg
 
 let key_of_secret_z ({ p; gg; _ } as group) x =
-  match Z.(powm gg x p) with
+  match Z.(powm_sec gg x p) with
   | ggx when bad_public_key group ggx
         -> raise Invalid_public_key
   | ggx -> ({ x }, Z_extra.to_cstruct_be ggx)
@@ -75,11 +73,10 @@ let rec gen_key ?g ?bits ({ p; q; _ } as group) =
     |> Z_extra.gen_bits ?g ~msb:1 in
   try key_of_secret_z group s with Invalid_public_key -> gen_key ?g ?bits group
 
-(* No time-masking. Does it matter in case of ephemeral DH??  *)
 let shared ({ p; _ } as group) { x } cs =
   match Z_extra.of_cstruct_be cs with
   | ggy when bad_public_key group ggy -> None
-  | ggy -> Some (Z_extra.to_cstruct_be (Z.powm ggy x p))
+  | ggy -> Some (Z_extra.to_cstruct_be (Z.powm_sec ggy x p))
 
 (* Finds a safe prime with [p = 2q + 1] and [2^q = 1 mod p]. *)
 let rec gen_group ?g ~bits () =

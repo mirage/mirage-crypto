@@ -4,10 +4,6 @@
     [generate] request. On BSD systems (FreeBSD, OpenBSD, macOS) [getentropy ()]
     is used instead.
 
-    The RNG [Devrandom] opens [/dev/urandom] (or [/dev/random] if the former is
-    absent) at initialization time, and reads random bytes from that file
-    descriptor.
-
     Calling {{!initialize}initialize} is enough to bring the RNG into a working
     state.
 
@@ -16,7 +12,5 @@
 *)
 
 module Getrandom : Mirage_crypto_rng.Generator
-
-(*module Devrandom : Mirage_crypto_rng.Generator *)
 
 val initialize : unit -> unit

@@ -68,19 +68,6 @@ module Uncommon : sig
     val split3 : Cstruct.t -> int -> int -> Cstruct.t * Cstruct.t * Cstruct.t
   end
 
-  val xd  : ?address:bool -> ?ascii:bool -> ?w:int -> unit -> Format.formatter -> Cstruct.t -> unit
-  (** [xd ?address ?ascii ?w () ppf cs] pretty-prints [cs] on [ppf] using the
-      traditional hexdump format.
-
-      [~address] starts each line with its offset in [cs]. Default [true].
-
-      [~ascii] prints (printable) bytes of [cs]. Default [false].
-
-      [~w] bytes per line. Default [16]. *)
-
-  val xdb : ?address:bool -> ?ascii:bool -> ?w:int -> unit -> Format.formatter -> bytes -> unit
-  (** {!xd} for [bytes]. *)
-
   val imin : int -> int -> int
   val imax : int -> int -> int
   val iter2 : 'a -> 'a -> ('a -> unit) -> unit

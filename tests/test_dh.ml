@@ -13,7 +13,7 @@ let dh_selftest ~bits n =
     and sh2 = Dh.shared p s2 m1 in
     assert_equal sh1 sh2
       ~cmp:(eq_opt Cstruct.equal)
-      ~pp_diff:(pp_diff (pp_opt (Mirage_crypto.Uncommon.xd ())))
+      ~pp_diff:(pp_diff (pp_opt Cstruct.hexdump_pp))
       ~msg:"shared secret"
 
 let dh_shared_0 =

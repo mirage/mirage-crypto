@@ -1,5 +1,14 @@
 (** {1 Public-key cryptography} *)
 
+(** Public and private key types are private, the constructors validate their
+    well-formedness as much as possible, esp. so that [powm_sec] will not raise
+    an exception (exponent > 1, or odd modulus). All modular exponentiations
+    (unless otherwise noted) use the {!Z.powm_sec} function, which uses a static
+    access pattern and operates in constant time (of the bit size of the input),
+    independent of which bits are set and not set. The performance is up to 20%
+    worse than [powm]. Additionally, blinding is applied to RSA and DSA by
+    default. *)
+
 type bits = int
 
 (** {b RSA} public-key cryptography algorithm. *)
@@ -80,7 +89,9 @@ module Rsa : sig
       [~attempts] is the number of trials. For triplets that form an RSA key,
       the probability of failure is at most [2^(-attempts)]. [attempts] defaults
       to an unspecified number that yields a very high probability of recovering
-      valid keys. *)
+      valid keys.
+
+      Note that no time masking is done for the computations in this function. *)
 
   val pub_of_priv : priv -> pub
   (** Extract the public component from a private key. *)
@@ -109,12 +120,12 @@ module Rsa : sig
 
       @raise Invalid_argument if [message] is [0x00] or [0x01]. *)
 
-  val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+  val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
     Cstruct.t -> Cstruct.t
-  (** [decrypt ~rsa_crt_hardening ~mask key ciphertext] is the decrypted
+  (** [decrypt ~crt_hardening ~mask key ciphertext] is the decrypted
       [ciphertext], left-padded with [0x00] up to [key] size.
 
-      [~rsa_crt_hardening] defaults to [false]. If [true] verifies that the
+      [~crt_hardening] defaults to [false]. If [true] verifies that the
       result is correct. This is to counter Chinese remainder theorem attacks to
       factorize primes. If the computed signature is incorrect, it is again
       computed in the classical way (c ^ d mod n) without the Chinese remainder
@@ -156,17 +167,17 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+    val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
       Cstruct.t -> Cstruct.t option
-    (** [decrypt ~rsa_crt_hardening ~mask ~key ciphertext] is [Some message] if
+    (** [decrypt ~crt_hardening ~mask ~key ciphertext] is [Some message] if
         the [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
-        operation, or [None] otherwise. [rsa_crt_hardening] defaults to
+        operation, or [None] otherwise. [crt_hardening] defaults to
         [false]. *)
 
-    val sig_encode : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+    val sig_encode : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
       Cstruct.t -> Cstruct.t
-    (** [sig_encode ~rsa_crt_hardening ~mask ~key message] is the PKCS1-padded
-        (type 1) [message] signed by the [key]. [rsa_crt_hardening] defaults to
+    (** [sig_encode ~crt_hardening ~mask ~key message] is the PKCS1-padded
+        (type 1) [message] signed by the [key]. [crt_hardening] defaults to
         [true] and verifies that the computed signature is correct.
 
         {b Note} This operation performs only the padding and RSA transformation
@@ -183,13 +194,13 @@ module Rsa : sig
     val min_key : Mirage_crypto.Hash.hash -> bits
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
-    val sign : ?rsa_crt_hardening:bool -> ?mask:mask ->
+    val sign : ?crt_hardening:bool -> ?mask:mask ->
       hash:Mirage_crypto.Hash.hash -> key:priv -> Cstruct.t or_digest ->
       Cstruct.t
-    (** [sign ~rsa_crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
+    (** [sign ~crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
         signature of [message], signed by the [key], using the hash function
         [hash]. This is the full signature, with the ASN-encoded message digest
-        as the payload. [rsa_crt_hardening] defaults to [true] and verifies that
+        as the payload. [crt_hardening] defaults to [true] and verifies that
         the computed signature is correct.
 
         [message] is either the actual message, or its digest.
@@ -229,11 +240,11 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
+    val decrypt : ?crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
       key:priv -> Cstruct.t -> Cstruct.t option
-    (** [decrypt ~rsa_crt_hardening ~mask ~label ~key ciphertext] is
+    (** [decrypt ~crt_hardening ~mask ~label ~key ciphertext] is
         [Some message] if the [ciphertext] was produced by the corresponding
-        {{!encrypt}encrypt} operation, or [None] otherwise. [rsa_crt_hardening]
+        {{!encrypt}encrypt} operation, or [None] otherwise. [crt_hardening]
         defaults to [false]. *)
   end
 
@@ -248,10 +259,10 @@ module Rsa : sig
       hash length and [slen] is the seed length. *)
   module PSS (H: Mirage_crypto.Hash.S) : sig
 
-    val sign : ?g:Mirage_crypto_rng.g -> ?rsa_crt_hardening:bool ->
+    val sign : ?g:Mirage_crypto_rng.g -> ?crt_hardening:bool ->
       ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ~g ~rsa_crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
-        digest of [message], signed with the [key]. [rsa_crt_hardening] defaults
+    (** [sign ~g ~crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
+        digest of [message], signed with the [key]. [crt_hardening] defaults
         to [false].
 
         [slen] is the optional seed length and defaults to the size of the
@@ -303,7 +314,8 @@ module Dsa : sig
     (priv, [> `Msg of string ]) result
   (** [priv ~fips ~p ~q ~gg ~x ~y] constructs a private DSA key from the given
       numbers. Will result in an error if parameters are ill-formed: same as
-      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. *)
+      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
+      time masking is done on the modular exponentiation. *)
 
   type pub = private {
     p  : Z.t ;
@@ -338,7 +350,8 @@ module Dsa : sig
   val generate : ?g:Mirage_crypto_rng.g -> keysize -> priv
   (** [generate g size] is a fresh {{!priv}private} key. The domain parameters
       are derived using a modified FIPS.186-4 probabilistic process, but the
-      derivation can not be validated.
+      derivation can not be validated. Note that no time masking is done for the
+      modular exponentiations.
 
       {b Note} The process might diverge if it is impossible to find parameters
       with the given bit sizes. This happens when [n] gets too big for [l], if
@@ -448,7 +461,8 @@ module Dh : sig
   (** [gen_group ~g ~bits ()] generates a random {!group} with modulus size
       [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
       and [2] for the generator, such that [2^q = 1 mod p].
-      Runtime is on the order of minute for 1024 bits.
+      Runtime is on the order of a minute for 1024 bits. Note that no time masking
+      is done for the modular exponentiation.
 
       {b Note} The process might diverge if there are no suitable groups. This
       happens with extremely small [bits] values. *)

@@ -122,7 +122,7 @@ let sign_z ?(mask = `Yes) ?k:k0 ~key:({ p; q; gg; x; _ } as key) z =
       let m  = Z_extra.gen_r ?g Z.one q in
       m, Z.invert m q
   in
-  let r = Z.(powm gg k p mod q) in
+  let r = Z.(powm_sec gg k p mod q) in
   (* normal DSA sign is: s = k^-1 * (z + r * x) mod q *)
   (* we apply blinding where possible and compute:
      s = k^-1 * b^-1 * (b * z + b * r * x) mod q
