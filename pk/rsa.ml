@@ -163,7 +163,7 @@ type mask = [ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ]
 
 let encrypt_unsafe ~key: ({ e; n } : pub) msg = Z.(powm msg e n)
 
-let decrypt_unsafe ~rsa_crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv) c =
+let decrypt_unsafe ~crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv) c =
   let m1 = Z.(powm_sec c dp p)
   and m2 = Z.(powm_sec c dq q) in
   (* NOTE: neither erem, nor the multiplications (addition, subtraction) are
@@ -173,17 +173,17 @@ let decrypt_unsafe ~rsa_crt_hardening ~key:({ e; d; n; p; q; dp; dq; q'} : priv)
   (* counter Arjen Lenstra's CRT attack by verifying the signature. Since the
      public exponent is small, this is not very expensive. Mentioned again
      "Factoring RSA keys with TLS Perfect Forward Secrecy" (Weimer, 2015). *)
-  if not rsa_crt_hardening || Z.(powm_sec m e n) = c then
+  if not crt_hardening || Z.(powm_sec m e n) = c then
     m
   else
     Z.(powm_sec c d n)
 
-let decrypt_blinded_unsafe ~rsa_crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
+let decrypt_blinded_unsafe ~crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
   let r  = until (rprime n) (fun _ -> Z_extra.gen_r ?g two n) in
   (* since r and n are coprime, there must be a multiplicative inverse *)
   let r' = Z.(invert r n) in
   let c' = Z.(powm_sec r e n * c mod n) in
-  let x  = decrypt_unsafe ~rsa_crt_hardening ~key c' in
+  let x  = decrypt_unsafe ~crt_hardening ~key c' in
   Z.(r' * x mod n)
 
 let (encrypt_z, decrypt_z) =
@@ -191,20 +191,20 @@ let (encrypt_z, decrypt_z) =
     if msg < two then invalid_arg "Rsa: message: %a" Z.pp_print msg;
     if n <= msg then raise Insufficient_key in
   (fun ~(key : pub) msg -> check_params key.n msg ; encrypt_unsafe ~key msg),
-  (fun ~rsa_crt_hardening ~mask ~(key : priv) msg ->
+  (fun ~crt_hardening ~mask ~(key : priv) msg ->
     check_params key.n msg ;
     match mask with
-    | `No         -> decrypt_unsafe ~rsa_crt_hardening ~key msg
-    | `Yes        -> decrypt_blinded_unsafe ~rsa_crt_hardening ~key msg
-    | `Yes_with g -> decrypt_blinded_unsafe ~rsa_crt_hardening ~g ~key msg )
+    | `No         -> decrypt_unsafe ~crt_hardening ~key msg
+    | `Yes        -> decrypt_blinded_unsafe ~crt_hardening ~key msg
+    | `Yes_with g -> decrypt_blinded_unsafe ~crt_hardening ~g ~key msg )
 
 let reformat out f msg =
   Z_extra.(of_cstruct_be msg |> f |> to_cstruct_be ~size:(out // 8))
 
 let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 
-let decrypt ?(rsa_crt_hardening=false) ?(mask=`Yes) ~key =
-  reformat (priv_bits key) (decrypt_z ~rsa_crt_hardening ~mask ~key)
+let decrypt ?(crt_hardening=false) ?(mask=`Yes) ~key =
+  reformat (priv_bits key) (decrypt_z ~crt_hardening ~mask ~key)
 
 let b   = Cs.b
 let cat = Cstruct.concat
@@ -260,8 +260,8 @@ module PKCS1 = struct
       try unpad (transform msg) with Insufficient_key -> None
     else None
 
-  let sig_encode ?(rsa_crt_hardening = true) ?mask ~key msg =
-    padded pad_01 (decrypt ~rsa_crt_hardening ?mask ~key) (priv_bits key) msg
+  let sig_encode ?(crt_hardening = true) ?mask ~key msg =
+    padded pad_01 (decrypt ~crt_hardening ?mask ~key) (priv_bits key) msg
 
   let sig_decode ~key msg =
     unpadded unpad_01 (encrypt ~key) (pub_bits key) msg
@@ -269,8 +269,8 @@ module PKCS1 = struct
   let encrypt ?g ~key msg =
     padded (pad_02 ?g) (encrypt ~key) (pub_bits key) msg
 
-  let decrypt ?(rsa_crt_hardening = false) ?mask ~key msg =
-    unpadded unpad_02 (decrypt ~rsa_crt_hardening ?mask ~key) (priv_bits key) msg
+  let decrypt ?(crt_hardening = false) ?mask ~key msg =
+    unpadded unpad_02 (decrypt ~crt_hardening ?mask ~key) (priv_bits key) msg
 
   let asns = List.(combine Hash.hashes &. map of_string) [
     "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10"     (* md5 *)
@@ -285,9 +285,9 @@ module PKCS1 = struct
 
   let detect msg = List.find_opt (fun (_, asn) -> Cs.is_prefix asn msg) asns
 
-  let sign ?(rsa_crt_hardening = true) ?mask ~hash ~key msg =
+  let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
     let msg' = Cs.(asn_of_hash hash <+> digest_or ~hash msg) in
-    sig_encode ~rsa_crt_hardening ?mask ~key msg'
+    sig_encode ~crt_hardening ?mask ~key msg'
 
   let verify ~hashp ~key ~signature msg =
     let open Option in
@@ -350,10 +350,10 @@ module OAEP (H : Hash.S) = struct
     if len msg > max_msg_bytes k then raise Insufficient_key
     else encrypt ~key @@ eme_oaep_encode ?g ?label k msg
 
-  let decrypt ?(rsa_crt_hardening = false) ?mask ?label ~key em =
+  let decrypt ?(crt_hardening = false) ?mask ?label ~key em =
     let k = priv_bits key // 8 in
     if len em <> k || max_msg_bytes k < 0 then None else
-      try eme_oaep_decode ?label @@ decrypt ~rsa_crt_hardening ?mask ~key em
+      try eme_oaep_decode ?label @@ decrypt ~crt_hardening ?mask ~key em
       with Insufficient_key -> None
 
   (* XXX Review rfc3447 7.1.2 and
@@ -406,12 +406,12 @@ module PSS (H: Hash.S) = struct
   let sufficient_key ~slen kbits =
     hlen + slen + 2 <= kbits / 8 (* 8 * (hlen + slen + 1) + 2 <= kbits *)
 
-  let sign ?g ?(rsa_crt_hardening = false) ?mask ?(slen = hlen) ~key msg =
+  let sign ?g ?(crt_hardening = false) ?mask ?(slen = hlen) ~key msg =
     let b = priv_bits key in
     if not (sufficient_key ~slen b) then raise Insufficient_key
     else
       let msg' = emsa_pss_encode ?g (imax 0 slen) (b - 1) msg in
-      decrypt ~rsa_crt_hardening ?mask ~key msg'
+      decrypt ~crt_hardening ?mask ~key msg'
 
   let verify ?(slen = hlen) ~key ~signature msg =
     let b = pub_bits key

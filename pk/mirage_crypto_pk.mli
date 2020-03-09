@@ -120,12 +120,12 @@ module Rsa : sig
 
       @raise Invalid_argument if [message] is [0x00] or [0x01]. *)
 
-  val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+  val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
     Cstruct.t -> Cstruct.t
-  (** [decrypt ~rsa_crt_hardening ~mask key ciphertext] is the decrypted
+  (** [decrypt ~crt_hardening ~mask key ciphertext] is the decrypted
       [ciphertext], left-padded with [0x00] up to [key] size.
 
-      [~rsa_crt_hardening] defaults to [false]. If [true] verifies that the
+      [~crt_hardening] defaults to [false]. If [true] verifies that the
       result is correct. This is to counter Chinese remainder theorem attacks to
       factorize primes. If the computed signature is incorrect, it is again
       computed in the classical way (c ^ d mod n) without the Chinese remainder
@@ -167,17 +167,17 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+    val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
       Cstruct.t -> Cstruct.t option
-    (** [decrypt ~rsa_crt_hardening ~mask ~key ciphertext] is [Some message] if
+    (** [decrypt ~crt_hardening ~mask ~key ciphertext] is [Some message] if
         the [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
-        operation, or [None] otherwise. [rsa_crt_hardening] defaults to
+        operation, or [None] otherwise. [crt_hardening] defaults to
         [false]. *)
 
-    val sig_encode : ?rsa_crt_hardening:bool -> ?mask:mask -> key:priv ->
+    val sig_encode : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
       Cstruct.t -> Cstruct.t
-    (** [sig_encode ~rsa_crt_hardening ~mask ~key message] is the PKCS1-padded
-        (type 1) [message] signed by the [key]. [rsa_crt_hardening] defaults to
+    (** [sig_encode ~crt_hardening ~mask ~key message] is the PKCS1-padded
+        (type 1) [message] signed by the [key]. [crt_hardening] defaults to
         [true] and verifies that the computed signature is correct.
 
         {b Note} This operation performs only the padding and RSA transformation
@@ -194,13 +194,13 @@ module Rsa : sig
     val min_key : Mirage_crypto.Hash.hash -> bits
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
-    val sign : ?rsa_crt_hardening:bool -> ?mask:mask ->
+    val sign : ?crt_hardening:bool -> ?mask:mask ->
       hash:Mirage_crypto.Hash.hash -> key:priv -> Cstruct.t or_digest ->
       Cstruct.t
-    (** [sign ~rsa_crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
+    (** [sign ~crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
         signature of [message], signed by the [key], using the hash function
         [hash]. This is the full signature, with the ASN-encoded message digest
-        as the payload. [rsa_crt_hardening] defaults to [true] and verifies that
+        as the payload. [crt_hardening] defaults to [true] and verifies that
         the computed signature is correct.
 
         [message] is either the actual message, or its digest.
@@ -240,11 +240,11 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?rsa_crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
+    val decrypt : ?crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
       key:priv -> Cstruct.t -> Cstruct.t option
-    (** [decrypt ~rsa_crt_hardening ~mask ~label ~key ciphertext] is
+    (** [decrypt ~crt_hardening ~mask ~label ~key ciphertext] is
         [Some message] if the [ciphertext] was produced by the corresponding
-        {{!encrypt}encrypt} operation, or [None] otherwise. [rsa_crt_hardening]
+        {{!encrypt}encrypt} operation, or [None] otherwise. [crt_hardening]
         defaults to [false]. *)
   end
 
@@ -259,10 +259,10 @@ module Rsa : sig
       hash length and [slen] is the seed length. *)
   module PSS (H: Mirage_crypto.Hash.S) : sig
 
-    val sign : ?g:Mirage_crypto_rng.g -> ?rsa_crt_hardening:bool ->
+    val sign : ?g:Mirage_crypto_rng.g -> ?crt_hardening:bool ->
       ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ~g ~rsa_crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
-        digest of [message], signed with the [key]. [rsa_crt_hardening] defaults
+    (** [sign ~g ~crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
+        digest of [message], signed with the [key]. [crt_hardening] defaults
         to [false].
 
         [slen] is the optional seed length and defaults to the size of the
