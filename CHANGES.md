@@ -54,6 +54,8 @@ mirage-crypto-pk
   Lenstra's CRT attack (mentioned again by Weimer)
 - use Eqaf_cstruct.equal instead of home-grown ct_eq
 - bindings with a bits argument are labeled to avoid confusion of bits and bytes
+- Dh secret is now a pair of group and secret, Dh.shared no longer gets the
+  group as separate argument
 - the powm_sec function is used to improve timing side channels mitigation (see
   https://gmplib.org/~tege/modexp-silent.pdf for further detalls). RSA still
   uses (lacking alternatives) Z.erem and Z.mul/add/sub without timing

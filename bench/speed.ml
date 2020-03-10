@@ -250,8 +250,8 @@ let benchmarks = [
         fst dh_groups);
 
   bm "dh-share" (fun name ->
-      count name (fun ((_, group), (sec, share)) ->
-          Mirage_crypto_pk.Dh.shared group sec share)
+      count name (fun (_, (sec, share)) ->
+          Mirage_crypto_pk.Dh.shared sec share)
         (fun ((g, _), _) -> g) dh_secrets);
 
   bm "aes-128-ecb" (fun name ->

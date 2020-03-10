@@ -431,7 +431,7 @@ module Dh : sig
   (** [group ~p ~gg ~q ()] constructs a group if [p] is odd, a prime number,
       and greater than [zero]. [gg] must be in the range [1 < gg < p]. *)
 
-  type secret = private { x : Z.t }
+  type secret = private { group : group ; x : Z.t }
   (** A private secret.
 
       {e [Sexplib] convertible.} *)
@@ -452,8 +452,8 @@ module Dh : sig
 
       {b Note} The process might diverge when [bits] is extremely small. *)
 
-  val shared : group -> secret -> Cstruct.t -> Cstruct.t option
-  (** [shared group secret message] is [Some key], the shared key, given a
+  val shared : secret -> Cstruct.t -> Cstruct.t option
+  (** [shared secret message] is [Some key], the shared key, given a
       group, a previously generated {!secret} and the other party's public
       message. It is [None] if [message] is degenerate. *)
 

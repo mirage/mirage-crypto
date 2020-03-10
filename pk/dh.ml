@@ -24,7 +24,14 @@ let group_of_sexp s =
   | Error (`Msg m) -> invalid_arg "bad group: %s" m
   | Ok g -> g
 
-type secret = { x : Z_sexp.t } [@@deriving sexp]
+type secret = { group : group ; x : Z_sexp.t } [@@deriving sexp]
+
+let secret_of_sexp sexp =
+  let s = secret_of_sexp sexp in
+  if Z.(one < s.x && s.x < s.group.p) then
+    s
+  else
+    invalid_arg "bad secret"
 
 (*
  * Estimates of equivalent-strength exponent sizes for the moduli sizes.
@@ -59,7 +66,7 @@ let key_of_secret_z ({ p; gg; _ } as group) x =
   if valid_secret group x then
     match Z.(powm_sec gg x p) with
     | ggx when bad_public_key group ggx -> raise Invalid_public_key
-    | ggx -> ({ x }, Z_extra.to_cstruct_be ggx)
+    | ggx -> ({ group ; x }, Z_extra.to_cstruct_be ggx)
   else
     raise Invalid_public_key
 
@@ -78,13 +85,10 @@ let rec gen_key ?g ?bits ({ p; q; _ } as group) =
     |> Z_extra.gen_bits ?g ~msb:1 in
   try key_of_secret_z group s with Invalid_public_key -> gen_key ?g ?bits group
 
-let shared ({ p; _ } as group) { x } cs =
-  if valid_secret group x then
-    match Z_extra.of_cstruct_be cs with
-    | ggy when bad_public_key group ggy -> None
-    | ggy -> Some (Z_extra.to_cstruct_be (Z.powm_sec ggy x p))
-  else
-    None
+let shared { group ; x } cs =
+  match Z_extra.of_cstruct_be cs with
+  | ggy when bad_public_key group ggy -> None
+  | ggy -> Some (Z_extra.to_cstruct_be (Z.powm_sec ggy x group.p))
 
 (* Finds a safe prime with [p = 2q + 1] and [2^q = 1 mod p]. *)
 let rec gen_group ?g ~bits () =
