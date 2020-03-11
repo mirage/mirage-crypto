@@ -30,3 +30,7 @@ conflicts: [
   "mirage-xen" {< "3.1.0"}
   "ocaml-freestanding" {< "0.4.1"}
 ]
+description: """
+Mirage-crypto provides symmetric ciphers (DES, AES, RC4), and hashes (MD5,
+SHA-1, SHA-2).
+"""

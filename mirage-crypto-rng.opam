@@ -21,3 +21,8 @@ depends: [
   "randomconv" {with-test & >= "0.1.3"}
   "ounit" {with-test}
 ]
+description: """
+Mirage-crypto-rng provides a random number generator interface, and
+implementations: Fortuna, HMAC-DRBG, getrandom/getentropy based (in the unix
+sublibrary)
+"""

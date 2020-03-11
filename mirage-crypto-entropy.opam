@@ -28,7 +28,7 @@ available: [
 ]
 synopsis: "Entropy source for MirageOS unikernels"
 description: """
-mirage-crypto-entropy implements various entropy sources for MirageOS unikernels:
+Mirage-crypto-entropy implements various entropy sources for MirageOS unikernels:
 - timer based ones (see [whirlwind RNG paper](https://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf))
 - rdseed and rdrand (x86/x86-64 only)
 """

@@ -29,3 +29,6 @@ depends: [
   ("mirage-no-xen" | "zarith-xen")
   ("mirage-no-solo5" | "zarith-freestanding")
 ]
+description: """
+Mirage-crypto-pk provides public-key cryptography (RSA, DSA, DH).
+"""
