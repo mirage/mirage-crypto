@@ -413,9 +413,12 @@ module Dh : sig
 
   (** {1 Diffie-Hellman key exchange} *)
 
-  exception Invalid_public_key
-  (** Raised if the public key is degenerate. Implies either badly malfunctioning
-      DH on the other side, or an attack attempt. *)
+  exception Invalid_key
+  (** Raised if the private key material is degenerate.
+      The following invariants are checked:
+      Secret key: [1 < secret < p]
+      Public key: [1 < public < p-1] && [public <> gg]
+  *)
 
   type group = private {
     p  : Z.t ;        (** modulus *)
@@ -432,7 +435,7 @@ module Dh : sig
       and greater than [zero]. [gg] must be in the range [1 < gg < p]. *)
 
   type secret = private { group : group ; x : Z.t }
-  (** A private secret.
+  (** A private key.
 
       {e [Sexplib] convertible.} *)
 
@@ -443,7 +446,7 @@ module Dh : sig
   (** [key_of_secret group s] is the {!secret} and the corresponding public
       key which use [s] as the secret exponent.
 
-      @raise Invalid_public_key if [s] is degenerate. *)
+      @raise Invalid_key if [s] is degenerate. *)
 
   val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:bits -> group -> secret * Cstruct.t
   (** Generate a random {!secret} and the corresponding public key.
@@ -453,16 +456,19 @@ module Dh : sig
       {b Note} The process might diverge when [bits] is extremely small. *)
 
   val shared : secret -> Cstruct.t -> Cstruct.t option
-  (** [shared secret message] is [Some key], the shared key, given a
-      group, a previously generated {!secret} and the other party's public
-      message. It is [None] if [message] is degenerate. *)
+  (** [shared secret public] is [Some shared_key] given a
+      a previously generated {!secret} (which specifies the [group])
+      and the other party's public key.
+      [shared_key] is the unpadded big-endian representation of the shared key.
+      It is [None] if these invariants do not hold for [public]:
+      [1 < public < p-1] && [public <> gg]. *)
 
   val gen_group : ?g:Mirage_crypto_rng.g -> bits:bits -> unit -> group
   (** [gen_group ~g ~bits ()] generates a random {!group} with modulus size
       [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
       and [2] for the generator, such that [2^q = 1 mod p].
-      Runtime is on the order of a minute for 1024 bits. Note that no time masking
-      is done for the modular exponentiation.
+      Runtime is on the order of a minute for 1024 bits.
+      Note that no time masking is done for the modular exponentiation.
 
       {b Note} The process might diverge if there are no suitable groups. This
       happens with extremely small [bits] values. *)
