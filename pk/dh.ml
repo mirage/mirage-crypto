@@ -4,7 +4,7 @@ open Rresult
 
 open Common
 
-exception Invalid_public_key
+exception Invalid_key
 
 type group = {
   p  : Z_sexp.t        ;  (* The prime modulus *)
@@ -65,13 +65,15 @@ let valid_secret { p ; _ } s =
 let key_of_secret_z ({ p; gg; _ } as group) x =
   if valid_secret group x then
     match Z.(powm_sec gg x p) with
-    | ggx when bad_public_key group ggx -> raise Invalid_public_key
+    | ggx when bad_public_key group ggx -> raise_notrace Invalid_key
     | ggx -> ({ group ; x }, Z_extra.to_cstruct_be ggx)
   else
-    raise Invalid_public_key
+    raise_notrace Invalid_key
 
 let key_of_secret group ~s =
-  key_of_secret_z group (Z_extra.of_cstruct_be s)
+  (* catches Invalid_private_key and re-raises with exception trace: *)
+  try key_of_secret_z group (Z_extra.of_cstruct_be s)
+  with Invalid_key -> raise Invalid_key
 
 (* XXX
  * - slightly weird distribution when bits > |q|
@@ -83,7 +85,7 @@ let rec gen_key ?g ?bits ({ p; q; _ } as group) =
     imin (get_or exp_size pb bits)
          (q >>| Z.numbits |> get ~def:pb))
     |> Z_extra.gen_bits ?g ~msb:1 in
-  try key_of_secret_z group s with Invalid_public_key -> gen_key ?g ?bits group
+  try key_of_secret_z group s with Invalid_key -> gen_key ?g ?bits group
 
 let shared { group ; x } cs =
   match Z_extra.of_cstruct_be cs with
