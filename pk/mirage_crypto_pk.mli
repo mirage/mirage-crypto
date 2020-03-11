@@ -310,9 +310,9 @@ module Dsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t ->
+  val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t -> unit ->
     (priv, [> `Msg of string ]) result
-  (** [priv ~fips ~p ~q ~gg ~x ~y] constructs a private DSA key from the given
+  (** [priv ~fips ~p ~q ~gg ~x ~y ()] constructs a private DSA key from the given
       numbers. Will result in an error if parameters are ill-formed: same as
       {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
       time masking is done on the modular exponentiation. *)
@@ -327,9 +327,9 @@ module Dsa : sig
 
       {e [Sexplib] convertible}. *)
 
-  val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t ->
+  val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t -> unit ->
     (pub, [> `Msg of string ]) result
-  (** [pub ~fips ~p ~q ~gg ~y] constructs a public DSA key from the given
+  (** [pub ~fips ~p ~q ~gg ~y ()] constructs a public DSA key from the given
       numbers. Will result in an error if the parameters are not well-formed:
       [one < gg < p], [q] probabilistically a prime, [p] probabilistically
       prime and odd, [0 < y < p], [q < p], and [p - 1 mod q = 0]. If [fips] is
@@ -431,7 +431,7 @@ module Dh : sig
   (** [group ~p ~gg ~q ()] constructs a group if [p] is odd, a prime number,
       and greater than [zero]. [gg] must be in the range [1 < gg < p]. *)
 
-  type secret = private { x : Z.t }
+  type secret = private { group : group ; x : Z.t }
   (** A private secret.
 
       {e [Sexplib] convertible.} *)
@@ -452,8 +452,8 @@ module Dh : sig
 
       {b Note} The process might diverge when [bits] is extremely small. *)
 
-  val shared : group -> secret -> Cstruct.t -> Cstruct.t option
-  (** [shared group secret message] is [Some key], the shared key, given a
+  val shared : secret -> Cstruct.t -> Cstruct.t option
+  (** [shared secret message] is [Some key], the shared key, given a
       group, a previously generated {!secret} and the other party's public
       message. It is [None] if [message] is degenerate. *)
 

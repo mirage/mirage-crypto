@@ -9,8 +9,8 @@ let dh_selftest ~bits n =
     let p = Dh.gen_group ~bits () in
     let (s1, m1) = Dh.gen_key p
     and (s2, m2) = Dh.gen_key p in
-    let sh1 = Dh.shared p s1 m2
-    and sh2 = Dh.shared p s2 m1 in
+    let sh1 = Dh.shared s1 m2
+    and sh2 = Dh.shared s2 m1 in
     assert_equal sh1 sh2
       ~cmp:(eq_opt Cstruct.equal)
       ~pp_diff:(pp_diff (pp_opt Cstruct.hexdump_pp))
@@ -59,7 +59,7 @@ let dh_shared_0 =
          84 69 0c 45 37 2e 1f 52 96 05 d7 e5 01 9a c8"
     in
     let grp = Dh.Group.oakley_5 in
-    match Dh.(shared grp (fst (key_of_secret grp ~s)) gy) with
+    match Dh.(shared (fst (key_of_secret grp ~s)) gy) with
     | None -> assert_failure "degenerate shared secret"
     | Some shared' ->
         assert_cs_equal ~msg:"shared secret" shared shared'
