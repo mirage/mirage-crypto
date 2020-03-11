@@ -21,11 +21,7 @@ implements various entropy sources for MirageOS unikernels:
 - timer based ones (see [whirlwind RNG paper](https://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf))
 - rdseed and rdrand (x86/x86-64 only)
 
-# Status
-
-This is a work in progress repository that is not yet released.  Please see
-https://github.com/mirage/mirage-crypto/issues/1 for our progress towards a
-stable release.
+[API documentation online](https://mirage.github.io/mirage-crypto/doc)
 
 ## Build
 
@@ -45,8 +41,6 @@ Unix:
 ```OCaml
 let () = Mirage_crypto_rng_unix.initialize ()
 ```
-
-[doc-entropy]: http://mirage.github.io/mirage-crypto/Mirage_crypto_rng_unix.html
 
 #### Illegal instructions
 

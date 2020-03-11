@@ -2,7 +2,7 @@ opam-version: "2.0"
 homepage:     "https://github.com/mirage/mirage-crypto"
 dev-repo:     "git+https://github.com/mirage/mirage-crypto.git"
 bug-reports:  "https://github.com/mirage/mirage-crypto/issues"
-doc:          "https://mirage.github.io/mirage-crypto/"
+doc:          "https://mirage.github.io/mirage-crypto/doc"
 author:       ["Hannes Mehnert" "David Kaloper" "Anil Madhavapeddy" "Dave Scott"]
 maintainer:   "Hannes Mehnert <hannes@mehnert.org>"
 license:      "BSD2"
