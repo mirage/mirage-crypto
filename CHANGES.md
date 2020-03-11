@@ -1,4 +1,4 @@
-## v0.6.0
+## v0.6.0 (2020-03-11)
 
 Initial release as mirage-crypto, based on nocrypto 0.5.4 (from January 2017),
 written by David Kaloper, and mirage-entropy 0.5.1 (February 2020). The goal is
