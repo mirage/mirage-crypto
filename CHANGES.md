@@ -1,8 +1,9 @@
-## v0.6.1
+## v0.6.1 (2020-03-15)
 
-* Add Windows support (@avsm)
-* Fix unix stubs to be allocating in case of exception (@avsm)
-* Add GitHub Actions CI (@avsm)
+* Add Windows 10+ support (#39 @avsm, review by @hannesm @dinosaure)
+* Fix unix stubs to be allocating in case of exception (#39 @avsm
+  review by @hannesm @dinosaure)
+* Add GitHub Actions CI (#39 @avsm)
 
 ## v0.6.0 (2020-03-11)
 
