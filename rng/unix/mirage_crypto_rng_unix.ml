@@ -10,7 +10,7 @@ module Getrandom = struct
 
   open Stdlib.Bigarray
   type buffer = (char, int8_unsigned_elt, c_layout) Array1.t
-  external getrandom : buffer -> int -> unit = "mc_getrandom" [@@noalloc]
+  external getrandom : buffer -> int -> unit = "mc_getrandom"
 
   let generate ~g:_ size =
     let data = Cstruct.create_unsafe size in
