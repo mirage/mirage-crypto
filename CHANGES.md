@@ -1,3 +1,9 @@
+## v0.6.1
+
+* Add Windows support (@avsm)
+* Fix unix stubs to be allocating in case of exception (@avsm)
+* Add GitHub Actions CI (@avsm)
+
 ## v0.6.0 (2020-03-11)
 
 Initial release as mirage-crypto, based on nocrypto 0.5.4 (from January 2017),
