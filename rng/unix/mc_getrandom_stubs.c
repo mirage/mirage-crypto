@@ -41,6 +41,17 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
     if (getentropy(data + i, rlen) < 0) uerror("getentropy", Nothing);
   }
 }
+#elif (defined(__WIN32__))
+#include <Windows.h>
+#include <ntstatus.h>
+#include <bcrypt.h>
+
+void raw_getrandom(uint8_t *data, uint32_t len) {
+   NTSTATUS Status;
+   Status = BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+   if (Status != STATUS_SUCCESS)
+     uerror("BCryptRandomGen", Nothing);
+}
 
 #else
 #error "Retrieving random data not supported on this platform"
