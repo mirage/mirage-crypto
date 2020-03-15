@@ -42,6 +42,16 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
   }
 }
 #elif (defined(__WIN32__))
+/* There is a choice between using RtlGenRandom and BCryptGenRandom
+ * here, and Microsoft does not make the choice obvious. It appears
+ * that RtlGenRandom is best used when older Windows compatibility
+ * is of concern, but requires some gymnastics around binding it
+ * with the right calling convention.
+ *
+ * Therefore (https://github.com/mirage/mirage-crypto/pull/39) we
+ * have decided to go with the more modern Windows API with bcrypt,
+ * and make Windows 10 our minimum supported version of mirage-crypto.
+ */
 #include <Windows.h>
 #include <ntstatus.h>
 #include <bcrypt.h>
