@@ -4,6 +4,8 @@
 * Fix unix stubs to be allocating in case of exception (#39 @avsm
   review by @hannesm @dinosaure)
 * Add GitHub Actions CI (#39 @avsm)
+* Rebuild source if the `MIRAGE_CRYPTO_ACCELERATE` environment
+  variable changes value (#40 @avsm)
 
 ## v0.6.0 (2020-03-11)
 
