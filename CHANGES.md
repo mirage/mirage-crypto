@@ -1,4 +1,4 @@
-## v0.6.1 (2020-03-15)
+## v0.6.1 (2020-03-15)
 
 * Add Windows 10+ support (#39 @avsm, review by @hannesm @dinosaure)
 * Fix unix stubs to be allocating in case of exception (#39 @avsm
