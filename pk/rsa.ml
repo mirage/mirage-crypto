@@ -235,7 +235,9 @@ module PKCS1 = struct
 
   let unpad ~mark ~is_pad cs =
     let f = not &. is_pad in
-    let i = Cs.ct_find_uint8 ~off:2 ~f cs |> Option.get ~def:2 in
+    let i =
+      let v = Cs.ct_find_uint8 ~off:2 ~f cs in
+      if v = (-1) then 2 else v in
     let c1 = get_uint8 cs 0 = 0x00
     and c2 = get_uint8 cs 1 = mark
     and c3 = get_uint8 cs i = 0x00
@@ -338,8 +340,9 @@ module OAEP (H : Hash.S) = struct
   let eme_oaep_decode ?(label = Cstruct.empty) msg =
     let (b0, ms, mdb) = Cs.split3 msg 1 hlen in
     let db = MGF.mask ~seed:(MGF.mask ~seed:mdb ms) mdb in
-    let i  = Cs.ct_find_uint8 ~off:hlen ~f:((<>) 0x00) db |> Option.get ~def:0
-    in
+    let i  =
+      let v = Cs.ct_find_uint8 ~off:hlen ~f:((<>) 0x00) db in
+      if v = (-1) then 0 else v in
     let c1 = Eqaf_cstruct.equal (sub db 0 hlen) H.(digest label)
     and c2 = get_uint8 b0 0 = 0x00
     and c3 = get_uint8 db i = 0x01 in
@@ -395,7 +398,9 @@ module PSS (H: Hash.S) = struct
     set_uint8 db 0 (get_uint8 db 0 land b0mask emlen) ;
     let salt = shift db (len db - slen) in
     let h'   = digest ~salt msg
-    and i    = Cs.ct_find_uint8 ~f:((<>) 0x00) db |> Option.get ~def:0 in
+    and i    =
+      let v = Cs.ct_find_uint8 ~f:((<>) 0x00) db in
+      if v = (-1) then 0 else v in
     let c1 = lnot (b0mask emlen) land get_uint8 mdb 0 = 0x00
     and c2 = i = em.len - hlen - slen - 2
     and c3 = get_uint8 db  i = 0x01
