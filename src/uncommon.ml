@@ -48,15 +48,21 @@ module Cs = struct
 
   let (<+>) = append
 
+  external int_of_bool : bool -> int = "%identity"
+  let ( <.> ) f g = fun x -> f (g x)
+
   let ct_find_uint8 ?(off=0) ~f cs =
-    let rec go acc i = function
-      | 0 -> acc
-      | n ->
-          let acc = match (acc, f (get_uint8 cs i)) with
-            | (None, true) -> Some i
-            | _            -> acc in
-          go acc (succ i) (pred n) in
-    go None off (len cs - off)
+    let f = int_of_bool <.> f in
+    let i = ref (len cs - 1) in
+    let a = ref (-1) in
+
+    while !i >= off do
+      let byte = get_uint8 cs !i in
+      a := Eqaf.select_int
+        (((!i - off) land min_int) lor (f byte))
+        !a !i ;
+      decr i ;
+    done ; !a
 
   let clone ?(off = 0) ?len cs =
     let len = match len with None -> cs.len - off | Some x -> x in

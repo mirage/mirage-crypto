@@ -45,7 +45,10 @@ module Uncommon : sig
     val (<+>) : Cstruct.t -> Cstruct.t -> Cstruct.t
     (** [<+>] is an alias for [Cstruct.append]. *)
 
-    val ct_find_uint8 : ?off:int -> f:(Cstruct.uint8 -> bool) -> Cstruct.t -> int option
+    val ct_find_uint8 : ?off:int -> f:(Cstruct.uint8 -> bool) -> Cstruct.t -> int
+    (** [ct_find_uint8 ?off ~f raw] returns where the first byte of the
+       buffer [raw] that satisfies the predicate [f]. It returns [-1] if
+       there is no value that satisfies [f] in the buffer [raw]. *)
 
     val xor_into : Cstruct.t -> Cstruct.t -> int -> unit
     val xor      : Cstruct.t -> Cstruct.t -> Cstruct.t
