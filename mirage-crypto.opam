@@ -21,6 +21,7 @@ depends: [
   "ounit" {with-test}
   "cstruct" {>="3.2.0"}
   "ocplib-endian"
+  "eqaf" {>= "0.6"}
 ]
 depopts: [
   "mirage-xen-posix"
