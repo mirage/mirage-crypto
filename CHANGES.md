@@ -1,3 +1,8 @@
+## v0.6.2 (2020-03-19)
+
+* Do not validate hardcoded DH groups to speedup initializatio time
+  (reported in #43 by @rbardou, fixed in #42 by @hannesm)
+
 ## v0.6.1 (2020-03-15)
 
 * Add Windows 10+ support (#39 @avsm, review by @hannesm @dinosaure)

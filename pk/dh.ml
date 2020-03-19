@@ -105,15 +105,10 @@ module Group = struct
   (* Safe-prime-style group: p = 2q + 1 && gg = 2 && gg^q = 1 mod p *)
   let s_group ~p =
     let p = f p in
-    match group ~p ~gg:Z.(~$2) ~q:Z.(pred p / ~$2) () with
-    | Error (`Msg m) -> invalid_arg "bad group %s" m
-    | Ok g -> g
+    { p ; gg = Z.(~$2) ; q = Some Z.(pred p / ~$2) }
 
   (* Any old group. *)
-  let group ~p ~gg ~q =
-    match group ~p:(f p) ~gg:(f gg) ~q:(f q) () with
-    | Error (`Msg m) -> invalid_arg "bad group %s" m
-    | Ok g -> g
+  let group ~p ~gg ~q = { p = f p ; gg = f gg ; q = Some (f q) }
 
   (* RFC2409 *)
 
