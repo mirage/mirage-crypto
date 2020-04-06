@@ -8,7 +8,7 @@
            aes_generic aes_aesni ghash_generic ghash_pclmul
            des_generic
            entropy_cpu_stubs)
-  (c_flags (:include cflags.sexp)))
+  (c_flags (:standard) (:include cflags.sexp)))
 
 (include_subdirs unqualified)
 
