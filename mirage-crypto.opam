@@ -10,6 +10,8 @@ synopsis:     "Simple symmetric cryptography for the modern age"
 
 build: [ ["dune" "subst"] {pinned}
          ["dune" "build" "-p" name "-j" jobs ]
+	 ["sh" "-exc" "echo \"xen_linkopts = \\\"-l:xen/mirage_crypto_xen_stubs.a\\\"\" >> _build/default/META.mirage-crypto" ]
+         ["sh" "-exc" "echo \"freestanding_linkopts = \\\"-l:freestanding/mirage_crypto_freestanding_stubs.a\\\"\" >> _build/default/META.mirage-crypto" ]
          ["dune" "runtest" "-p" name "-j" jobs] {with-test} ]
 
 depends: [
