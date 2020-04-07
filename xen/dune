@@ -5,9 +5,11 @@
  (public_name mirage-crypto.xen)
  (optional)
  (libraries mirage-xen-posix)
- (c_flags (:standard) (:include ../src/cflags.sexp) (:include cflags-xen.sexp))
- (c_names misc hash_stubs md5 sha1 sha256 sha512 aes_generic
-          aes_aesni des_generic ghash_pclmul ghash_generic entropy_cpu_stubs)
+ (foreign_stubs
+   (language c)
+   (flags (:standard) (:include ../src/cflags.sexp) (:include cflags-xen.sexp))
+   (names misc hash_stubs md5 sha1 sha256 sha512 aes_generic
+          aes_aesni des_generic ghash_pclmul ghash_generic entropy_cpu_stubs))
 )
 
 (rule (with-stdout-to cflags-xen.sexp (run ./cflags.sh)))

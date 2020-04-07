@@ -12,5 +12,7 @@
   (public_name mirage-crypto-rng.unix)
   (modules mirage_crypto_rng_unix)
   (libraries mirage-crypto-rng unix)
-  (c_names mc_getrandom_stubs)
-  (c_library_flags (:include rng_c_flags.sexp)))
+  (foreign_stubs
+    (language c)
+    (names mc_getrandom_stubs)
+    (flags (:include rng_c_flags.sexp))))
