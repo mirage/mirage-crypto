@@ -1,3 +1,5 @@
+module Native = Mirage_crypto_native.Native
+
 (** [Uncommon] is a [Common], now with less name clashes. *)
 
 let kasprintf k fmt =
