@@ -114,15 +114,13 @@ module Counters = struct
 
   let _tmp = Bytes.make 32 '\x00'
 
-  open EndianBytes.BigEndian_unsafe
-
   module C64be = struct
     type ctr = int64
     let size = 8
     let of_cstruct cs = BE.get_uint64 cs 0
     let add = Int64.add
     let unsafe_count_into t buf off ~blocks =
-      set_int64 _tmp 0 t;
+      Bytes.set_int64_be _tmp 0 t;
       Native.count8be _tmp buf off ~blocks
   end
 
@@ -135,7 +133,7 @@ module Counters = struct
       let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
       ((if flip then Int64.succ w1 else w1), w0')
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      set_int64 _tmp 0 w1; set_int64 _tmp 8 w0;
+      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
       Native.count16be _tmp buf off ~blocks
   end
 
@@ -145,7 +143,7 @@ module Counters = struct
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      set_int64 _tmp 0 w1; set_int64 _tmp 8 w0;
+      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
       Native.count16be4 _tmp buf off ~blocks
   end
 end
