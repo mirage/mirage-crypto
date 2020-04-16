@@ -112,7 +112,7 @@ module Counters = struct
     val unsafe_count_into : ctr -> Native.buffer -> int -> blocks:int -> unit
   end
 
-  let _tmp = Bytes.make 32 '\x00'
+  let _tmp = Bytes.make 16 '\x00'
 
   module C64be = struct
     type ctr = int64
