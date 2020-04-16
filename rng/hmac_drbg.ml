@@ -12,8 +12,11 @@ module Make (H : Mirage_crypto.Hash.S) = struct
 
   let (bx00, bx01) = Cs.(b 0x00, b 0x01)
 
-  let k0 = Cs.create ~init:0x00 H.digest_size
-  and v0 = Cs.create ~init:0x01 H.digest_size
+  let k0 = Cstruct.create H.digest_size (* fills k0 with 0s *)
+  and v0 =
+    let buf = Cstruct.create H.digest_size in
+    Cstruct.memset buf 0x01;
+    buf
 
   let create () = { k = k0 ; v = v0 ; seeded = false }
 

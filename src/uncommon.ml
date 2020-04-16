@@ -58,10 +58,10 @@ module Cs = struct
           go acc (succ i) (pred n) in
     go None off (len cs - off)
 
-  let clone ?(off = 0) ?len cs =
-    let len = match len with None -> cs.len - off | Some x -> x in
+  let clone ?len cs =
+    let len = match len with None -> cs.len | Some x -> x in
     let cs' = create_unsafe len in
-    ( blit cs off cs' 0 len ; cs' )
+    ( blit cs 0 cs' 0 len ; cs' )
 
   let xor_into src dst n =
     if n > imin (len src) (len dst) then
@@ -72,9 +72,6 @@ module Cs = struct
     let len = imin (len cs1) (len cs2) in
     let cs  = clone ~len cs2 in
     ( xor_into cs1 cs len ; cs )
-
-  let create ?(init=0x00) n =
-    let cs = create_unsafe n in ( memset cs init ; cs )
 
   let is_prefix cs0 cs = cs0.len <= cs.len && equal cs0 (sub cs 0 cs0.len)
 

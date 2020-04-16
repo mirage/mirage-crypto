@@ -25,7 +25,7 @@ type g =
   }
 
 let create () =
-  let k = Cs.create 32 in
+  let k = Cstruct.create 32 in
   { ctr    = (0L, 0L)
   ; secret = k
   ; key    = AES_CTR.of_secret k

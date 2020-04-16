@@ -104,7 +104,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ?(adata = Cstruct.empty) data 
          doit (Cstruct.sub block 0 block_size)
               (Cstruct.shift block block_size)
     in
-    doit (Cs.create block_size) cbcheader
+    doit (Cstruct.create block_size) cbcheader
   in
 
   let rec loop iv ctr src target =

@@ -10,7 +10,7 @@ env:
 matrix:
   include:
   - os: osx
-    env: OCAML_VERSION=4.08
+    env: OCAML_VERSION=4.09
   - dist: xenial
     env: OCAML_VERSION=4.08 DEPOPTS="zarith-xen mirage-xen-posix"
 notifications:

@@ -244,7 +244,13 @@ module PKCS1 = struct
       Some (sub cs (i + 1) (len cs - i - 1))
     else None
 
-  let pad_01    = pad ~mark:0x01 ~padding:(Cs.create ~init:0xff)
+  let pad_01    =
+    let padding size =
+      let buf = Cstruct.create size in
+      Cstruct.memset buf 0xff;
+      buf
+    in
+    pad ~mark:0x01 ~padding
   let pad_02 ?g = pad ~mark:0x02 ~padding:(generate_with ?g ~f:((<>) 0x00))
 
   let unpad_01 = unpad ~mark:0x01 ~is_pad:((=) 0xff)
@@ -329,7 +335,7 @@ module OAEP (H : Hash.S) = struct
 
   let eme_oaep_encode ?g ?(label = Cstruct.empty) k msg =
     let seed  = Mirage_crypto_rng.generate ?g hlen
-    and pad   = Cs.create (max_msg_bytes k - len msg) in
+    and pad   = Cstruct.create (max_msg_bytes k - len msg) in
     let db    = cat [ H.digest label ; pad ; bx01 ; msg ] in
     let mdb   = MGF.mask ~seed db in
     let mseed = MGF.mask ~seed:mdb seed in
@@ -376,7 +382,7 @@ module PSS (H: Hash.S) = struct
 
   let b0mask embits = 0xff lsr ((8 - embits mod 8) mod 8)
 
-  let zero_8 = Cs.create 8
+  let zero_8 = Cstruct.create 8
 
   let digest ~salt msg = H.digesti @@ iter3 zero_8 (H1.digest_or msg) salt
 
@@ -384,7 +390,7 @@ module PSS (H: Hash.S) = struct
     let n    = emlen // 8
     and salt = Mirage_crypto_rng.generate ?g slen in
     let h    = digest ~salt msg in
-    let db   = cat [ Cs.create (n - slen - hlen - 2) ; bx01 ; salt ] in
+    let db   = cat [ Cstruct.create (n - slen - hlen - 2) ; bx01 ; salt ] in
     let mdb  = MGF.mask ~seed:h db in
     set_uint8 mdb 0 @@ get_uint8 mdb 0 land b0mask emlen ;
     cat [ mdb ; h ; bxbc ]

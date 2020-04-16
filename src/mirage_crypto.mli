@@ -52,8 +52,7 @@ module Uncommon : sig
 
     (** {2 Private utilities} *)
 
-    val create : ?init:int -> int -> Cstruct.t
-    val clone  : ?off:int -> ?len:int -> Cstruct.t -> Cstruct.t
+    val clone  : ?len:int -> Cstruct.t -> Cstruct.t
 
     val (lsl) : Cstruct.t -> int -> Cstruct.t
 

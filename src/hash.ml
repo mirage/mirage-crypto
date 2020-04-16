@@ -70,23 +70,27 @@ end
 
 module Hash_of (F : Foreign) (D : Desc) = struct
 
-  open Cs
-
   include Core (F) (D)
 
-  let opad = create ~init:0x5c block_size
-  let ipad = create ~init:0x36 block_size
+  let opad =
+    let buf = Cstruct.create block_size in
+    Cstruct.memset buf 0x5c;
+    buf
+  let ipad =
+    let buf = Cstruct.create block_size in
+    Cstruct.memset buf 0x36;
+    buf
 
   let rec norm key =
     match compare (Cstruct.len key) block_size with
     |  1 -> norm (digest key)
-    | -1 -> rpad key block_size 0
+    | -1 -> Cs.rpad key block_size 0
     |  _ -> key
 
   let hmaci ~key iter =
     let key = norm key in
-    let outer = xor key opad
-    and inner = xor key ipad in
+    let outer = Cs.xor key opad
+    and inner = Cs.xor key ipad in
     let rest = digesti (fun f -> f inner; iter f) in
     digesti (fun f -> f outer; f rest)
 
