@@ -134,7 +134,7 @@ let priv_of_exp ?g ?(attempts=100) ~e ~d ~n () =
           else
             go ax2 (i' - 1)
       in
-      Option.(go Z.(powm (Z_extra.gen ?g n) t n) s >>| Z.(gcd n &. pred))
+      Option.map Z.(gcd n &. pred) (go Z.(powm (Z_extra.gen ?g n) t n) s)
     in
     if attempts > 0 then
       Z_extra.strip_factor ~f:two Z.(e * d |> pred) >>= function
@@ -301,10 +301,14 @@ module PKCS1 = struct
     sig_encode ~crt_hardening ?mask ~key msg'
 
   let verify ~hashp ~key ~signature msg =
-    let open Option in
-    ( sig_decode ~key signature >>= fun cs -> detect cs >>| fun (hash, asn) ->
-        hashp hash && Eqaf_cstruct.equal Cs.(asn <+> digest_or ~hash msg) cs )
-    |> get ~def:false
+    let (>>=) = Option.bind
+    and (>>|) = Fun.flip Option.map
+    in
+    Option.value
+      (sig_decode ~key signature >>= fun cs ->
+       detect cs >>| fun (hash, asn) ->
+       hashp hash && Eqaf_cstruct.equal Cs.(asn <+> digest_or ~hash msg) cs)
+      ~default:false
 
   let min_key hash =
     (len (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1

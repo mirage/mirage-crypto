@@ -13,30 +13,6 @@ let (//) x y =
 let imin (a : int) b = if a < b then a else b
 let imax (a : int) b = if a < b then b else a
 
-module Option = struct
-
-  let get_or f x = function None -> f x | Some y -> y
-
-  let (>>=) a fb = match a with Some x -> fb x | _ -> None
-  let (>>|) a f = match a with Some x -> Some (f x) | _ -> None
-
-  let v_map ~def ~f = function
-    | Some x -> f x
-    | None   -> def
-
-  let get ~def = function
-    | Some x -> x
-    | None   -> def
-
-  let map ~f = function
-    | Some x -> Some (f x)
-    | None   -> None
-
-  let cond ~f = function
-    | Some x -> ignore (f x)
-    | None   -> ()
-end
-
 type 'a iter = ('a -> unit) -> unit
 
 let iter2 a b   f = f a; f b
