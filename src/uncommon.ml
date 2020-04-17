@@ -48,16 +48,6 @@ module Cs = struct
 
   let (<+>) = append
 
-  let ct_find_uint8 ?(off=0) ~f cs =
-    let rec go acc i = function
-      | 0 -> acc
-      | n ->
-          let acc = match (acc, f (get_uint8 cs i)) with
-            | (None, true) -> Some i
-            | _            -> acc in
-          go acc (succ i) (pred n) in
-    go None off (len cs - off)
-
   let clone ?len cs =
     let len = match len with None -> cs.len | Some x -> x in
     let cs' = create_unsafe len in
