@@ -43,8 +43,8 @@ end
 
 let create (type a) ?g ?seed ?(strict=false) (m : a generator) =
   let module M = (val m) in
-  let g = Option.get_or M.create () g in
-  seed |> Option.cond ~f:(M.reseed ~g) ;
+  let g = Option.value g ~default:(M.create ()) in
+  Option.iter (M.reseed ~g) seed;
   Generator (g, strict, m)
 
 let generator = ref (create (module Null))

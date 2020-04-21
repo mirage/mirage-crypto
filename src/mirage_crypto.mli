@@ -29,16 +29,6 @@ module Uncommon : sig
 
       @raise Division_by_zero when [y < 1]. *)
 
-  module Option : sig
-    val v_map : def:'b -> f:('a -> 'b) -> 'a option -> 'b
-    val map   : f:('a -> 'b) -> 'a option -> 'b option
-    val get   : def:'a -> 'a option -> 'a
-    val get_or : ('a -> 'b) -> 'a -> 'b option -> 'b
-    val cond : f:('a -> 'b) -> 'a option -> unit
-    val (>>=) : 'a option -> ('a -> 'b option) -> 'b option
-    val (>>|) : 'a option -> ('a -> 'b) -> 'b option
-  end
-
   (** Addons to {!Cstruct}. *)
   module Cs : sig
 

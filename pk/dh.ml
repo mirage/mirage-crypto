@@ -81,10 +81,11 @@ let key_of_secret group ~s =
  *)
 let rec gen_key ?g ?bits ({ p; q; _ } as group) =
   let pb = Z.numbits p in
-  let s = Option.(
-    imin (get_or exp_size pb bits)
-         (q >>| Z.numbits |> get ~def:pb))
-    |> Z_extra.gen_bits ?g ~msb:1 in
+  let s =
+    imin (Option.value bits ~default:pb |> exp_size)
+         (Option.fold ~none:pb ~some:Z.numbits q)
+    |> Z_extra.gen_bits ?g ~msb:1
+  in
   try key_of_secret_z group s with Invalid_key -> gen_key ?g ?bits group
 
 let shared { group ; x } cs =
