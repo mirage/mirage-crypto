@@ -89,6 +89,8 @@ external count16be4 : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_
 
 external blit : buffer -> off -> buffer -> off -> size -> unit = "caml_blit_bigstring_to_bigstring" [@@noalloc]
 
+external misc_mode : unit -> int = "mc_misc_mode" [@@noalloc]
+
 external _set_aesni_supported : bool -> unit = "mc_aesni_set_supported" [@@noalloc]
 external _set_pclmul_supported : bool -> unit = "mc_pclmul_set_supported" [@@noalloc]
 external _set_sse_supported : bool -> unit = "mc_sse_set_supported" [@@noalloc]
