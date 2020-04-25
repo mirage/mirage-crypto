@@ -9,21 +9,20 @@
 
 #if defined (__x86_64__) && defined (ACCELERATE)
 #include <x86intrin.h>
+#define __mc_ACCELERATE__
 #endif
 
-#if defined (__x86_64__) && defined (ACCELERATE) && defined (__SSSE3__)
-#define __mc_SSE__
-#endif
+#ifdef __mc_ACCELERATE__
 
-#if defined (__x86_64__) && defined (ACCELERATE) && defined (__AES__)
-#define __mc_AES_NI__
-#else
-#define __mc_AES_GENERIC__
-#endif
+#define _mc_switch_accel(_GENERIC_CALL, ACCELERATED_CALL) \
+  ACCELERATED_CALL;
 
-#if defined (__x86_64__) && defined (ACCELERATE) && defined (__PCLMUL__)
-#define __mc_PCLMUL__
-#endif
+#else /* __mc_ACCELERATE__ */
+
+#define _mc_switch_accel(GENERIC_CALL, _ACCELERATED_CALL) \
+  GENERIC_CALL;
+
+#endif /* __mc_ACCELERATE__ */
 
 #ifndef __unused
 #define __unused(x) x __attribute__((unused))
@@ -45,5 +44,34 @@
 
 #define __define_bc_7(f) \
   CAMLprim value f ## _bc (value *v, int __unused(c) ) { return f(v[0], v[1], v[2], v[3], v[4], v[5], v[6]); }
+
+/* Signature of generic functions */
+
+CAMLprim value mc_aes_rk_size_generic (value rounds);
+
+CAMLprim value
+mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds);
+
+CAMLprim value
+mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk));
+
+CAMLprim value
+mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks);
+
+CAMLprim value
+mc_aes_dec_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks);
+
+CAMLprim value mc_ghash_key_size_generic (__unit ());
+
+CAMLprim value mc_ghash_init_key_generic (value key, value off, value m);
+
+CAMLprim value
+mc_ghash_generic (value m, value hash, value src, value off, value len);
+
+CAMLprim value
+mc_xor_into_generic (value b1, value off1, value b2, value off2, value n);
+
+CAMLprim value
+mc_count_16_be_4_generic (value ctr, value dst, value off, value blocks);
 
 #endif /* H__MIRAGE_CRYPTO */

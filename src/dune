@@ -3,7 +3,7 @@
   (public_name mirage-crypto)
   (libraries cstruct)
   (private_modules ccm cipher_block cipher_stream hash native uncommon)
-  (c_names misc
+  (c_names misc misc_sse
            md5 sha1 sha256 sha512 hash_stubs
            aes_generic aes_aesni ghash_generic ghash_pclmul
            des_generic
