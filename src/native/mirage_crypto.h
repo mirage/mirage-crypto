@@ -14,12 +14,13 @@
 
 #ifdef __mc_ACCELERATE__
 
-#define _mc_switch_accel(_GENERIC_CALL, ACCELERATED_CALL) \
-  ACCELERATED_CALL;
+#define _mc_switch_accel(SUPPORTED, GENERIC_CALL, ACCELERATED_CALL) \
+  if (!(SUPPORTED)) { GENERIC_CALL; } \
+  else { ACCELERATED_CALL; }
 
 #else /* __mc_ACCELERATE__ */
 
-#define _mc_switch_accel(GENERIC_CALL, _ACCELERATED_CALL) \
+#define _mc_switch_accel(_SUPPORTED, GENERIC_CALL, _ACCELERATED_CALL) \
   GENERIC_CALL;
 
 #endif /* __mc_ACCELERATE__ */

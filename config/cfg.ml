@@ -1,15 +1,13 @@
 let evar  = "MIRAGE_CRYPTO_ACCELERATE"
-let needs = [`SSSE3; `AES; `PCLMULQDQ]
 let flags = ["-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul"]
 let std_flags = ["--std=c99"; "-Wall"; "-Wextra"; "-Wpedantic"; "-O3"]
 
 let _ =
-  let auto = match Cpuid.supports needs with Ok true -> flags | _ -> [] in
   let accelerate_flags = match Sys.getenv evar with
     | "true" -> flags
     | "false" -> []
-    | _ -> auto
-    | exception Not_found -> auto
+    | _ -> flags
+    | exception Not_found -> flags
   in
   let ent_flags =
     let c = Configurator.V1.create "mirage-crypto" in

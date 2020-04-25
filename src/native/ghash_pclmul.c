@@ -188,16 +188,24 @@ static inline void __ghash (__m128i *m, __m128i hash[1], const __m128i *src, siz
 
 #endif /* __mc_ACCELERATE__ */
 
+static int _pclmul_supported = 0;
+
+CAMLprim value
+mc_pclmul_set_supported (value s) {
+  _pclmul_supported = Bool_val(s);
+  return Val_unit;
+}
+
 CAMLprim value mc_ghash_key_size (__unit ()) {
   value s;
-  _mc_switch_accel(
+  _mc_switch_accel(_pclmul_supported,
     s = mc_ghash_key_size_generic(Val_unit),
     s = Val_int (__keys * 16))
   return s;
 }
 
 CAMLprim value mc_ghash_init_key (value key, value off, value m) {
-  _mc_switch_accel(
+  _mc_switch_accel(_pclmul_supported,
     mc_ghash_init_key_generic(key, off, m),
     __derive ((__m128i *) _ba_uint8_off (key, off), (__m128i *) Bp_val (m)))
   return Val_unit;
@@ -205,7 +213,7 @@ CAMLprim value mc_ghash_init_key (value key, value off, value m) {
 
 CAMLprim value
 mc_ghash (value k, value hash, value src, value off, value len) {
-  _mc_switch_accel(
+  _mc_switch_accel(_pclmul_supported,
     mc_ghash_generic(k, hash, src, off, len),
     __ghash ( (__m128i *) Bp_val (k), (__m128i *) Bp_val (hash),
       (__m128i *) _ba_uint8_off (src, off), Int_val (len) ))
@@ -214,7 +222,7 @@ mc_ghash (value k, value hash, value src, value off, value len) {
 
 CAMLprim value mc_ghash_mode (__unit ()) {
   value enabled = 0;
-  _mc_switch_accel(
+  _mc_switch_accel(_pclmul_supported,
     enabled = 0,
     enabled = 1)
   return Val_int (enabled);

@@ -31,9 +31,17 @@ static inline void _mc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t bloc
 
 #endif /* __mc_ACCELERATE__ */
 
+static int _sse_supported = 0;
+
+CAMLprim value
+mc_sse_set_supported (value s) {
+  _sse_supported = Bool_val(s);
+  return Val_unit;
+}
+
 CAMLprim value
 mc_xor_into (value b1, value off1, value b2, value off2, value n) {
-  _mc_switch_accel(
+  _mc_switch_accel(_sse_supported,
     mc_xor_into_generic(b1, off1, b2, off2, n),
     xor_into (_ba_uint8_off (b1, off1), _ba_uint8_off (b2, off2), Int_val (n)))
   return Val_unit;
@@ -41,7 +49,7 @@ mc_xor_into (value b1, value off1, value b2, value off2, value n) {
 
 #define __export_counter(name, f)                                        \
   CAMLprim value name (value ctr, value dst, value off, value blocks) {  \
-    _mc_switch_accel(                                                    \
+    _mc_switch_accel(_sse_supported,                                     \
       name##_generic (ctr, dst, off, blocks),                            \
       f ( (uint64_t*) Bp_val (ctr),                                      \
           (uint64_t*) _ba_uint8_off (dst, off), Long_val (blocks) ))     \
@@ -52,7 +60,7 @@ __export_counter(mc_count_16_be_4, _mc_count_16_be_4)
 
 CAMLprim value mc_misc_mode (__unit ()) {
   value enabled = 0;
-  _mc_switch_accel(
+  _mc_switch_accel(_sse_supported,
     enabled = 0,
     enabled = 1)
   return Val_int (enabled);

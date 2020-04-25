@@ -88,3 +88,12 @@ external count16be  : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_
 external count16be4 : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_16_be_4" [@@noalloc]
 
 external blit : buffer -> off -> buffer -> off -> size -> unit = "caml_blit_bigstring_to_bigstring" [@@noalloc]
+
+external _set_aesni_supported : bool -> unit = "mc_aesni_set_supported" [@@noalloc]
+external _set_pclmul_supported : bool -> unit = "mc_pclmul_set_supported" [@@noalloc]
+external _set_sse_supported : bool -> unit = "mc_sse_set_supported" [@@noalloc]
+
+let () =
+  if Cpuid.supports [`SSSE3] = Ok true then _set_sse_supported true;
+  if Cpuid.supports [`AES] = Ok true then _set_aesni_supported true;
+  if Cpuid.supports [`PCLMULQDQ] = Ok true then _set_pclmul_supported true
