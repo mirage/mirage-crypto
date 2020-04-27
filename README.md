@@ -41,21 +41,3 @@ Unix:
 ```OCaml
 let () = Mirage_crypto_rng_unix.initialize ()
 ```
-
-#### Illegal instructions
-
-```
-Program terminated with signal SIGILL, Illegal instruction.
-#0  _mm_aeskeygenassist_si128 (__C=<optimized out>, __X=...)
-```
-
-`Mirage_crypto` has CPU acceleration support (`SSE2`+`AES-NI`), but no run-time
-autodetection yet. You compiled the library with acceleration, but you are using
-it on a machine that does not support it.
-
-The environment variable `MIRAGE_CRYPTO_ACCELERATE` can be used to override
-detection:
-
-- `MIRAGE_CRYPTO_ACCELERATE=false dune build` force-disables non-portable code.
-- `MIRAGE_CRYPTO_ACCELERATE=true dune build` force-enables non-portable code.
-- Otherwise, it matches the capabilities of the build machine.

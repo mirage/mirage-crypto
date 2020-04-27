@@ -7,7 +7,7 @@
 #include <caml/mlvalues.h>
 #include <caml/bigarray.h>
 
-#if defined (__x86_64__) && defined (ACCELERATE)
+#if defined (__x86_64__)
 #include <x86intrin.h>
 #define __mc_ACCELERATE__
 #endif

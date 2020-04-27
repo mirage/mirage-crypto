@@ -13,5 +13,4 @@
 (include_subdirs unqualified)
 
 (rule
-  (deps (env_var MIRAGE_CRYPTO_ACCELERATE))
   (action (with-stdout-to cflags.sexp (run ../config/cfg.exe))))
