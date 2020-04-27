@@ -23,8 +23,9 @@
  */
 
 #include <string.h>
+#include "mirage_crypto.h"
+#include "hash.h"
 #include "sha256.h"
-#include "bitfn.h"
 
 void _mc_sha224_init(struct sha224_ctx *ctx)
 {
@@ -80,7 +81,7 @@ static void sha256_do_chunk(struct sha256_ctx *ctx, uint32_t buf[])
 	int i;
 	uint32_t w[64];
 
-	cpu_to_be32_array(w, buf, 16);
+	htobe32_array(w, buf, 16);
 	for (i = 16; i < 64; i++)
 		w[i] = s1(w[i - 2]) + w[i - 7] + s0(w[i - 15]) + w[i - 16];
 
@@ -159,7 +160,7 @@ void _mc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out)
 	uint32_t *p = (uint32_t *) out;
 
 	/* cpu -> big endian */
-	bits = cpu_to_be64(ctx->sz << 3);
+	bits = htobe64(ctx->sz << 3);
 
 	/* pad out to 56 */
 	index = (uint32_t) (ctx->sz & 0x3f);
@@ -171,5 +172,5 @@ void _mc_sha256_finalize(struct sha256_ctx *ctx, uint8_t *out)
 
 	/* store to digest */
 	for (i = 0; i < 8; i++)
-		p[i] = cpu_to_be32(ctx->h[i]);
+		p[i] = htobe32(ctx->h[i]);
 }

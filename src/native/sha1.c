@@ -23,8 +23,9 @@
  */
 
 #include <string.h>
+#include "mirage_crypto.h"
+#include "hash.h"
 #include "sha1.h"
-#include "bitfn.h"
 
 void _mc_sha1_init(struct sha1_ctx *ctx)
 {
@@ -57,7 +58,7 @@ static inline void sha1_do_chunk(struct sha1_ctx *ctx, uint32_t *buf)
 {
 	uint32_t a, b, c, d, e;
 	uint32_t w[16];
-#define CPY(i)	w[i] = be32_to_cpu(buf[i])
+#define CPY(i)	w[i] = be32toh(buf[i])
 	CPY(0); CPY(1); CPY(2); CPY(3); CPY(4); CPY(5); CPY(6); CPY(7);
 	CPY(8); CPY(9); CPY(10); CPY(11); CPY(12); CPY(13); CPY(14); CPY(15);
 #undef CPY
@@ -190,7 +191,7 @@ void _mc_sha1_finalize(struct sha1_ctx *ctx, uint8_t *out)
 	uint32_t *p = (uint32_t *) out;
 
 	/* add padding and update data with it */
-	bits = cpu_to_be64(ctx->sz << 3);
+	bits = htobe64(ctx->sz << 3);
 
 	/* pad out to 56 */
 	index = (uint32_t) (ctx->sz & 0x3f);
@@ -201,9 +202,9 @@ void _mc_sha1_finalize(struct sha1_ctx *ctx, uint8_t *out)
 	_mc_sha1_update(ctx, (uint8_t *) &bits, sizeof(bits));
 
 	/* output hash */
-	p[0] = cpu_to_be32(ctx->h[0]);
-	p[1] = cpu_to_be32(ctx->h[1]);
-	p[2] = cpu_to_be32(ctx->h[2]);
-	p[3] = cpu_to_be32(ctx->h[3]);
-	p[4] = cpu_to_be32(ctx->h[4]);
+	p[0] = htobe32(ctx->h[0]);
+	p[1] = htobe32(ctx->h[1]);
+	p[2] = htobe32(ctx->h[2]);
+	p[3] = htobe32(ctx->h[3]);
+	p[4] = htobe32(ctx->h[4]);
 }

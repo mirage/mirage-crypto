@@ -23,7 +23,8 @@
  */
 
 #include <string.h>
-#include "bitfn.h"
+#include "mirage_crypto.h"
+#include "hash.h"
 #include "sha512.h"
 
 void _mc_sha384_init(struct sha512_ctx *ctx)
@@ -96,7 +97,7 @@ static void sha512_do_chunk(struct sha512_ctx *ctx, uint64_t *buf)
 	int i;
 	uint64_t w[80];
 
-	cpu_to_be64_array(w, buf, 16);
+	htobe64_array(w, buf, 16);
 
 	for (i = 16; i < 80; i++)
 		w[i] = s1(w[i - 2]) + w[i - 7] + s0(w[i - 15]) + w[i - 16];
@@ -178,8 +179,8 @@ void _mc_sha512_finalize(struct sha512_ctx *ctx, uint8_t *out)
 	uint64_t *p = (uint64_t *) out;
 
 	/* cpu -> big endian */
-	bits[0] = cpu_to_be64((ctx->sz[1] << 3 | ctx->sz[0] >> 61));
-	bits[1] = cpu_to_be64((ctx->sz[0] << 3));
+	bits[0] = htobe64((ctx->sz[1] << 3 | ctx->sz[0] >> 61));
+	bits[1] = htobe64((ctx->sz[0] << 3));
 
 	/* pad out to 56 */
 	index = (unsigned int) (ctx->sz[0] & 0x7f);
@@ -191,7 +192,7 @@ void _mc_sha512_finalize(struct sha512_ctx *ctx, uint8_t *out)
 
 	/* store to digest */
 	for (i = 0; i < 8; i++)
-		p[i] = cpu_to_be64(ctx->h[i]);
+		p[i] = htobe64(ctx->h[i]);
 }
 
 // //  i don't wanna go to libc i said no no no
@@ -240,7 +241,7 @@ void _mc_sha512_finalize(struct sha512_ctx *ctx, uint8_t *out)
 // 		/* re-init the context, otherwise len is changed */
 // 		memset(ctx, 0, sizeof(*ctx));
 // 		for (i = 0; i < 8; i++)
-// 			ctx->h[i] = cpu_to_be64(((uint64_t *) out)[i]);
+// 			ctx->h[i] = htobe64(((uint64_t *) out)[i]);
 // 		}
 // 	}
 // }

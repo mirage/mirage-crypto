@@ -2,7 +2,77 @@
 #define H__MIRAGE_CRYPTO
 
 #include <stdint.h>
-#include "bitfn.h"
+
+#if defined(__freestanding__)
+#include <endian.h>
+
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <sys/endian.h>
+
+#elif defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#define htobe16(x) OSSwapHostToBigInt16(x)
+#define htole16(x) OSSwapHostToLittleInt16(x)
+#define be16toh(x) OSSwapBigToHostInt16(x)
+#define le16toh(x) OSSwapLittleToHostInt16(x)
+#define htobe32(x) OSSwapHostToBigInt32(x)
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define be32toh(x) OSSwapBigToHostInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+#define bswap16(x) OSSwapInt16(x)
+#define bswap32(x) OSSwapInt32(x)
+#define bswap64(x) OSSwapInt64(x)
+
+#elif defined(__linux__)
+#define __USE_MISC
+#define _DEFAULT_SOURCE
+#include <endian.h>
+#include <byteswap.h>
+#define bswap16(x) bswap_16(x)
+#define bswap32(x) bswap_32(x)
+#define bswap64(x) bswap_64(x)
+
+#elif defined(__WINDOWS__)
+#include <winsock2.h>
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define htobe16(x) htons(x)
+#define htole16(x) (x)
+#define be16toh(x) ntohs(x)
+#define le16toh(x) (x)
+#define htobe32(x) htonl(x)
+#define htole32(x) (x)
+#define be32toh(x) ntohl(x)
+#define le32toh(x) (x)
+#define htobe64(x) htonll(x)
+#define htole64(x) (x)
+#define be64toh(x) ntohll(x)
+#define le64toh(x) (x)
+#else /* BYTE_ORDER == BIG_ENDIAN */
+/* that would be xbox 360 */
+#define htobe16(x) (x)
+#define htole16(x) __builtin_bswap16(x)
+#define be16toh(x) (x)
+#define le16toh(x) __builtin_bswap16(x)
+#define htobe32(x) (x)
+#define htole32(x) __builtin_bswap32(x)
+#define be32toh(x) (x)
+#define le32toh(x) __builtin_bswap32(x)
+#define htobe64(x) (x)
+#define htole64(x) __builtin_bswap64(x)
+#define be64toh(x) (x)
+#define le64toh(x) __builtin_bswap64(x)
+#endif
+#define bswap16(x) __builtin_bswap16(x)
+#define bswap32(x) __builtin_bswap32(x)
+#define bswap64(x) __builtin_bswap64(x)
+
+#else
+#error "unsupported platform"
+#endif
 
 #include <caml/mlvalues.h>
 #include <caml/bigarray.h>

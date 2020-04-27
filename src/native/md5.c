@@ -23,8 +23,9 @@
  */
 
 #include <string.h>
-#include <stdio.h>
-#include "bitfn.h"
+//#include <stdio.h>
+#include "mirage_crypto.h"
+#include "hash.h"
 #include "md5.h"
 
 void _mc_md5_init(struct md5_ctx *ctx)
@@ -160,7 +161,7 @@ void _mc_md5_finalize(struct md5_ctx *ctx, uint8_t *out)
 	uint32_t *p = (uint32_t *) out;
 
 	/* add padding and update data with it */
-	bits = cpu_to_le64(ctx->sz << 3);
+	bits = htole64(ctx->sz << 3);
 
 	/* pad out to 56 */
 	index = (uint32_t) (ctx->sz & 0x3f);
@@ -171,8 +172,8 @@ void _mc_md5_finalize(struct md5_ctx *ctx, uint8_t *out)
 	_mc_md5_update(ctx, (uint8_t *) &bits, sizeof(bits));
 
 	/* output hash */
-	p[0] = cpu_to_le32(ctx->h[0]);
-	p[1] = cpu_to_le32(ctx->h[1]);
-	p[2] = cpu_to_le32(ctx->h[2]);
-	p[3] = cpu_to_le32(ctx->h[3]);
+	p[0] = htole32(ctx->h[0]);
+	p[1] = htole32(ctx->h[1]);
+	p[2] = htole32(ctx->h[2]);
+	p[3] = htole32(ctx->h[3]);
 }

@@ -19,8 +19,8 @@ static inline void xor_into (uint8_t *src, uint8_t *dst, size_t n) {
 }
 
 static inline void _mc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks) {
-  uint64_t qw = be64_to_cpu (*init);
-  while (blocks --) *(dst ++) = cpu_to_be64 (qw ++);
+  uint64_t qw = be64toh (*init);
+  while (blocks --) *(dst ++) = htobe64 (qw ++);
 }
 
 /* XXX
@@ -35,11 +35,11 @@ static inline void _mc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks)
  */
 static inline void _mc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks) {
   uint64_t qw1 = init[0],
-           qw2 = be64_to_cpu (init[1]);
+           qw2 = be64toh (init[1]);
   for (; blocks --; dst += 2) {
     dst[0] = qw1;
-    dst[1] = cpu_to_be64 (qw2);
-    if ((++ qw2) == 0) qw1 = cpu_to_be64 (be64_to_cpu (qw1) + 1);
+    dst[1] = htobe64 (qw2);
+    if ((++ qw2) == 0) qw1 = htobe64 (be64toh (qw1) + 1);
   }
 }
 
@@ -57,11 +57,11 @@ static inline void _mc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t bloc
 #else
   uint64_t qw1 = init[0];
   uint32_t dw3 = ((uint32_t*) init)[2],
-           dw4 = be32_to_cpu (((uint32_t*) init)[3]);
+           dw4 = be32toh (((uint32_t*) init)[3]);
   for (; blocks --; dst += 2) {
     dst[0] = qw1;
     ((uint32_t*) dst)[2] = dw3;
-    ((uint32_t*) dst)[3] = cpu_to_be32 (dw4 ++);
+    ((uint32_t*) dst)[3] = htobe32 (dw4 ++);
   }
 #endif
 

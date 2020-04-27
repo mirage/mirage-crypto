@@ -23,7 +23,7 @@
 static const __uint128_t r = __set_uint128_t (0xe100000000000000, 0);
 
 static inline __uint128_t __load_128_t (const uint64_t s[2]) {
-  return __set_uint128_t (be64_to_cpu (s[0]), be64_to_cpu (s[1]));
+  return __set_uint128_t (be64toh (s[0]), be64toh (s[1]));
 }
 
 static inline __uint128_t __load_128_t_with_padding (const uint8_t *src, size_t n) {
@@ -33,8 +33,8 @@ static inline __uint128_t __load_128_t_with_padding (const uint8_t *src, size_t 
 }
 
 static inline void __store_128_t (uint64_t s[2], __uint128_t x) {
-  s[0] = cpu_to_be64 (x >> 64);
-  s[1] = cpu_to_be64 (x);
+  s[0] = htobe64 (x >> 64);
+  s[1] = htobe64 (x);
 }
 
 #if defined (__MC_GHASH_LARGE_TABLES)
