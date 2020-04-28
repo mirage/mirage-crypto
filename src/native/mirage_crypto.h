@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/* endian.h is tricky (not specified), inspiration from;
+   https://gist.github.com/panzi/6856583 (public domain)
+   and https://gist.github.com/PkmX/63dd23f28ba885be53a5 (also public domain)
+*/
 #if defined(__freestanding__)
 #include <endian.h>
 
@@ -37,38 +41,52 @@
 #define bswap64(x) bswap_64(x)
 
 #elif (defined(__WINDOWS__) || defined(_WIN32) || defined(_WIN64))
-#include <winsock2.h>
+#include <windows.h>
 #if BYTE_ORDER == LITTLE_ENDIAN
-#define htobe16(x) htons(x)
+#if defined(_MSC_VER)
+#include <stdlib.h>
+#define htobe16(x) _byteswap_ushort(x)
 #define htole16(x) (x)
-#define be16toh(x) ntohs(x)
+#define be16toh(x) _byteswap_ushort(x)
 #define le16toh(x) (x)
-#define htobe32(x) htonl(x)
+#define htobe32(x) _byteswap_ulong(x)
 #define htole32(x) (x)
-#define be32toh(x) ntohl(x)
+#define be32toh(x) _byteswap_ulong(x)
 #define le32toh(x) (x)
-#define htobe64(x) htonll(x)
+#define htobe64(x) _byteswap_uint64(x)
 #define htole64(x) (x)
-#define be64toh(x) ntohll(x)
+#define be64toh(x) _byteswap_uint64(x)
 #define le64toh(x) (x)
-#else /* BYTE_ORDER == BIG_ENDIAN */
-/* that would be xbox 360 */
-#define htobe16(x) (x)
-#define htole16(x) __builtin_bswap16(x)
-#define be16toh(x) (x)
-#define le16toh(x) __builtin_bswap16(x)
-#define htobe32(x) (x)
-#define htole32(x) __builtin_bswap32(x)
-#define be32toh(x) (x)
-#define le32toh(x) __builtin_bswap32(x)
-#define htobe64(x) (x)
-#define htole64(x) __builtin_bswap64(x)
-#define be64toh(x) (x)
-#define le64toh(x) __builtin_bswap64(x)
-#endif
+
+#define bswap16(x) _byteswap_ushort(x)
+#define bswap32(x) _byteswap_ulong(x)
+#define bswap64(x) _byteswap_uint64(x)
+
+#elif defined(__GNUC__) || defined(__clang__)
+
+#define htobe16(x) __builtin_bswap16(x)
+#define htole16(x) (x)
+#define be16toh(x) __builtin_bswap16(x)
+#define le16toh(x) (x)
+#define htobe32(x) __builtin_bswap32(x)
+#define htole32(x) (x)
+#define be32toh(x) __builtin_bswap32(x)
+#define le32toh(x) (x)
+#define htobe64(x) __builtin_bswap64(x)
+#define htole64(x) (x)
+#define be64toh(x) __builtin_bswap64(x)
+#define le64toh(x) (x)
+
 #define bswap16(x) __builtin_bswap16(x)
 #define bswap32(x) __builtin_bswap32(x)
 #define bswap64(x) __builtin_bswap64(x)
+
+#else
+#error "windows platform not supported (only MSC and gcc/clang)"
+
+#else /* BYTE_ORDER == BIG_ENDIAN */
+#error "big endian byte order not supported on windows"
+#endif
 
 #else
 #error "unsupported platform"
