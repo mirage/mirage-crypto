@@ -14,13 +14,22 @@
 
 #ifdef __mc_ACCELERATE__
 
-#define _mc_switch_accel(SUPPORTED, GENERIC_CALL, ACCELERATED_CALL) \
-  if (!(SUPPORTED)) { GENERIC_CALL; } \
+struct _mc_cpu_features {
+  int aesni;
+  int pclmul;
+  int ssse3;
+};
+
+/* Supported accelerations */
+extern struct _mc_cpu_features mc_detected_cpu_features;
+
+#define _mc_switch_accel(FEATURE, GENERIC_CALL, ACCELERATED_CALL) \
+  if (!(mc_detected_cpu_features.FEATURE)) { GENERIC_CALL; } \
   else { ACCELERATED_CALL; }
 
 #else /* __mc_ACCELERATE__ */
 
-#define _mc_switch_accel(_SUPPORTED, GENERIC_CALL, _ACCELERATED_CALL) \
+#define _mc_switch_accel(_FEATURE, GENERIC_CALL, _ACCELERATED_CALL) \
   GENERIC_CALL;
 
 #endif /* __mc_ACCELERATE__ */
