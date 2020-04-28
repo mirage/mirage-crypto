@@ -36,7 +36,7 @@
 #define bswap32(x) bswap_32(x)
 #define bswap64(x) bswap_64(x)
 
-#elif defined(__WINDOWS__)
+#elif (defined(__WINDOWS__) || defined(_WIN32) || defined(_WIN64))
 #include <winsock2.h>
 #if BYTE_ORDER == LITTLE_ENDIAN
 #define htobe16(x) htons(x)
