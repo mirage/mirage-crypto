@@ -81,14 +81,15 @@
 #define bswap32(x) __builtin_bswap32(x)
 #define bswap64(x) __builtin_bswap64(x)
 
-#else
+#else /* MSC / GNUC / clang */
 #error "windows platform not supported (only MSC and gcc/clang)"
+#endif
 
 #else /* BYTE_ORDER == BIG_ENDIAN */
 #error "big endian byte order not supported on windows"
 #endif
 
-#else
+#else /* all OS defines */
 #error "unsupported platform"
 #endif
 
