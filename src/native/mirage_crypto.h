@@ -33,6 +33,7 @@
 
 #elif defined(__linux__)
 #define __USE_MISC
+#define _GNU_SOURCE
 #define _DEFAULT_SOURCE
 #include <endian.h>
 #include <byteswap.h>
