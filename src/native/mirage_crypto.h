@@ -12,16 +12,22 @@
 #define __mc_ACCELERATE__
 #endif
 
-#ifdef __mc_ACCELERATE__
+#if defined (__i386__) || defined (__x86_64__)
 
 struct _mc_cpu_features {
   int aesni;
   int pclmul;
   int ssse3;
+  int rdrand;
+  int rdseed;
 };
 
 /* Supported accelerations */
 extern struct _mc_cpu_features mc_detected_cpu_features;
+
+#endif /* __i386__ || __x86_64__ */
+
+#ifdef __mc_ACCELERATE__
 
 #define _mc_switch_accel(FEATURE, GENERIC_CALL, ACCELERATED_CALL) \
   if (!(mc_detected_cpu_features.FEATURE)) { GENERIC_CALL; } \

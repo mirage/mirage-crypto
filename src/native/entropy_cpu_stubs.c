@@ -10,12 +10,6 @@
 #define __x86__
 
 #include <x86intrin.h>
-#include <cpuid.h>
-
-/* because clang... */
-#if !defined(bit_RDSEED)
-#define bit_RDSEED 0x00040000
-#endif
 
 #if defined (__x86_64__)
 #define random_t unsigned long long
@@ -31,7 +25,6 @@
 #endif /* __i386__ || __x86_64__ */
 
 #if defined (__arm__)
-
 /* Replace with `read_virtual_count` from MiniOS when that symbol
  * gets exported. */
 static inline uint32_t read_virtual_count () {
@@ -40,6 +33,7 @@ static inline uint32_t read_virtual_count () {
   return c_lo;
 }
 #endif /* arm */
+
 #if defined (__aarch64__)
 #define	isb()		__asm __volatile("isb" : : : "memory")
 static inline uint64_t read_virtual_count(void)
@@ -63,35 +57,25 @@ static enum cpu_rng_t __cpu_rng = RNG_NONE;
 
 static void detect () {
 #if defined (__x86__)
-
-  unsigned int sig, eax, ebx, ecx, edx;
-  int max = __get_cpuid_max (0, &sig);
   random_t r = 0;
 
-  if (max < 1) return;
+  if (mc_detected_cpu_features.rdrand)
+    /* AMD Ryzen 3000 bug where RDRAND always returns -1
+       https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
+    for (int i = 0; i < RETRIES; i++)
+      if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
+        __cpu_rng = RNG_RDRAND;
+        break;
+      }
 
-  if (sig == signature_INTEL_ebx || sig == signature_AMD_ebx) {
-    __cpuid (1, eax, ebx, ecx, edx);
-    if (ecx & bit_RDRND)
-      /* AMD Ryzen 3000 bug where RDRAND always returns -1
-         https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
-      for (int i = 0; i < RETRIES; i++)
-        if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
-          __cpu_rng = RNG_RDRAND;
-          break;
-        }
-    if (max > 7) {
-      __cpuid_count (7, 0, eax, ebx, ecx, edx);
-      if (ebx & bit_RDSEED)
-        /* RDSEED could return -1 as well, thus we test it here as well
-           https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
-        for (int i = 0; i < RETRIES; i++)
-          if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
-            __cpu_rng = RNG_RDSEED;
-            break;
-          }
-    }
-  }
+  if (mc_detected_cpu_features.rdseed)
+    /* RDSEED could return -1, thus we test it here
+       https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
+    for (int i = 0; i < RETRIES; i++)
+      if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
+        __cpu_rng = RNG_RDSEED;
+        break;
+      }
 #endif
 }
 

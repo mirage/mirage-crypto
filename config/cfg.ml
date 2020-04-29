@@ -8,7 +8,7 @@ let _ =
   in
   let accelerate_flags =
     match arch with
-    | "x86_64" -> [ "-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul" ]
+    | "x86_64" | "amd64" -> [ "-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul" ]
     | _ -> []
   in
   let ent_flags =
