@@ -22,9 +22,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "mirage_crypto.h"
+
 #include <string.h>
 //#include <stdio.h>
-#include "mirage_crypto.h"
 #include "hash.h"
 #include "md5.h"
 

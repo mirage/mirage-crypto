@@ -1,8 +1,6 @@
 #if !defined (H__MIRAGE_CRYPTO)
 #define H__MIRAGE_CRYPTO
 
-#include <stdint.h>
-
 /* endian.h is tricky (not specified), inspiration from;
    https://gist.github.com/panzi/6856583 (public domain)
    and https://gist.github.com/PkmX/63dd23f28ba885be53a5 (also public domain)
@@ -93,6 +91,8 @@
 #else /* all OS defines */
 #error "unsupported platform"
 #endif
+
+#include <stdint.h>
 
 #include <caml/mlvalues.h>
 #include <caml/bigarray.h>

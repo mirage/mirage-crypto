@@ -22,8 +22,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "mirage_crypto.h"
+
+#include <string.h>
 #include "hash.h"
 #include "sha256.h"
 
