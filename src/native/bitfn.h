@@ -40,63 +40,47 @@
 #define bitfn_swap32(x) __builtin_bswap32(x)
 #define bitfn_swap64(x) __builtin_bswap64(x)
 
-#ifndef ARCH_HAS_ROL32
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
 {
 	return (word << shift) | (word >> (32 - shift));
 }
-#endif
 
-#ifndef ARCH_HAS_ROR32
 static inline uint32_t ror32(uint32_t word, uint32_t shift)
 {
 	return (word >> shift) | (word << (32 - shift));
 }
-#endif
 
-#ifndef ARCH_HAS_ROL64
 static inline uint64_t rol64(uint64_t word, uint32_t shift)
 {
 	return (word << shift) | (word >> (64 - shift));
 }
-#endif
 
-#ifndef ARCH_HAS_ROR64
 static inline uint64_t ror64(uint64_t word, uint32_t shift)
 {
 	return (word >> shift) | (word << (64 - shift));
 }
-#endif
 
-#ifndef ARCH_HAS_ARRAY_SWAP32
 static inline void array_swap32(uint32_t *d, uint32_t *s, uint32_t nb)
 {
 	while (nb--)
 		*d++ = bitfn_swap32(*s++);
 }
-#endif
 
-#ifndef ARCH_HAS_ARRAY_SWAP64
 static inline void array_swap64(uint64_t *d, uint64_t *s, uint32_t nb)
 {
 	while (nb--)
 		*d++ = bitfn_swap64(*s++);
 }
-#endif
 
-#ifndef ARCH_HAS_ARRAY_COPY32
 static inline void array_copy32(uint32_t *d, uint32_t *s, uint32_t nb)
 {
 	while (nb--) *d++ = *s++;
 }
-#endif
 
-#ifndef ARCH_HAS_ARRAY_COPY64
 static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 {
 	while (nb--) *d++ = *s++;
 }
-#endif
 
 /* big endian to cpu */
 #if LITTLE_ENDIAN == BYTE_ORDER
