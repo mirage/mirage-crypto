@@ -1,6 +1,6 @@
 #include "mirage_crypto.h"
 
-#if defined (__i386__) || defined (__x86_64__) || defined (__mc_ACCELERATE__)
+#ifdef __mc_detect_features__
 
 #include <cpuid.h>
 
@@ -33,11 +33,11 @@ mc_detect_cpu_features (__unit ()) {
   return Val_unit;
 }
 
-#else /* i386 || x86_64 */
+#else /* __mc_detect_features__ */
 
 CAMLprim value
 mc_detect_cpu_features (__unit ()) {
   return Val_unit;
 }
 
-#endif /* i386 || x86_64 */
+#endif /* __mc_detect_features__ */

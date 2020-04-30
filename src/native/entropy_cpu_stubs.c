@@ -7,8 +7,6 @@
 #include "mirage_crypto.h"
 
 #if defined (__i386__) || defined (__x86_64__)
-#define __x86__
-
 #include <x86intrin.h>
 
 #if defined (__x86_64__)
@@ -56,7 +54,7 @@ static enum cpu_rng_t __cpu_rng = RNG_NONE;
 #define RETRIES 10
 
 static void detect () {
-#if defined (__x86__)
+#ifdef __mc_ENTROPY__
   random_t r = 0;
 
   if (mc_detected_cpu_features.rdrand)
@@ -80,7 +78,7 @@ static void detect () {
 }
 
 CAMLprim value caml_cycle_counter (value __unused(unit)) {
-#if defined (__x86__)
+#if defined (__i386__) || defined (__x86_64__)
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
   return Val_long (read_virtual_count ());
@@ -90,7 +88,7 @@ CAMLprim value caml_cycle_counter (value __unused(unit)) {
 }
 
 CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
-#if defined (__x86__)
+#ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
   int i = RETRIES;
@@ -112,7 +110,7 @@ CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
 }
 
 CAMLprim value caml_cpu_unchecked_random (value __unused(unit)) {
-#if defined (__x86__)
+#ifdef __mc_ENTROPY__
   random_t r = 0;
   /* rdrand/rdseed may fail (and return CR = 0) if insufficient entropy is
      available (or the hardware DRNG is in the middle of reseeding).

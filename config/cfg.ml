@@ -13,7 +13,7 @@ let _ =
   in
   let ent_flags =
     match arch with
-    | "x86_64" | "amd64" | "x86" -> [ "-mrdrnd" ; "-mrdseed" ]
+    | "x86_64" | "amd64" | "x86" -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
     | _ -> []
   in
   let fs = std_flags @ ent_flags @ accelerate_flags in

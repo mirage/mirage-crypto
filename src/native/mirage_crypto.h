@@ -10,9 +10,15 @@
 #ifdef ACCELERATE
 #include <x86intrin.h>
 #define __mc_ACCELERATE__
+#define __mc_detect_features__
 #endif
 
-#if defined (__i386__) || defined (__x86_64__)
+#ifdef ENTROPY
+#define __mc_ENTROPY__
+#define __mc_detect_features__
+#endif
+
+#ifdef __mc_detect_features__
 
 struct _mc_cpu_features {
   int aesni;
@@ -25,7 +31,7 @@ struct _mc_cpu_features {
 /* Supported accelerations */
 extern struct _mc_cpu_features mc_detected_cpu_features;
 
-#endif /* __i386__ || __x86_64__ */
+#endif /* __mc_detect_features__ */
 
 #ifdef __mc_ACCELERATE__
 
