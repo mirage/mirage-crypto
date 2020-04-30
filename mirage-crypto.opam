@@ -17,7 +17,6 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "1.7"}
   "dune-configurator" {>= "2.0.0"}
-  "cpuid" {build}
   "ounit" {with-test}
   "cstruct" {>="3.2.0"}
 ]
