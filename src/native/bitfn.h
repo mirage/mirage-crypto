@@ -26,19 +26,14 @@
 #define BITFN_H
 #include <stdint.h>
 
-#ifdef __MINGW32__
-  # define LITTLE_ENDIAN 1234
-  # define BYTE_ORDER    LITTLE_ENDIAN
-#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__)
-  # include <sys/endian.h>
-#elif defined(__APPLE__)
-  # include <machine/endian.h>
-#else
-  # include <endian.h>
-#endif
-
 #define bitfn_swap32(x) __builtin_bswap32(x)
 #define bitfn_swap64(x) __builtin_bswap64(x)
+
+#if defined(_MSC_VER)
+#include <stdlib.h>
+#define bitfn_swap32(x) _byteswap_ulong(x)
+#define bitfn_swap64(x) _byteswap_uint64(x)
+#endif /* MSC_VER */
 
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
 {
@@ -83,7 +78,8 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 }
 
 /* big endian to cpu */
-#if LITTLE_ENDIAN == BYTE_ORDER
+#ifdef __BYTE_ORDER__
+#if __ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__
 
 # define be32_to_cpu(a) bitfn_swap32(a)
 # define cpu_to_be32(a) bitfn_swap32(a)
@@ -106,7 +102,7 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 
 # define ARCH_IS_LITTLE_ENDIAN
 
-#elif BIG_ENDIAN == BYTE_ORDER
+#elif __ORDER_BIG_ENDIAN__ == __BYTE_ORDER__
 
 # define be32_to_cpu(a) (a)
 # define cpu_to_be32(a) (a)
@@ -130,7 +126,11 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 # define ARCH_IS_BIG_ENDIAN
 
 #else
-# error "endian not supported"
+# error "endian is neither big nor little endian"
+#endif
+
+#else
+# error "__BYTE_ORDER__ is not defined"
 #endif
 
 #endif /* !BITFN_H */
