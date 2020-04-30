@@ -1,6 +1,6 @@
 #include "mirage_crypto.h"
 
-#if defined (__i386__) || defined (__x86_64__)
+#if defined (__i386__) || defined (__x86_64__) || defined (__mc_ACCELERATE__)
 
 #include <cpuid.h>
 
