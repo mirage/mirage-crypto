@@ -26,13 +26,13 @@
 #define BITFN_H
 #include <stdint.h>
 
-#define bitfn_swap32(x) __builtin_bswap32(x)
-#define bitfn_swap64(x) __builtin_bswap64(x)
-
 #if defined(_MSC_VER)
 #include <stdlib.h>
 #define bitfn_swap32(x) _byteswap_ulong(x)
 #define bitfn_swap64(x) _byteswap_uint64(x)
+#else /* MSC_VER */
+#define bitfn_swap32(x) __builtin_bswap32(x)
+#define bitfn_swap64(x) __builtin_bswap64(x)
 #endif /* MSC_VER */
 
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
