@@ -77,7 +77,6 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 	while (nb--) *d++ = *s++;
 }
 
-/* big endian to cpu */
 #ifdef __BYTE_ORDER__
 #if __ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__
 
