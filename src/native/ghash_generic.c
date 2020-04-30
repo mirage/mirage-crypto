@@ -14,8 +14,6 @@
 #define __MC_GHASH_LARGE_TABLES
 
 #include "mirage_crypto.h"
-#if !defined (__mc_PCLMUL__)
-
 #include <string.h>
 
 #define __set_uint128_t(w1, w0) (((__uint128_t) w1 << 64) | w0)
@@ -87,22 +85,18 @@ static inline void __ghash (__uint128_t m[__t_size], uint64_t hash[2], const uin
   __store_128_t (hash, acc);
 }
 
-CAMLprim value mc_ghash_key_size (__unit ()) {
+CAMLprim value mc_ghash_key_size_generic (__unit ()) {
   return Val_int (sizeof (__uint128_t) * __t_size);
 }
 
-CAMLprim value mc_ghash_init_key (value key, value off, value m) {
+CAMLprim value mc_ghash_init_key_generic (value key, value off, value m) {
   __derive ((uint64_t *) _ba_uint8_off (key, off), (__uint128_t *) Bp_val (m));
   return Val_unit;
 }
 
 CAMLprim value
-mc_ghash (value m, value hash, value src, value off, value len) {
+mc_ghash_generic (value m, value hash, value src, value off, value len) {
   __ghash ((__uint128_t *) Bp_val (m), (uint64_t *) Bp_val (hash),
            _ba_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
-
-CAMLprim value mc_ghash_mode (__unit ()) { return Val_int (0); }
-
-#endif /* __mc_PCLMUL__ */

@@ -9,7 +9,7 @@
  */
 
 #include "mirage_crypto.h"
-#if defined (__mc_AES_NI__)
+#if defined (__mc_ACCELERATE__)
 
 /* xmm: [3, 2, 1, 0] */
 #define _S_3333 0xff
@@ -23,7 +23,7 @@
  *
  * XXX Get rid of the correction here.
  */
-int _mc_aesni_rk_size (uint8_t rounds) {
+static int _mc_aesni_rk_size (uint8_t rounds) {
   return (rounds + 1) * 16 + 15;
 }
 
@@ -336,52 +336,69 @@ static inline void _mc_aesni_dec_blocks (const uint8_t *src, uint8_t *dst, const
   __blocked_loop (_mc_aesni_dec, _mc_aesni_dec8, src, dst, rk, rounds, blocks);
 }
 
+#endif /* __mc_ACCELERATE__ */
 
 CAMLprim value
 mc_aes_rk_size (value rounds) {
-  return Val_int (_mc_aesni_rk_size (Int_val (rounds)));
+  value s;
+  _mc_switch_accel(aesni,
+    s = mc_aes_rk_size_generic(rounds),
+    s = Val_int (_mc_aesni_rk_size (Int_val (rounds))))
+  return s;
 }
 
 CAMLprim value
 mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
-  _mc_aesni_derive_e_key (_ba_uint8_off (key, off1),
-                          _ba_uint8 (rk),
-                          Int_val (rounds));
+  _mc_switch_accel(aesni,
+    mc_aes_derive_e_key_generic(key, off1, rk, rounds),
+    _mc_aesni_derive_e_key (_ba_uint8_off (key, off1),
+                            _ba_uint8 (rk),
+                            Int_val (rounds)))
   return Val_unit;
 }
 
 CAMLprim value
 mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value rk) {
-  _mc_aesni_derive_d_key (_ba_uint8_off (key, off1),
-                          _ba_uint8 (kr),
-                          Int_val (rounds),
-                          Is_block(rk) ? _ba_uint8(Field(rk, 0)) : 0);
+  _mc_switch_accel(aesni,
+    mc_aes_derive_d_key_generic(key, off1, kr, rounds, rk),
+    _mc_aesni_derive_d_key (_ba_uint8_off (key, off1),
+                            _ba_uint8 (kr),
+                            Int_val (rounds),
+                            Is_block(rk) ? _ba_uint8(Field(rk, 0)) : 0))
   return Val_unit;
 }
 
 CAMLprim value
 mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _mc_aesni_enc_blocks ( _ba_uint8_off (src, off1),
-                         _ba_uint8_off (dst, off2),
-                         _ba_uint8 (rk),
-                         Int_val (rounds),
-                         Int_val (blocks) );
+  _mc_switch_accel(aesni,
+    mc_aes_enc_generic(src, off1, dst, off2, rk, rounds, blocks),
+    _mc_aesni_enc_blocks ( _ba_uint8_off (src, off1),
+                           _ba_uint8_off (dst, off2),
+                           _ba_uint8 (rk),
+                           Int_val (rounds),
+                           Int_val (blocks) ))
   return Val_unit;
 }
 
 CAMLprim value
 mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _mc_aesni_dec_blocks ( _ba_uint8_off (src, off1),
-                         _ba_uint8_off (dst, off2),
-                         _ba_uint8 (rk),
-                         Int_val (rounds),
-                         Int_val (blocks) );
+  _mc_switch_accel(aesni,
+    mc_aes_dec_generic(src, off1, dst, off2, rk, rounds, blocks),
+    _mc_aesni_dec_blocks ( _ba_uint8_off (src, off1),
+                           _ba_uint8_off (dst, off2),
+                           _ba_uint8 (rk),
+                           Int_val (rounds),
+                           Int_val (blocks) ))
   return Val_unit;
 }
 
-CAMLprim value mc_aes_mode (__unit ()) { return Val_int (1); }
+CAMLprim value mc_aes_mode (__unit ()) {
+  value enabled = 0;
+  _mc_switch_accel(aesni,
+    enabled = 0,
+    enabled = 1)
+  return Val_int (enabled);
+}
 
 __define_bc_7 (mc_aes_enc)
 __define_bc_7 (mc_aes_dec)
-
-#endif /* __mc_AES_NI__ */

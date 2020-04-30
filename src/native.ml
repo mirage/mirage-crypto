@@ -88,3 +88,12 @@ external count16be  : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_
 external count16be4 : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_16_be_4" [@@noalloc]
 
 external blit : buffer -> off -> buffer -> off -> size -> unit = "caml_blit_bigstring_to_bigstring" [@@noalloc]
+
+external misc_mode : unit -> int = "mc_misc_mode" [@@noalloc]
+
+external _detect_cpu_features : unit -> unit = "mc_detect_cpu_features" [@@noalloc]
+external _detect_entropy : unit -> unit = "caml_entropy_detect"
+
+let () =
+  _detect_cpu_features ();
+  _detect_entropy ()

@@ -21,7 +21,7 @@
 #define __MC_GHASH_AGGREGATED_REDUCE
 
 #include "mirage_crypto.h"
-#if defined (__mc_PCLMUL__)
+#ifdef __mc_ACCELERATE__
 
 #include <string.h>
 
@@ -186,20 +186,36 @@ static inline void __ghash (__m128i *m, __m128i hash[1], const __m128i *src, siz
   _mm_storeu_si128 (hash, __repr_xform (acc));
 }
 
-CAMLprim value mc_ghash_key_size (__unit ()) { return Val_int (__keys * 16); }
+#endif /* __mc_ACCELERATE__ */
+
+CAMLprim value mc_ghash_key_size (__unit ()) {
+  value s;
+  _mc_switch_accel(pclmul,
+    s = mc_ghash_key_size_generic(Val_unit),
+    s = Val_int (__keys * 16))
+  return s;
+}
 
 CAMLprim value mc_ghash_init_key (value key, value off, value m) {
-  __derive ((__m128i *) _ba_uint8_off (key, off), (__m128i *) Bp_val (m));
+  _mc_switch_accel(pclmul,
+    mc_ghash_init_key_generic(key, off, m),
+    __derive ((__m128i *) _ba_uint8_off (key, off), (__m128i *) Bp_val (m)))
   return Val_unit;
 }
 
 CAMLprim value
 mc_ghash (value k, value hash, value src, value off, value len) {
-  __ghash ( (__m128i *) Bp_val (k), (__m128i *) Bp_val (hash),
-            (__m128i *) _ba_uint8_off (src, off), Int_val (len) );
+  _mc_switch_accel(pclmul,
+    mc_ghash_generic(k, hash, src, off, len),
+    __ghash ( (__m128i *) Bp_val (k), (__m128i *) Bp_val (hash),
+      (__m128i *) _ba_uint8_off (src, off), Int_val (len) ))
   return Val_unit;
 }
 
-CAMLprim value mc_ghash_mode (__unit ()) { return Val_int (1); }
-
-#endif /* __mc_PCLMUL__ */
+CAMLprim value mc_ghash_mode (__unit ()) {
+  value enabled = 0;
+  _mc_switch_accel(pclmul,
+    enabled = 0,
+    enabled = 1)
+  return Val_int (enabled);
+}

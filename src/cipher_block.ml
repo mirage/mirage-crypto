@@ -451,6 +451,7 @@ end
 
 let accelerated =
   let flags =
+    (match Native.misc_mode () with 1 -> [`XOR] | _ -> []) @
     (match Native.AES.mode () with 1 -> [`AES] | _ -> []) @
     (match Native.GHASH.mode () with 1 -> [`GHASH] | _ -> []) in
-  match flags with [] -> [] | _ -> `XOR :: flags
+  flags

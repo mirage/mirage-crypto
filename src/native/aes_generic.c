@@ -6,8 +6,6 @@
 
 #include "mirage_crypto.h"
 
-#if defined (__mc_AES_GENERIC__)
-
 #define KEYLENGTH(keybits) ((keybits)/8)
 #define RKLENGTH(keybits)  ((keybits)/8+28)
 #define NROUNDS(keybits)   ((keybits)/32+6)
@@ -1229,12 +1227,12 @@ static inline void _mc_aes_dec_blocks (const uint8_t *src, uint8_t *dst, const u
 }
 
 CAMLprim value
-mc_aes_rk_size (value rounds) {
+mc_aes_rk_size_generic (value rounds) {
   return Val_int (RKLENGTH (keybits_of_r (Int_val (rounds))) * sizeof(uint32_t));
 }
 
 CAMLprim value
-mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
+mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds) {
   mc_rijndaelSetupEncrypt (_ba_uint32 (rk),
                            _ba_uint8_off (key, off1),
                            keybits_of_r (Int_val (rounds)));
@@ -1242,7 +1240,7 @@ mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
 }
 
 CAMLprim value
-mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value __unused (rk)) {
+mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk)) {
   mc_rijndaelSetupDecrypt (_ba_uint32 (kr),
                            _ba_uint8_off (key, off1),
                            keybits_of_r (Int_val (rounds)));
@@ -1250,7 +1248,7 @@ mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value __unus
 }
 
 CAMLprim value
-mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
   _mc_aes_enc_blocks ( _ba_uint8_off (src, off1),
                        _ba_uint8_off (dst, off2),
                        _ba_uint32 (rk),
@@ -1260,7 +1258,7 @@ mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds
 }
 
 CAMLprim value
-mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
+mc_aes_dec_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
   _mc_aes_dec_blocks ( _ba_uint8_off (src, off1),
                        _ba_uint8_off (dst, off2),
                        _ba_uint32 (rk),
@@ -1268,10 +1266,3 @@ mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds
                        Int_val (blocks) );
   return Val_unit;
 }
-
-CAMLprim value mc_aes_mode (__unit ()) { return Val_int (0); }
-
-__define_bc_7 (mc_aes_enc)
-__define_bc_7 (mc_aes_dec)
-
-#endif /* __mc_AES_GENERIC__ */
