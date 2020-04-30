@@ -19,7 +19,7 @@ type g = Generator : ('a * bool * 'a generator) -> g
 
 module Fortuna = Fortuna
 
-module Hmac_drbg = Hmac_drbg
+module Hmac_drbg = Hmac_drbg.Make
 
 module Null = struct
 

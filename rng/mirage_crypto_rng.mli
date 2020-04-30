@@ -103,9 +103,7 @@ module Fortuna : Generator
 
 (** {b HMAC_DRBG}: A NIST-specified RNG based on HMAC construction over the
     provided hash. *)
-module Hmac_drbg : sig
-  module Make (H : Mirage_crypto.Hash.S) : Generator
-end
+module Hmac_drbg (H : Mirage_crypto.Hash.S) : Generator
 
 (** No-op generator returning exactly the bytes it was seeded with. *)
 module Null : Generator
