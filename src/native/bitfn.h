@@ -26,47 +26,19 @@
 #define BITFN_H
 #include <stdint.h>
 
-#ifndef NO_INLINE_ASM
-/**********************************************************/
-# if (defined(__i386__))
-#  define ARCH_HAS_SWAP32
-static inline uint32_t bitfn_swap32(uint32_t a)
-{
-	__asm__ ("bswap %0" : "=r" (a) : "0" (a));
-	return a;
-}
-/**********************************************************/
-# elif (defined(__arm__))
-#  define ARCH_HAS_SWAP32
-static inline uint32_t bitfn_swap32(uint32_t a)
-{
-	uint32_t tmp = a;
-	__asm__ volatile ("eor %1, %0, %0, ror #16\n"
-	                  "bic %1, %1, #0xff0000\n"
-	                  "mov %0, %0, ror #8\n"
-	                  "eor %0, %0, %1, lsr #8\n"
-	                  : "=r" (a), "=r" (tmp) : "0" (a), "1" (tmp));
-	return a;
-}
-/**********************************************************/
-# elif defined(__x86_64__)
-#  define ARCH_HAS_SWAP32
-#  define ARCH_HAS_SWAP64
-static inline uint32_t bitfn_swap32(uint32_t a)
-{
-	__asm__ ("bswap %0" : "=r" (a) : "0" (a));
-	return a;
-}
+#ifdef __MINGW32__
+  # define LITTLE_ENDIAN 1234
+  # define BYTE_ORDER    LITTLE_ENDIAN
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__)
+  # include <sys/endian.h>
+#elif defined(__APPLE__)
+  # include <machine/endian.h>
+#else
+  # include <endian.h>
+#endif
 
-static inline uint64_t bitfn_swap64(uint64_t a)
-{
-	__asm__ ("bswap %0" : "=r" (a) : "0" (a));
-	return a;
-}
-
-# endif
-#endif /* NO_INLINE_ASM */
-/**********************************************************/
+#define bitfn_swap32(x) __builtin_bswap32(x)
+#define bitfn_swap64(x) __builtin_bswap64(x)
 
 #ifndef ARCH_HAS_ROL32
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
@@ -96,26 +68,11 @@ static inline uint64_t ror64(uint64_t word, uint32_t shift)
 }
 #endif
 
-#ifndef ARCH_HAS_SWAP32
-static inline uint32_t bitfn_swap32(uint32_t a)
-{
-	return (a << 24) | ((a & 0xff00) << 8) | ((a >> 8) & 0xff00) | (a >> 24);
-}
-#endif
-
 #ifndef ARCH_HAS_ARRAY_SWAP32
 static inline void array_swap32(uint32_t *d, uint32_t *s, uint32_t nb)
 {
 	while (nb--)
 		*d++ = bitfn_swap32(*s++);
-}
-#endif
-
-#ifndef ARCH_HAS_SWAP64
-static inline uint64_t bitfn_swap64(uint64_t a)
-{
-	return ((uint64_t) bitfn_swap32((uint32_t) (a >> 32))) |
-	       (((uint64_t) bitfn_swap32((uint32_t) a)) << 32);
 }
 #endif
 
@@ -141,16 +98,6 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 }
 #endif
 
-#ifdef __MINGW32__
-  # define LITTLE_ENDIAN 1234
-  # define BYTE_ORDER    LITTLE_ENDIAN
-#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__)
-  # include <sys/endian.h>
-#elif defined(__APPLE__)
-  # include <machine/endian.h>
-#else
-  # include <endian.h>
-#endif
 /* big endian to cpu */
 #if LITTLE_ENDIAN == BYTE_ORDER
 
