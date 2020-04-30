@@ -33,9 +33,6 @@ module Cpu_native = struct
   external unchecked_random : unit -> int  = "caml_cpu_unchecked_random" [@@noalloc]
   external checked_random : unit -> int  = "caml_cpu_checked_random" [@@noalloc]
   external rng_type : unit -> int  = "caml_cpu_rng_type" [@@noalloc]
-  external detect : unit -> unit = "caml_entropy_detect"
-
-  let () = detect ()
 
   let cpu_rng =
     match rng_type () with

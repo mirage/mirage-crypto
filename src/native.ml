@@ -92,6 +92,8 @@ external blit : buffer -> off -> buffer -> off -> size -> unit = "caml_blit_bigs
 external misc_mode : unit -> int = "mc_misc_mode" [@@noalloc]
 
 external _detect_cpu_features : unit -> unit = "mc_detect_cpu_features" [@@noalloc]
+external _detect_entropy : unit -> unit = "caml_entropy_detect"
 
 let () =
-  _detect_cpu_features ()
+  _detect_cpu_features ();
+  _detect_entropy ()
