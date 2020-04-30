@@ -104,9 +104,6 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 # define cpu_to_be64_array(d, s, l) array_swap64(d, s, l)
 # define be64_to_cpu_array(d, s, l) array_swap64(d, s, l)
 
-# define ror32_be(a, s) rol32(a, s)
-# define rol32_be(a, s) ror32(a, s)
-
 # define ARCH_IS_LITTLE_ENDIAN
 
 #elif BIG_ENDIAN == BYTE_ORDER
@@ -129,9 +126,6 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 # define le64_to_cpu_array(d, s, l) array_swap64(d, s, l)
 # define cpu_to_be64_array(d, s, l) array_copy64(d, s, l)
 # define be64_to_cpu_array(d, s, l) array_copy64(d, s, l)
-
-# define ror32_be(a, s) ror32(a, s)
-# define rol32_be(a, s) rol32(a, s)
 
 # define ARCH_IS_BIG_ENDIAN
 
