@@ -19,4 +19,5 @@ module Getrandom = struct
 end
 
 let initialize () =
-  Mirage_crypto_rng.generator := Mirage_crypto_rng.create (module Getrandom)
+  Mirage_crypto_rng.set_default_generator
+    (Mirage_crypto_rng.create (module Getrandom))

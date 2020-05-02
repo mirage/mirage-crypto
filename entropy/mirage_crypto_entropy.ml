@@ -130,7 +130,7 @@ let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
   else begin
     running := true;
     let rng = Mirage_crypto_rng.(create ?g rng) in
-    Mirage_crypto_rng.generator := rng;
+    Mirage_crypto_rng.set_default_generator rng;
     let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) in
     Lwt_list.iteri_p
       (fun i boot -> boot (handler ~source:i))

@@ -9,8 +9,28 @@ open Test_common_random
 
 let vz = Z.of_string_base 16
 
+module Null = struct
+
+  type g = Cstruct.t ref
+
+  let block = 1
+
+  let create () = ref Cstruct.empty
+
+  let generate ~g n =
+    try
+      let (a, b) = Cstruct.split !g n in ( g := b ; a )
+    with Invalid_argument _ -> raise Mirage_crypto_rng.Unseeded_generator
+
+  let reseed ~g cs = g := Cs.(!g <+> cs)
+
+  let seeded ~g = Cstruct.len !g > 0
+
+  let accumulate ~g = `Acc (fun ~source:_ -> reseed ~g)
+end
+
 let random_is seed =
-  Mirage_crypto_rng.create ~seed (module Mirage_crypto_rng.Null)
+  Mirage_crypto_rng.create ~seed (module Null)
 
 let gen_rsa ~bits =
   let e     = Z.(if bits < 24 then ~$3 else ~$0x10001) in

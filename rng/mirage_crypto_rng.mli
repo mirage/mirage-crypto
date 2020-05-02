@@ -8,8 +8,8 @@
     {- The {{!Generator}signature} of generator modules, together with a
        facility to convert such modules into actual {{!g}generators}, and
        functions that operate on this representation.}
-    {- A global generator instance, the default is {{!Null}Null}, used
-       when one is not explicitly supplied.}}
+    {- A global generator instance, which needs to be initialized by calling
+       {!set_default_generator}.}}
 *)
 
 (** {1 Usage notes} *)
@@ -54,6 +54,12 @@ type g
 
 exception Unseeded_generator
 (** Thrown when using an uninitialized {{!g}generator}. *)
+
+exception No_default_generator
+(** Thrown when {!set_generator} has not been called. *)
+
+exception Default_generator_already_set
+(** Thrown when {!set_generator} is called a second time. *)
 
 (** A single PRNG algorithm. *)
 module type Generator = sig
@@ -105,9 +111,6 @@ module Fortuna : Generator
     provided hash. *)
 module Hmac_drbg (H : Mirage_crypto.Hash.S) : Generator
 
-(** No-op generator returning exactly the bytes it was seeded with. *)
-module Null : Generator
-
 val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool -> (module Generator with type g = 'a) -> g
 (** [create module] uses a module conforming to the {{!Generator}Generator}
     signature to instantiate the generic generator {{!g}g}.
@@ -119,16 +122,17 @@ val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool -> (module Generator with 
     [strict] puts the generator into a more standards-conformant, but slighty
     slower mode. Useful if the outputs need to match published test-vectors. *)
 
-val generator : g ref
-(** Default generator. Functions in this module use this generator when not
-    explicitly supplied one.
+val default_generator : unit -> g
+(** [default_generator ()] is the default generator. Functions in this module
+    use this generator when not explicitly supplied one.
 
-    Swapping the [generator] is a way to subvert the random-generation process
-    e.g. to make it fully deterministic. Don't do that unless you know what
-    you're doing, but use [Mirage_crypto_entropy.initialize] or
-    [Mirage_crypto_rng_unix.initialize ()].
+    @raise No_default_generator if {!set_generator} has not been called. *)
 
-    [generator] defaults to {{!Null}Null}. *)
+val set_default_generator : g -> unit
+(** [set_default_generator g] sets the default generator to [g]. This function
+    must be called once.
+
+    @raise Default_generator_already_set if called a second time. *)
 
 val generate : ?g:g -> int -> Cstruct.t
 (** Invoke {{!Generator.generate}generate} on [g] or
