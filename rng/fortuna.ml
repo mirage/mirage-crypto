@@ -21,7 +21,6 @@ type g =
   ; mutable secret : Cstruct.t
   ; mutable key    : AES_CTR.key
   ; mutable trap   : (unit -> unit) option
-  ; mutable seeded : bool
   }
 
 let create () =
@@ -30,12 +29,13 @@ let create () =
   ; secret = k
   ; key    = AES_CTR.of_secret k
   ; trap   = None
-  ; seeded = false
   }
 
 let clone ~g = { g with trap = None }
 
-let seeded ~g = g.seeded
+let seeded ~g =
+  let lo, hi = g.ctr in
+  not (Int64.equal lo 0L && Int64.equal hi 0L)
 
 (* XXX We might want to erase the old key. *)
 let set_key ~g sec =
@@ -44,8 +44,7 @@ let set_key ~g sec =
 
 let reseedi ~g iter =
   set_key ~g @@ SHAd256.digesti (fun f -> f g.secret; iter f);
-  g.ctr <- AES_CTR.add_ctr g.ctr 1L;
-  g.seeded <- true
+  g.ctr <- AES_CTR.add_ctr g.ctr 1L
 
 let iter1 a     f = f a
 
@@ -63,7 +62,7 @@ let generate_rekey ~g bytes =
 
 let generate ~g bytes =
   ( match g.trap with None -> () | Some f -> g.trap <- None ; f () );
-  if not g.seeded then raise Boot.Unseeded_generator ;
+  if not (seeded ~g) then raise Boot.Unseeded_generator ;
   let rec chunk acc = function
     | i when i <= 0 -> acc
     | n -> let n' = imin n 0x10000 in
