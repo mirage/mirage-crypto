@@ -14,3 +14,6 @@
   (libraries mirage-crypto-rng unix)
   (c_names mc_getrandom_stubs)
   (c_library_flags (:include rng_c_flags.sexp)))
+
+(env
+  (dev (c_flags (-Werror))))
