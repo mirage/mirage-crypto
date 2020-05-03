@@ -26,21 +26,8 @@
 #define BITFN_H
 #include <stdint.h>
 
-#if defined(_MSC_VER)
-  // not targeting xbox 360, which is big endian
-  #include <stdlib.h>
-  #define bitfn_swap32(x) _byteswap_ulong(x)
-  #define bitfn_swap64(x) _byteswap_uint64(x)
-  #ifndef __ORDER_LITTLE_ENDIAN__
-    #define __ORDER_LITTLE_ENDIAN__ 1234
-  #endif /* ORDER_LITTLE_ENDIAN */
-  #ifndef __BYTE_ORDER__
-    #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
-  #endif /* BYTE_ORDER */
-#else /* MSC_VER */
-  #define bitfn_swap32(x) __builtin_bswap32(x)
-  #define bitfn_swap64(x) __builtin_bswap64(x)
-#endif /* MSC_VER */
+#define bitfn_swap32(x) __builtin_bswap32(x)
+#define bitfn_swap64(x) __builtin_bswap64(x)
 
 static inline uint32_t rol32(uint32_t word, uint32_t shift)
 {
