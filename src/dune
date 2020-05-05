@@ -11,6 +11,9 @@
            entropy_cpu_stubs)
   (c_flags (:standard) (:include cflags.sexp)))
 
+(env
+  (dev (c_flags (-Werror))))
+
 (include_subdirs unqualified)
 
 (rule
