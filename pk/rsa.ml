@@ -91,8 +91,15 @@ let priv ~e ~d ~n ~p ~q ~dp ~dq ~q' =
   guard Z.(dq = d mod (pred q)) (`Msg "dq <> d mod (q - 1)") >>= fun () ->
   (* e has been checked (valid_e) to be coprime to p-1 and q-1 ->
      muliplicative inverse exists *)
-  guard Z.(d = invert e (pred p * pred q))
-    (`Msg "d <> e ^ -1 mod (p - 1) * (q - 1)") >>= fun () ->
+  guard Z.(one = dp * e mod (pred p)) (`Msg "1 <> dp * e mod (p - 1)") >>= fun () ->
+  guard Z.(one = dq * e mod (pred q)) (`Msg "1 <> dq * e mod (q - 1)") >>= fun () ->
+  let d =
+    let d' = Z.(invert e (pred p * pred q)) in
+    if not (d = d') then
+      Log.warn (fun m -> m "invalid d %a in private key, adjusting to %a"
+                   Z.pp_print d Z.pp_print d');
+    d'
+  in
   Ok { e ; d ; n ; p ; q ; dp ; dq ; q' }
 
 let priv_of_sexp s =

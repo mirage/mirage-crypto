@@ -15,6 +15,7 @@ build: [ ["dune" "subst"] {pinned}
 depends: [
   "conf-gmp-powm-sec" {build}
   "ocaml" {>= "4.08.0"}
+  "logs"
   "dune" {>= "1.7"}
   "ounit" {with-test}
   "randomconv" {with-test & >= "0.1.3"}
