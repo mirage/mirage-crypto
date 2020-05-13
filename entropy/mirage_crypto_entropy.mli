@@ -42,8 +42,10 @@ val pp_source : Format.formatter -> source -> unit
 val sources : unit -> source list
 (** [sources ()] is a list of supported entropy sources on your platform. *)
 
-val initialize :
-  ?g:'a -> (module Mirage_crypto_rng.Generator with type g = 'a) -> t Lwt.t
-(** [initialize ~g rng_module] sets the default generator to the [rng_module]
-    and sets up periodic entropy feeding for that rng. This function raises if
-    it is called a second time. *)
+module Make (T : Mirage_time.S) : sig
+  val initialize :
+    ?g:'a -> (module Mirage_crypto_rng.Generator with type g = 'a) -> t Lwt.t
+  (** [initialize ~g rng_module] sets the default generator to the [rng_module]
+      and sets up periodic entropy feeding for that rng. This function raises if
+      it is called a second time. *)
+end

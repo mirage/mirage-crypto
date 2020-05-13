@@ -21,8 +21,10 @@ module Printing_rng = struct
   let seeded ~g:_ = true
 end
 
+module E = Mirage_crypto_entropy.Make(Time)
+
 let with_entropy act =
-  Mirage_crypto_entropy.initialize (module Printing_rng) >>= fun _ ->
+  E.initialize (module Printing_rng) >>= fun _ ->
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
          Mirage_crypto_entropy.pp_source ppf x;

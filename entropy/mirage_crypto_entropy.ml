@@ -30,15 +30,16 @@
 module Cpu_native = struct
 
   external cycles : unit -> int  = "caml_cycle_counter" [@@noalloc]
-  external unchecked_random : unit -> int  = "caml_cpu_unchecked_random" [@@noalloc]
-  external checked_random : unit -> int  = "caml_cpu_checked_random" [@@noalloc]
+  external rdseed : unit -> int  = "caml_cpu_rdseed" [@@noalloc]
+  external rdrand : unit -> int  = "caml_cpu_rdrand" [@@noalloc]
   external rng_type : unit -> int  = "caml_cpu_rng_type" [@@noalloc]
 
   let cpu_rng =
     match rng_type () with
-    | 0 -> None
-    | 1 -> Some `Rdrand
-    | 2 -> Some `Rdseed
+    | 0 -> []
+    | 1 -> [ `Rdrand ]
+    | 2 -> [ `Rdseed ]
+    | 3 -> [ `Rdrand ; `Rdseed ]
     | _ -> assert false
 end
 
@@ -58,11 +59,17 @@ let pp_source ppf s =
   in
   Format.pp_print_string ppf str
 
-let sources () =
-  `Timer ::
+let sources () = `Timer :: Cpu_native.cpu_rng
+
+let rng = function
+  | `Rdseed -> Cpu_native.rdseed
+  | `Rdrand -> Cpu_native.rdrand
+
+let random prefered =
   match Cpu_native.cpu_rng with
-  | Some x -> [x]
-  | None   -> []
+  | [] -> None
+  | xs when List.mem prefered xs -> Some (rng prefered)
+  | y::_ -> Some (rng y)
 
 let write_header source data =
   Cstruct.set_uint8 data 0 source;
@@ -91,19 +98,31 @@ let whirlwind_bootstrap id =
   cs
 
 let interrupt_hook () =
-  match Cpu_native.cpu_rng with
-  | None ->
-      let buf = Cstruct.create 4 in fun () ->
-        let a = Cpu_native.cycles () in
-        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
-        buf
-  | Some _ ->
-      let buf = Cstruct.create 12 in fun () ->
-        let a = Cpu_native.cycles ()
-        and b = Cpu_native.unchecked_random () in
-        Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
-        Cstruct.LE.set_uint64 buf 4 (Int64.of_int b) ;
-        buf
+  let buf = Cstruct.create 4 in fun () ->
+    let a = Cpu_native.cycles () in
+    Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
+    buf
+
+let rdrand_once g random =
+  let source = 1 in
+  let `Acc handle = Mirage_crypto_rng.accumulate (Some g) ~source in
+  for _i = 0 to pred 32 do
+    let cs = Cstruct.create 8 in
+    Cstruct.LE.set_uint64 cs 0 (Int64.of_int (random ()));
+    handle cs
+  done
+
+let rdrand_task g sleep =
+  let open Lwt.Infix in
+  match random `Rdrand with
+  | None -> ()
+  | Some random ->
+    Lwt.async (fun () ->
+        let rec one () =
+          rdrand_once g random;
+          sleep >>= one
+        in
+        one ())
 
 (* XXX TODO
  *
@@ -114,32 +133,38 @@ let interrupt_hook () =
  * Compile-time entropy. A function returning it could go into `t.inits`.
  *)
 
-let checked_rdrand_rdseed id =
-  let cs = Cstruct.create 10 in
-  let random = Cpu_native.checked_random () in
-  Cstruct.LE.set_uint64 cs 2 (Int64.of_int random);
-  write_header id cs;
-  cs
+let rdrand_rdseed id =
+  match random `Rdseed with
+  | None -> failwith "expected a CPU rng"
+  | Some random ->
+    let cs = Cstruct.create 10 in
+    Cstruct.LE.set_uint64 cs 2 (Int64.of_int (random ()));
+    write_header id cs;
+    cs
 
 let bootstrap_functions () =
   match Cpu_native.cpu_rng with
-  | None -> [ whirlwind_bootstrap ; whirlwind_bootstrap ; whirlwind_bootstrap ]
-  | Some _ -> [ checked_rdrand_rdseed ; checked_rdrand_rdseed ; whirlwind_bootstrap ; checked_rdrand_rdseed ; checked_rdrand_rdseed ]
+  | [] -> [ whirlwind_bootstrap ; whirlwind_bootstrap ; whirlwind_bootstrap ]
+  | _ -> [ rdrand_rdseed ; rdrand_rdseed ; whirlwind_bootstrap ; rdrand_rdseed ; rdrand_rdseed ]
 
 let running = ref false
 
-let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
-  if !running then
-    Lwt.fail_with "entropy harvesting already running"
-  else begin
-    running := true;
-    let seed =
-      List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
-    in
-    let rng = Mirage_crypto_rng.(create ?g ~seed rng) in
-    Mirage_crypto_rng.set_default_generator rng;
-    let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in
-    let hook = interrupt_hook () in
-    Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
-    Lwt.return_unit
-  end
+module Make (T : Mirage_time.S) = struct
+
+  let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
+    if !running then
+      Lwt.fail_with "entropy harvesting already running"
+    else begin
+      running := true;
+      let seed =
+        List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
+      in
+      let rng = Mirage_crypto_rng.(create ?g ~seed rng) in
+      Mirage_crypto_rng.set_default_generator rng;
+      rdrand_task rng (T.sleep_ns (Duration.of_sec 1));
+      let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in
+      let hook = interrupt_hook () in
+      Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
+      Lwt.return_unit
+    end
+end
