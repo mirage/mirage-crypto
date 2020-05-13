@@ -17,6 +17,8 @@ let block = 16
 
 (* the minimal amount of bytes in a pool to trigger a reseed *)
 let min_pool_size = 64
+(* the minimal duration between two reseeds *)
+let min_time_duration = 1_000_000_000L
 
 (* XXX Locking!! *)
 type g =
@@ -26,9 +28,11 @@ type g =
   ; pools          : SHAd256.t array
   ; mutable pool0_size : int
   ; mutable reseed_count : int
+  ; mutable last_reseed : int64
+  ; time : (unit -> int64) option
   }
 
-let create () =
+let create ?time () =
   let k = Cstruct.create 32 in
   { ctr    = (0L, 0L)
   ; secret = k
@@ -36,6 +40,8 @@ let create () =
   ; pools  = Array.make 32 SHAd256.empty
   ; pool0_size = 0
   ; reseed_count = 0
+  ; last_reseed = 0L
+  ; time
   }
 
 let seeded ~g =
@@ -66,16 +72,27 @@ let generate_rekey ~g bytes =
   r1
 
 let add_pool_entropy g =
-  g.reseed_count <- g.reseed_count + 1;
-  g.pool0_size <- 0;
-  reseedi ~g @@ fun add ->
-  for i = 0 to 31 do
-    if g.reseed_count land (1 lsl i - 1) = 0 then
-      (SHAd256.get g.pools.(i) |> add; g.pools.(i) <- SHAd256.empty)
-  done
+  if g.pool0_size > min_pool_size then
+    let should_reseed, now =
+      match g.time with
+      | None -> true, 0L
+      | Some f ->
+        let now = f () in
+        Int64.(sub now g.last_reseed > min_time_duration), now
+    in
+    if should_reseed then begin
+      g.reseed_count <- g.reseed_count + 1;
+      g.last_reseed <- now;
+      g.pool0_size <- 0;
+      reseedi ~g @@ fun add ->
+      for i = 0 to 31 do
+        if g.reseed_count land (1 lsl i - 1) = 0 then
+          (SHAd256.get g.pools.(i) |> add; g.pools.(i) <- SHAd256.empty)
+      done
+    end
 
 let generate ~g bytes =
-  if g.pool0_size > min_pool_size then add_pool_entropy g;
+  add_pool_entropy g;
   if not (seeded ~g) then raise Boot.Unseeded_generator ;
   let rec chunk acc = function
     | i when i <= 0 -> acc

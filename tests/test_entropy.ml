@@ -5,7 +5,7 @@ module Printing_rng = struct
 
   let block = 16
 
-  let create () = ()
+  let create ?time:_ () = ()
 
   let generate ~g:_ _n = assert false
 

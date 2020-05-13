@@ -71,7 +71,7 @@ module type Generator = sig
   (** Internally, this generator's {{!generate}generate} always produces
       [k * block] bytes. *)
 
-  val create : unit -> g
+  val create : ?time:(unit -> int64) -> unit -> g
   (** Create a new, unseeded {{!g}g}. *)
 
   val generate : g:g -> int -> Cstruct.t
@@ -109,16 +109,21 @@ module Fortuna : Generator
     provided hash. *)
 module Hmac_drbg (H : Mirage_crypto.Hash.S) : Generator
 
-val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool -> (module Generator with type g = 'a) -> g
-(** [create module] uses a module conforming to the {{!Generator}Generator}
-    signature to instantiate the generic generator {{!g}g}.
+val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool ->
+  ?time:(unit -> int64) -> (module Generator with type g = 'a) -> g
+(** [create ~g ~seed ~strict ~time module] uses a module conforming to the
+    {{!Generator}Generator} signature to instantiate the generic generator
+    {{!g}g}.
 
     [g] is the state to use, otherwise a fresh one is created.
 
     [seed] can be provided to immediately reseed the generator with.
 
     [strict] puts the generator into a more standards-conformant, but slighty
-    slower mode. Useful if the outputs need to match published test-vectors. *)
+    slower mode. Useful if the outputs need to match published test-vectors.
+
+    [time] is used to limit the amount of reseedings. Fortuna uses at most once
+    every second. *)
 
 val default_generator : unit -> g
 (** [default_generator ()] is the default generator. Functions in this module

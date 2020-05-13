@@ -1,7 +1,7 @@
 
 module Getrandom = struct
   type g = unit
-  let create () = ()
+  let create ?time:_ () = ()
   let reseed ~g:_ _reseed = ()
   let accumulate ~g:_ ~source:_ = `Acc (fun _buf -> ())
   let seeded ~g:_ = true

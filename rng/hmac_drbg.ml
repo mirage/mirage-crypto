@@ -18,7 +18,7 @@ module Make (H : Mirage_crypto.Hash.S) = struct
     Cstruct.memset buf 0x01;
     buf
 
-  let create () = { k = k0 ; v = v0 ; seeded = false }
+  let create ?time:_ () = { k = k0 ; v = v0 ; seeded = false }
 
   let seeded ~g = g.seeded
 

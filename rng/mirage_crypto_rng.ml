@@ -37,7 +37,7 @@ let () = Printexc.register_printer (function
 module type Generator = sig
   type g
   val block      : int
-  val create     : unit -> g
+  val create     : ?time:(unit -> int64) -> unit -> g
   val generate   : g:g -> int -> Cstruct.t
   val reseed     : g:g -> Cstruct.t -> unit
   val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
@@ -51,9 +51,9 @@ module Fortuna = Fortuna
 
 module Hmac_drbg = Hmac_drbg.Make
 
-let create (type a) ?g ?seed ?(strict=false) (m : a generator) =
+let create (type a) ?g ?seed ?(strict=false) ?time (m : a generator) =
   let module M = (val m) in
-  let g = Option.value g ~default:(M.create ()) in
+  let g = Option.value g ~default:(M.create ?time ()) in
   Option.iter (M.reseed ~g) seed;
   Generator (g, strict, m)
 

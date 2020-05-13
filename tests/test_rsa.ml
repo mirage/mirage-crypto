@@ -15,7 +15,7 @@ module Null = struct
 
   let block = 1
 
-  let create () = ref Cstruct.empty
+  let create ?time:_ () = ref Cstruct.empty
 
   let generate ~g n =
     try
