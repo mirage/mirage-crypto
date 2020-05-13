@@ -21,7 +21,7 @@ module Printing_rng = struct
   let seeded ~g:_ = true
 end
 
-module E = Mirage_crypto_entropy.Make(Time)
+module E = Mirage_crypto_entropy.Make(Time)(Mclock)
 
 let with_entropy act =
   E.initialize (module Printing_rng) >>= fun _ ->

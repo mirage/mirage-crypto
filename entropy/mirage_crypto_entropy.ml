@@ -149,7 +149,7 @@ let bootstrap_functions () =
 
 let running = ref false
 
-module Make (T : Mirage_time.S) = struct
+module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
 
   let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
     if !running then
@@ -159,7 +159,7 @@ module Make (T : Mirage_time.S) = struct
       let seed =
         List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
       in
-      let rng = Mirage_crypto_rng.(create ?g ~seed rng) in
+      let rng = Mirage_crypto_rng.(create ?g ~seed ~time:M.elapsed_ns rng) in
       Mirage_crypto_rng.set_default_generator rng;
       rdrand_task rng (T.sleep_ns (Duration.of_sec 1));
       let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in

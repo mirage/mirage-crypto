@@ -31,4 +31,4 @@
  (name test_entropy)
  (modules test_entropy)
  (package mirage-crypto-entropy)
- (libraries mirage-crypto-entropy mirage-unix mirage-time-unix))
+ (libraries mirage-crypto-entropy mirage-unix mirage-time-unix mirage-clock-unix))

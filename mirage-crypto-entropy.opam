@@ -21,9 +21,11 @@ depends: [
   "mirage-crypto" {=version}
   "mirage-crypto-rng" {=version}
   "mirage-time" {>= "2.0.0"}
+  "mirage-clock" {>= "3.0.0"}
   "duration"
   "mirage-unix" {with-test & >= "3.0.0"}
   "mirage-time-unix" {with-test & >= "2.0.0"}
+  "mirage-clock-unix" {with-test & >= "3.0.0"}
 ]
 tags: [ "org:mirage"]
 available: [
