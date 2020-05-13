@@ -106,7 +106,7 @@ let interrupt_hook () =
 let rdrand_once g random =
   let source = 1 in
   let `Acc handle = Mirage_crypto_rng.accumulate (Some g) ~source in
-  for _i = 0 to pred 32 do
+  for _i = 0 to pred (Mirage_crypto_rng.pools (Some g)) do
     let cs = Cstruct.create 8 in
     Cstruct.LE.set_uint64 cs 0 (Int64.of_int (random ()));
     handle cs

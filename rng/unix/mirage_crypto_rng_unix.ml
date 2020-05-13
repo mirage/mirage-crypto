@@ -5,6 +5,7 @@ module Getrandom = struct
   let reseed ~g:_ _reseed = ()
   let accumulate ~g:_ ~source:_ = `Acc (fun _buf -> ())
   let seeded ~g:_ = true
+  let pools = 0
 
   let block = 256
 

@@ -95,6 +95,9 @@ module type Generator = sig
   val seeded : g:g -> bool
   (** [seeded ~g] is [true] iff operations won't throw
       {{!Unseeded_generator}Unseeded_generator}. *)
+
+  val pools : int
+  (** [pools] is the amount of pools if any. *)
 end
 
 type 'a generator = (module Generator with type g = 'a)
@@ -154,6 +157,7 @@ val block : g option -> int
 val reseed     : ?g:g -> Cstruct.t -> unit
 val accumulate : g option -> source:int -> [`Acc of Cstruct.t -> unit]
 val seeded     : g option -> bool
+val pools      : g option -> int
 val strict : g option -> bool
 (**/**)
 

@@ -42,4 +42,6 @@ module Make (H : Mirage_crypto.Hash.S) = struct
 
   (* XXX *)
   let accumulate ~g:_ = invalid_arg "Implement Hmac_drbg.accumulate..."
+
+  let pools = 0
 end

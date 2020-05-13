@@ -19,6 +19,7 @@ module Printing_rng = struct
     `Acc print
 
   let seeded ~g:_ = true
+  let pools = 1
 end
 
 module E = Mirage_crypto_entropy.Make(Time)(Mclock)

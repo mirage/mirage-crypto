@@ -42,6 +42,7 @@ module type Generator = sig
   val reseed     : g:g -> Cstruct.t -> unit
   val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
   val seeded     : g:g -> bool
+  val pools      : int
 end
 
 type 'a generator = (module Generator with type g = 'a)
@@ -87,6 +88,9 @@ let seeded g =
 
 let block g =
   let Generator (_, _, m) = get g in let module M = (val m) in M.block
+
+let pools g =
+  let Generator (_, _, m) = get g in let module M = (val m) in M.pools
 
 let strict g =
   let Generator (_, s, _) = get g in s

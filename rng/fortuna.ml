@@ -19,6 +19,8 @@ let block = 16
 let min_pool_size = 64
 (* the minimal duration between two reseeds *)
 let min_time_duration = 1_000_000_000L
+(* number of pools *)
+let pools = 32
 
 (* XXX Locking!! *)
 type g =
@@ -37,7 +39,7 @@ let create ?time () =
   { ctr    = (0L, 0L)
   ; secret = k
   ; key    = AES_CTR.of_secret k
-  ; pools  = Array.make 32 SHAd256.empty
+  ; pools  = Array.make pools SHAd256.empty
   ; pool0_size = 0
   ; reseed_count = 0
   ; last_reseed = 0L
