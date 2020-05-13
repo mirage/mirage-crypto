@@ -131,12 +131,12 @@ let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
     running := true;
     let rng = Mirage_crypto_rng.(create ?g rng) in
     Mirage_crypto_rng.set_default_generator rng;
-    let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) in
     Lwt_list.iteri_p
-      (fun i boot -> boot (handler ~source:i))
+      (fun i boot ->
+         let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:i in
+         boot handler)
       (bootstrap_functions ()) >|= fun () ->
+    let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in
     let hook = interrupt_hook () in
-    Mirage_runtime.at_enter_iter (fun () ->
-        let e = hook () in
-        handler ~source:0 e)
+    Mirage_runtime.at_enter_iter (fun () -> handler (hook ()))
   end

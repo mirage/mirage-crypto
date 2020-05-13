@@ -40,7 +40,7 @@ module type Generator = sig
   val create     : unit -> g
   val generate   : g:g -> int -> Cstruct.t
   val reseed     : g:g -> Cstruct.t -> unit
-  val accumulate : g:g -> [`Acc of source:int -> Cstruct.t -> unit]
+  val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
   val seeded     : g:g -> bool
 end
 
@@ -77,8 +77,10 @@ let generate ?(g = default_generator ()) n =
 let reseed ?(g = default_generator ()) cs =
   let Generator (g, _, m) = g in let module M = (val m) in M.reseed ~g cs
 
-let accumulate g =
-  let Generator (g, _, m) = get g in let module M = (val m) in M.accumulate ~g
+let accumulate g ~source =
+  let Generator (g, _, m) = get g in
+  let module M = (val m) in
+  M.accumulate ~g ~source
 
 let seeded g =
   let Generator (g, _, m) = get g in let module M = (val m) in M.seeded ~g

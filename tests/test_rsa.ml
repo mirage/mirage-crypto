@@ -26,7 +26,7 @@ module Null = struct
 
   let seeded ~g = Cstruct.len !g > 0
 
-  let accumulate ~g = `Acc (fun ~source:_ -> reseed ~g)
+  let accumulate ~g ~source:_ = `Acc (reseed ~g)
 end
 
 let random_is seed =

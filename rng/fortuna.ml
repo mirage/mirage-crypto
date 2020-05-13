@@ -105,9 +105,9 @@ end
  * Schneier recommends against using generator-imposed pool-seeding schedule
  * but it just makes for a horrid api.
  *)
-let accumulate ~g =
+let accumulate ~g ~source =
   let acc  = Accumulator.create ~g
   and pool = ref 0 in
-  `Acc (fun ~source cs ->
+  `Acc (fun cs ->
     Accumulator.add ~acc ~source ~pool:!pool cs ;
     incr pool)

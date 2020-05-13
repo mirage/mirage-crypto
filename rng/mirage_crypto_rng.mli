@@ -84,15 +84,13 @@ module type Generator = sig
 
       A generator is seded after a single application of [reseed]. *)
 
-  val accumulate : g:g -> [`Acc of source:int -> Cstruct.t -> unit]
+  val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
   (** [accumulate ~g] is a closure suitable for incrementally feeding
       small amounts of environmentally sourced entropy into [g].
 
       Its operation should be fast enough for repeated calling from e.g.
       event loops. Systems with several distinct, stable entropy sources
-      should use stable [source] to distinguish their sources.
-
-      A generator is seeded after a single application of the closure. *)
+      should use stable [source] to distinguish their sources. *)
 
   val seeded : g:g -> bool
   (** [seeded ~g] is [true] iff operations won't throw
@@ -149,7 +147,7 @@ val block : g option -> int
  * Client applications should not use them directly. *)
 
 val reseed     : ?g:g -> Cstruct.t -> unit
-val accumulate : g option -> [`Acc of source:int -> Cstruct.t -> unit]
+val accumulate : g option -> source:int -> [`Acc of Cstruct.t -> unit]
 val seeded     : g option -> bool
 val strict : g option -> bool
 (**/**)

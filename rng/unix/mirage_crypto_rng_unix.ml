@@ -3,7 +3,7 @@ module Getrandom = struct
   type g = unit
   let create () = ()
   let reseed ~g:_ _reseed = ()
-  let accumulate ~g:_ = `Acc (fun ~source:_ _buf -> ())
+  let accumulate ~g:_ ~source:_ = `Acc (fun _buf -> ())
   let seeded ~g:_ = true
 
   let block = 256

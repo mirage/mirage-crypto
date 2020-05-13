@@ -12,8 +12,8 @@ module Printing_rng = struct
   let reseed ~g:_ data =
     Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
 
-  let accumulate ~g:_ =
-    let print ~source data =
+  let accumulate ~g:_ ~source =
+    let print data =
       Format.printf "accumulate: (src:%d) %a@.%!" source Cstruct.hexdump_pp data
     in
     `Acc print
