@@ -42,8 +42,6 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-open Lwt.Infix
-
 type t = unit
 
 type source = [
@@ -66,25 +64,31 @@ let sources () =
   | Some x -> [x]
   | None   -> []
 
+let write_header source data =
+  Cstruct.set_uint8 data 0 source;
+  Cstruct.set_uint8 data 1 (Cstruct.len data - 2)
+
 (* Note:
  * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
  * data races that lead to execution-time variability of identical instructions.
  * See Whirlwind RNG:
  *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
  *)
-let whirlwind_bootstrap f =
+let whirlwind_bootstrap id =
   let outer     = 100
   and inner_max = 1024
   and a         = ref 0
-  and cs        = Cstruct.create 2 in
+  in
+  let cs        = Cstruct.create (outer * 2 + 2) in
   for i = 0 to outer - 1 do
     let tsc = Cpu_native.cycles () in
-    let ()  = Cstruct.LE.set_uint16 cs 0 tsc ; f cs in
+    Cstruct.LE.set_uint16 cs ((i + 1) * 2) tsc;
     for j = 1 to tsc mod inner_max do
       a := tsc / j - !a * i + 1
     done
-  done ;
-  Lwt.return_unit
+  done;
+  write_header id cs;
+  cs
 
 let interrupt_hook () =
   match Cpu_native.cpu_rng with
@@ -110,12 +114,12 @@ let interrupt_hook () =
  * Compile-time entropy. A function returning it could go into `t.inits`.
  *)
 
-let checked_rdrand_rdseed f =
-  let cs = Cstruct.create 8 in
+let checked_rdrand_rdseed id =
+  let cs = Cstruct.create 10 in
   let random = Cpu_native.checked_random () in
-  Cstruct.LE.set_uint64 cs 0 (Int64.of_int random);
-  f cs;
-  Lwt.return_unit
+  Cstruct.LE.set_uint64 cs 2 (Int64.of_int random);
+  write_header id cs;
+  cs
 
 let bootstrap_functions () =
   match Cpu_native.cpu_rng with
@@ -129,14 +133,13 @@ let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
     Lwt.fail_with "entropy harvesting already running"
   else begin
     running := true;
-    let rng = Mirage_crypto_rng.(create ?g rng) in
+    let seed =
+      List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
+    in
+    let rng = Mirage_crypto_rng.(create ?g ~seed rng) in
     Mirage_crypto_rng.set_default_generator rng;
-    Lwt_list.iteri_p
-      (fun i boot ->
-         let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:i in
-         boot handler)
-      (bootstrap_functions ()) >|= fun () ->
     let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in
     let hook = interrupt_hook () in
-    Mirage_runtime.at_enter_iter (fun () -> handler (hook ()))
+    Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
+    Lwt.return_unit
   end
