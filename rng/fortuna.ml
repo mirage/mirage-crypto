@@ -15,12 +15,17 @@ end
 
 let block = 16
 
+(* the minimal amount of bytes in a pool to trigger a reseed *)
+let min_pool_size = 64
+
 (* XXX Locking!! *)
 type g =
   { mutable ctr    : AES_CTR.ctr
   ; mutable secret : Cstruct.t
   ; mutable key    : AES_CTR.key
-  ; mutable trap   : (unit -> unit) option
+  ; pools          : SHAd256.t array
+  ; mutable pool0_size : int
+  ; mutable reseed_count : int
   }
 
 let create () =
@@ -28,10 +33,10 @@ let create () =
   { ctr    = (0L, 0L)
   ; secret = k
   ; key    = AES_CTR.of_secret k
-  ; trap   = None
+  ; pools  = Array.make 32 SHAd256.empty
+  ; pool0_size = 0
+  ; reseed_count = 0
   }
-
-let clone ~g = { g with trap = None }
 
 let seeded ~g =
   let lo, hi = g.ctr in
@@ -60,8 +65,17 @@ let generate_rekey ~g bytes =
   g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b);
   r1
 
+let add_pool_entropy g =
+  g.reseed_count <- g.reseed_count + 1;
+  g.pool0_size <- 0;
+  reseedi ~g @@ fun add ->
+  for i = 0 to 31 do
+    if g.reseed_count land (1 lsl i - 1) = 0 then
+      (SHAd256.get g.pools.(i) |> add; g.pools.(i) <- SHAd256.empty)
+  done
+
 let generate ~g bytes =
-  ( match g.trap with None -> () | Some f -> g.trap <- None ; f () );
+  if g.pool0_size > min_pool_size then add_pool_entropy g;
   if not (seeded ~g) then raise Boot.Unseeded_generator ;
   let rec chunk acc = function
     | i when i <= 0 -> acc
@@ -69,45 +83,19 @@ let generate ~g bytes =
            chunk (generate_rekey ~g n' :: acc) (n - n') in
   Cstruct.concat @@ chunk [] bytes
 
-
-module Accumulator = struct
-
-  type t = {
-    mutable count : int ;
-    pools         : SHAd256.t array ;
-    gen           : g ;
-  }
-
-  let create ~g = {
-    pools = Array.make 32 SHAd256.empty ;
-    count = 0 ;
-    gen   = g
-  }
-
-  let fire acc =
-    acc.count <- acc.count + 1;
-    reseedi ~g:acc.gen @@ fun add ->
-      for i = 0 to 31 do
-        if acc.count land (1 lsl i - 1) = 0 then
-          (SHAd256.get acc.pools.(i) |> add; acc.pools.(i) <- SHAd256.empty)
-      done
-
-  let add ~acc ~source ~pool data =
-    let pool   = pool land 0x1f
-    and source = source land 0xff in
-    let header = Cs.of_bytes [ source ; Cstruct.len data ] in
-    acc.pools.(pool) <- SHAd256.feedi acc.pools.(pool) (iter2 header data);
-    (* XXX This is clobbered on multi-pool. *)
-    acc.gen.trap <- Some (fun () -> fire acc)
-end
+let add ~g ~source ~pool data =
+  let pool   = pool land 0x1f
+  and source = source land 0xff in
+  let header = Cs.of_bytes [ source ; Cstruct.len data ] in
+  g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 header data);
+  if pool = 0 then g.pool0_size <- g.pool0_size + Cstruct.len data
 
 (* XXX
  * Schneier recommends against using generator-imposed pool-seeding schedule
  * but it just makes for a horrid api.
  *)
 let accumulate ~g ~source =
-  let acc  = Accumulator.create ~g
-  and pool = ref 0 in
+  let pool = ref 0 in
   `Acc (fun cs ->
-    Accumulator.add ~acc ~source ~pool:!pool cs ;
+    add ~g ~source ~pool:!pool cs ;
     incr pool)
