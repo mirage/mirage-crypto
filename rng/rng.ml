@@ -4,8 +4,6 @@ exception Unseeded_generator
 
 exception No_default_generator
 
-exception Default_generator_already_set
-
 let setup_rng =
   "\nTo initialize the RNG with a default generator, and set up entropy \
    collection and periodic reseeding as a background task, do the \
@@ -27,11 +25,6 @@ let () = Printexc.register_printer (function
       Some ("The RNG has not been seeded." ^ setup_rng)
     | No_default_generator ->
       Some ("The default generator is not yet initialized. " ^ setup_rng)
-    | Default_generator_already_set ->
-      Some "The default generator in Mirage_crypto_rng has already been set, \
-            and can only be set once in the program lifetime. The reason for \
-            this is to avoid potential issues with entropy collection and \
-            distribution."
     | _ -> None)
 
 module type Generator = sig
@@ -56,10 +49,7 @@ let create (type a) ?g ?seed ?(strict=false) ?time (m : a generator) =
 
 let _default_generator = ref None
 
-let set_default_generator g =
-  match !_default_generator with
-  | None -> _default_generator := Some g
-  | Some _ -> raise Default_generator_already_set
+let set_default_generator g = _default_generator := Some g
 
 let default_generator () =
   match !_default_generator with

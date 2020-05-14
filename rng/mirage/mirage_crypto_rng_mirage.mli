@@ -32,7 +32,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) : sig
     (module Mirage_crypto_rng.Generator with type g = 'a) -> unit Lwt.t
   (** [initialize ~g ~sleep rng_module] sets the default generator to the
       [rng_module] and sets up periodic entropy feeding for that rng. This
-      function raises if it is called a second time. The argument [~sleep] is
-      measured in ns, and used as sleep between cpu assisted random number
-      harvesting. It defaults to one second. *)
+      function fails ([Lwt.fail]) if it is called a second time. The argument
+      [~sleep] is measured in ns, and used as sleep between cpu assisted random
+      number collection. It defaults to one second. *)
 end

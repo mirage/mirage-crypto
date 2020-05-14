@@ -13,7 +13,21 @@ let getrandom_init _ =
   let data = getrandom 128 in
   Entropy.header `Getrandom data
 
+let running = ref false
+
 let initialize () =
+  if !running then
+    Logs.warn
+      (fun m -> m "Mirage_crypto_rng_unix.initialize was called before, you \
+                   should ensure this call is intentional.")
+  else
+    (try
+       let _ = default_generator () in
+       Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                              been set, check that this call is intentional");
+     with
+       No_default_generator -> ());
+  running := true ;
   let seed =
     List.mapi (fun i f -> f i)
       Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ] |>

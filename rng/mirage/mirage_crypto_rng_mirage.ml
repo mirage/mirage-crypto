@@ -49,6 +49,12 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
     if !running then
       Lwt.fail_with "entropy collection already running"
     else begin
+      (try
+         let _ = default_generator () in
+         Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                                been set, check that this call is intentional");
+       with
+         No_default_generator -> ());
       running := true;
       let seed =
         List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat

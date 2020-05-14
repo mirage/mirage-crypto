@@ -34,19 +34,26 @@ let getrandom_init _ =
 
 let initialize ?(sleep = Duration.of_sec 1) () =
   if !running then
-    Lwt.fail_with "entropy collection already running"
-  else begin
-    running := true;
-    let seed =
-      List.mapi (fun i f -> f i)
-        Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ] |>
-      Cstruct.concat
-    in
-    Entropy.add_source `Getrandom;
-    let rng = create ~seed ~time:Mtime_clock.elapsed_ns (module Fortuna) in
-    set_default_generator rng;
-    rdrand_task rng sleep;
-    getrandom_task rng (Int64.mul sleep 10L);
-    let _ = Lwt_main.Enter_iter_hooks.add_first (Entropy.timer_accumulator rng) in
-    Lwt.return_unit
-  end
+    Logs.warn
+      (fun m -> m "Mirage_crypto_rng_lwt.initialize was called before, you \
+                   should ensure this call is intentional.")
+  else
+    (try
+       let _ = default_generator () in
+       Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                              been set, check that this call is intentional");
+     with
+       No_default_generator -> ());
+  running := true;
+  let seed =
+    List.mapi (fun i f -> f i)
+      Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ] |>
+    Cstruct.concat
+  in
+  Entropy.add_source `Getrandom;
+  let rng = create ~seed ~time:Mtime_clock.elapsed_ns (module Fortuna) in
+  set_default_generator rng;
+  rdrand_task rng sleep;
+  getrandom_task rng (Int64.mul sleep 10L);
+  let _ = Lwt_main.Enter_iter_hooks.add_first (Entropy.timer_accumulator rng) in
+  Lwt.return_unit

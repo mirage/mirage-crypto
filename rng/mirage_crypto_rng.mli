@@ -21,8 +21,9 @@
     high-quality entropy source.
 
     Suitable generators are provided by sub-libraries
-    {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}
-    and {{!Mirage_crypto_rng_mirage}mirage-crypto-rng.mirage} (for MirageOS).
+    {{!Mirage_crypto_rng_lwt}mirage-crypto-rng.lwt} (for Lwt),
+    {{!Mirage_crypto_rng_mirage}mirage-crypto-rng.mirage} (for MirageOS),
+    and {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}.
     Although this module exposes a more fine-grained interface, allowing manual
     seeding of generators, this is intended either for implementing
     entropy-harvesting modules, or very specialized purposes. Users of this
@@ -57,9 +58,6 @@ exception Unseeded_generator
 
 exception No_default_generator
 (** Thrown when {!set_generator} has not been called. *)
-
-exception Default_generator_already_set
-(** Thrown when {!set_generator} is called a second time. *)
 
 (** A single PRNG algorithm. *)
 module type Generator = sig
@@ -136,9 +134,7 @@ val default_generator : unit -> g
 
 val set_default_generator : g -> unit
 (** [set_default_generator g] sets the default generator to [g]. This function
-    must be called once.
-
-    @raise Default_generator_already_set if called a second time. *)
+    must be called once. *)
 
 val generate : ?g:g -> int -> Cstruct.t
 (** Invoke {{!Generator.generate}generate} on [g] or
