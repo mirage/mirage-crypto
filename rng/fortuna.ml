@@ -95,7 +95,7 @@ let add_pool_entropy g =
 
 let generate ~g bytes =
   add_pool_entropy g;
-  if not (seeded ~g) then raise Boot.Unseeded_generator ;
+  if not (seeded ~g) then raise Rng.Unseeded_generator ;
   let rec chunk acc = function
     | i when i <= 0 -> acc
     | n -> let n' = imin n 0x10000 in

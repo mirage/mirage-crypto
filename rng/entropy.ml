@@ -43,8 +43,6 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-type t = unit
-
 type source = [
   | `Timer
   | `Rdseed
@@ -59,17 +57,22 @@ let pp_source ppf s =
   in
   Format.pp_print_string ppf str
 
+let source_id = function
+  | `Timer -> 0
+  | `Rdrand -> 1
+  | `Rdseed -> 2
+
 let sources () = `Timer :: Cpu_native.cpu_rng
 
-let rng = function
+let cpu_rng = function
   | `Rdseed -> Cpu_native.rdseed
   | `Rdrand -> Cpu_native.rdrand
 
 let random prefered =
   match Cpu_native.cpu_rng with
   | [] -> None
-  | xs when List.mem prefered xs -> Some (rng prefered)
-  | y::_ -> Some (rng y)
+  | xs when List.mem prefered xs -> Some prefered
+  | y::_ -> Some y
 
 let write_header source data =
   Cstruct.set_uint8 data 0 source;
@@ -80,7 +83,7 @@ let write_header source data =
  * data races that lead to execution-time variability of identical instructions.
  * See Whirlwind RNG:
  *   http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf
- *)
+*)
 let whirlwind_bootstrap id =
   let outer     = 100
   and inner_max = 1024
@@ -97,74 +100,30 @@ let whirlwind_bootstrap id =
   write_header id cs;
   cs
 
+let cpu_rng_bootstrap id =
+  match random `Rdseed with
+  | None -> failwith "expected a CPU rng"
+  | Some insn ->
+    let cs = Cstruct.create 10 in
+    Cstruct.LE.set_uint64 cs 2 (Int64.of_int ((cpu_rng insn) ()));
+    write_header id cs;
+    cs
+
 let interrupt_hook () =
   let buf = Cstruct.create 4 in fun () ->
     let a = Cpu_native.cycles () in
     Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
     buf
 
-let rdrand_once g random =
-  let source = 1 in
-  let `Acc handle = Mirage_crypto_rng.accumulate (Some g) ~source in
-  for _i = 0 to pred (Mirage_crypto_rng.pools (Some g)) do
-    let cs = Cstruct.create 8 in
-    Cstruct.LE.set_uint64 cs 0 (Int64.of_int (random ()));
-    handle cs
-  done
-
-let rdrand_task g sleep =
-  let open Lwt.Infix in
+let cpu_rng g =
   match random `Rdrand with
   | None -> ()
-  | Some random ->
-    Lwt.async (fun () ->
-        let rec one () =
-          rdrand_once g random;
-          sleep >>= one
-        in
-        one ())
-
-(* XXX TODO
- *
- * Xentropyd. Detect its presence here, make it feed into `t.handlers` as
- * `~source:1` and add a function providing initial entropy burst to
- * `t.inits`.
- *
- * Compile-time entropy. A function returning it could go into `t.inits`.
- *)
-
-let rdrand_rdseed id =
-  match random `Rdseed with
-  | None -> failwith "expected a CPU rng"
-  | Some random ->
-    let cs = Cstruct.create 10 in
-    Cstruct.LE.set_uint64 cs 2 (Int64.of_int (random ()));
-    write_header id cs;
-    cs
-
-let bootstrap_functions () =
-  match Cpu_native.cpu_rng with
-  | [] -> [ whirlwind_bootstrap ; whirlwind_bootstrap ; whirlwind_bootstrap ]
-  | _ -> [ rdrand_rdseed ; rdrand_rdseed ; whirlwind_bootstrap ; rdrand_rdseed ; rdrand_rdseed ]
-
-let running = ref false
-
-module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
-
-  let initialize (type a) ?g (rng : a Mirage_crypto_rng.generator) =
-    if !running then
-      Lwt.fail_with "entropy harvesting already running"
-    else begin
-      running := true;
-      let seed =
-        List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
-      in
-      let rng = Mirage_crypto_rng.(create ?g ~seed ~time:M.elapsed_ns rng) in
-      Mirage_crypto_rng.set_default_generator rng;
-      rdrand_task rng (T.sleep_ns (Duration.of_sec 1));
-      let `Acc handler = Mirage_crypto_rng.accumulate (Some rng) ~source:0 in
-      let hook = interrupt_hook () in
-      Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
-      Lwt.return_unit
-    end
-end
+  | Some insn ->
+    let source = source_id insn in
+    let randomf = cpu_rng insn in
+    let `Acc handle = Rng.accumulate (Some g) ~source in
+    for _i = 0 to pred (Rng.pools (Some g)) do
+      let cs = Cstruct.create 8 in
+      Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
+      handle cs
+    done

@@ -26,26 +26,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-type t
-(** The type of the entropy device. *)
-
-type source = [
-  | `Timer
-  | `Rdseed
-  | `Rdrand
-]
-(** A polymorphic variant of entropy sources. *)
-
-val pp_source : Format.formatter -> source -> unit
-(** [pp_source ppf source] pretty-prints [source] on [ppf]. *)
-
-val sources : unit -> source list
-(** [sources ()] is a list of supported entropy sources on your platform. *)
-
 module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) : sig
   val initialize :
-    ?g:'a -> (module Mirage_crypto_rng.Generator with type g = 'a) -> t Lwt.t
-  (** [initialize ~g rng_module] sets the default generator to the [rng_module]
-      and sets up periodic entropy feeding for that rng. This function raises if
-      it is called a second time. *)
+    ?g:'a -> ?sleep:int64 -> (module Mirage_crypto_rng.Generator with type g = 'a) -> unit
+  (** [initialize ~g ~sleep rng_module] sets the default generator to the
+      [rng_module] and sets up periodic entropy feeding for that rng. This
+      function raises if it is called a second time. The argument [~sleep] is
+      measured in ns, and used as sleep between cpu assisted random number
+      harvesting. It defaults to one second. *)
 end

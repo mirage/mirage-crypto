@@ -31,7 +31,7 @@ module Make (H : Mirage_crypto.Hash.S) = struct
     g.k <- k ; g.v <- v ; g.seeded <- true
 
   let generate ~g bytes =
-    if not g.seeded then raise Boot.Unseeded_generator ;
+    if not g.seeded then raise Rng.Unseeded_generator ;
     let rec go acc k v = function
       | 0 -> (v, Cstruct.concat @@ List.rev acc)
       | i -> let v = H.hmac ~key:k v in go (v::acc) k v (pred i) in

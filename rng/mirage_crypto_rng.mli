@@ -22,7 +22,7 @@
 
     Suitable generators are provided by sub-libraries
     {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}
-    and {{!Mirage_crypto_entropy}mirage-crypto-entropy} (for MirageOS).
+    and {{!Mirage_crypto_rng_mirage}mirage-crypto-rng.mirage} (for MirageOS).
     Although this module exposes a more fine-grained interface, allowing manual
     seeding of generators, this is intended either for implementing
     entropy-harvesting modules, or very specialized purposes. Users of this
@@ -179,3 +179,47 @@ val strict : g option -> bool
   let g = Rng.(create ~seed:secret (module Generators.Fortuna)) in
   Rng.generate ~g 32]}
 *)
+
+(** Entropy sources and collection *)
+module Entropy : sig
+
+  (** The variant of entropy sources. *)
+  type source = [
+    | `Timer
+    | `Rdseed
+    | `Rdrand
+  ]
+
+  val pp_source : Format.formatter -> source -> unit
+  (** [pp_source ppf source] pretty-prints the entropy [source] on [ppf]. *)
+
+  val sources : unit -> source list
+  (** [sources ()] returns the list of available sources. *)
+
+  (** {1 Bootstrap} *)
+
+  val whirlwind_bootstrap : int -> Cstruct.t
+  (** [whirlwind_bootstrap id] exploits CPU-level data races which lead to
+      execution-time variability. It returns 200 bytes random data prefixed
+      by [id].
+
+      See {{:http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf}}
+      for further details. *)
+
+  val cpu_rng_bootstrap : int -> Cstruct.t
+  (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
+      RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
+      The [id] is used as prefix. *)
+
+  (** {1 Timer source} *)
+
+  val interrupt_hook : unit -> unit -> Cstruct.t
+  (** [interrupt_hook ()] collects the lower 4 bytes from [rdtsc], to be
+      used for entropy collection in the event loop. *)
+
+  (** {1 CPU assisted RNG} *)
+
+  val cpu_rng : g -> unit
+  (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
+      of [g]. *)
+end

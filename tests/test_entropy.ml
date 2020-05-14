@@ -1,5 +1,3 @@
-open Lwt.Infix
-
 module Printing_rng = struct
   type g = unit
 
@@ -22,15 +20,15 @@ module Printing_rng = struct
   let pools = 1
 end
 
-module E = Mirage_crypto_entropy.Make(Time)(Mclock)
+module E = Mirage_crypto_rng_mirage.Make(Time)(Mclock)
 
 let with_entropy act =
-  E.initialize (module Printing_rng) >>= fun _ ->
+  E.initialize (module Printing_rng);
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
-         Mirage_crypto_entropy.pp_source ppf x;
+         Mirage_crypto_rng.Entropy.pp_source ppf x;
          Format.pp_print_space ppf ()))
-    (Mirage_crypto_entropy.sources ());
+    (Mirage_crypto_rng.Entropy.sources ());
   act ()
 
 let () =
