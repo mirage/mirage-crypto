@@ -222,7 +222,15 @@ module Entropy : sig
   (** [interrupt_hook ()] collects the lower 4 bytes from [rdtsc], to be
       used for entropy collection in the event loop. *)
 
-  (** {1 CPU assisted RNG} *)
+  val timer_accumulator : g -> unit -> unit
+  (** [timer_accumulator g] is the accumulator for the [`Timer] source,
+      applying {!interrupt_hook} on each call. *)
+
+  (** {1 Periodic pulled sources} *)
+
+  val feed_pools : g -> source -> (unit -> Cstruct.t) -> unit
+  (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
+      [f] for each pool. *)
 
   val cpu_rng : g -> unit
   (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools

@@ -47,7 +47,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
 
   let initialize (type a) ?g ?(sleep = Duration.of_sec 1) (rng : a generator) =
     if !running then
-      failwith "entropy harvesting already running"
+      Lwt.fail_with "entropy collection already running"
     else begin
       running := true;
       let seed =
@@ -56,9 +56,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
       let rng = create ?g ~seed ~time:M.elapsed_ns rng in
       set_default_generator rng;
       rdrand_task rng sleep;
-      let `Acc handler = accumulate (Some rng) ~source:0 in
-      let hook = Entropy.interrupt_hook () in
-      Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
-      Entropy.add_source `Timer
+      Mirage_runtime.at_enter_iter (Entropy.timer_accumulator rng);
+      Lwt.return_unit
     end
 end

@@ -131,15 +131,27 @@ let interrupt_hook () =
     Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
     buf
 
+let timer_accumulator g =
+  let `Acc handle = Rng.accumulate (Some g) ~source:(source_id `Timer) in
+  let hook = interrupt_hook () in
+  add_source `Timer;
+  (fun () -> handle (hook ()))
+
+let feed_pools g source f =
+  let `Acc handle = Rng.accumulate (Some g) ~source:(source_id source) in
+  for _i = 0 to pred (Rng.pools (Some g)) do
+    let cs = f () in
+    handle cs
+  done
+
 let cpu_rng g =
   match random `Rdrand with
   | None -> ()
   | Some insn ->
-    let source = source_id insn in
     let randomf = cpu_rng insn in
-    let `Acc handle = Rng.accumulate (Some g) ~source in
-    for _i = 0 to pred (Rng.pools (Some g)) do
+    let f () =
       let cs = Cstruct.create 8 in
       Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
-      handle cs
-    done
+      cs
+    in
+    feed_pools g insn f

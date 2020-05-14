@@ -22,6 +22,7 @@ depends: [
   "ounit" {with-test}
   "randomconv" {with-test & >= "0.1.3"}
 # lwt sublibrary
+  "mtime"
   "lwt" {>= "4.0.0"}
 # mirage sublibrary
   "mirage-runtime" {>= "3.7.0"}
