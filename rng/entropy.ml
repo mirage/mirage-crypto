@@ -47,6 +47,7 @@ type source = [
   | `Timer
   | `Rdseed
   | `Rdrand
+  | `Getrandom
 ]
 
 let pp_source ppf s =
@@ -54,6 +55,7 @@ let pp_source ppf s =
     | `Timer -> "timer"
     | `Rdseed -> "rdseed"
     | `Rdrand -> "rdrand"
+    | `Getrandom -> "getrandom"
   in
   Format.pp_print_string ppf str
 
@@ -61,8 +63,13 @@ let source_id = function
   | `Timer -> 0
   | `Rdrand -> 1
   | `Rdseed -> 2
+  | `Getrandom -> 3
 
-let sources () = `Timer :: Cpu_native.cpu_rng
+let _sources : source list ref = ref Cpu_native.cpu_rng
+
+let add_source s = _sources := s :: !_sources
+
+let sources () = !_sources
 
 let cpu_rng = function
   | `Rdseed -> Cpu_native.rdseed
@@ -77,6 +84,12 @@ let random prefered =
 let write_header source data =
   Cstruct.set_uint8 data 0 source;
   Cstruct.set_uint8 data 1 (Cstruct.len data - 2)
+
+let header source data =
+  let hdr = Cstruct.create 2 in
+  let buf = Cstruct.append hdr data in
+  write_header (source_id source) buf;
+  buf
 
 (* Note:
  * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
@@ -108,6 +121,9 @@ let cpu_rng_bootstrap id =
     Cstruct.LE.set_uint64 cs 2 (Int64.of_int ((cpu_rng insn) ()));
     write_header id cs;
     cs
+
+let bootstrap id =
+  try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
 
 let interrupt_hook () =
   let buf = Cstruct.create 4 in fun () ->

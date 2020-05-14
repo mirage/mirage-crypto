@@ -40,15 +40,8 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
         one ())
 
   let bootstrap_functions () =
-    match Entropy.sources () with
-    | [ `Timer ] ->
-      [ Entropy.whirlwind_bootstrap ;
-        Entropy.whirlwind_bootstrap ;
-        Entropy.whirlwind_bootstrap ]
-    | _ ->
-      [ Entropy.cpu_rng_bootstrap ; Entropy.cpu_rng_bootstrap ;
-        Entropy.whirlwind_bootstrap ;
-        Entropy.cpu_rng_bootstrap ; Entropy.cpu_rng_bootstrap ]
+    [ Entropy.bootstrap ; Entropy.bootstrap ;
+      Entropy.whirlwind_bootstrap ; Entropy.bootstrap ]
 
   let running = ref false
 
@@ -65,6 +58,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
       rdrand_task rng sleep;
       let `Acc handler = accumulate (Some rng) ~source:0 in
       let hook = Entropy.interrupt_hook () in
-      Mirage_runtime.at_enter_iter (fun () -> handler (hook ()))
+      Mirage_runtime.at_enter_iter (fun () -> handler (hook ()));
+      Entropy.add_source `Timer
     end
 end

@@ -188,6 +188,7 @@ module Entropy : sig
     | `Timer
     | `Rdseed
     | `Rdrand
+    | `Getrandom
   ]
 
   val pp_source : Format.formatter -> source -> unit
@@ -211,6 +212,10 @@ module Entropy : sig
       RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
       The [id] is used as prefix. *)
 
+  val bootstrap : int -> Cstruct.t
+  (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or
+      [whirlwind_bootstrap] if not. *)
+
   (** {1 Timer source} *)
 
   val interrupt_hook : unit -> unit -> Cstruct.t
@@ -222,4 +227,9 @@ module Entropy : sig
   val cpu_rng : g -> unit
   (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
       of [g]. *)
+
+  (**/**)
+  val add_source : source -> unit
+  val header : source -> Cstruct.t -> Cstruct.t
+  (**/**)
 end
