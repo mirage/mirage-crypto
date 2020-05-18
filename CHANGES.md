@@ -1,3 +1,35 @@
+## v0.7.0 (2020-05-18)
+
+* CPU feature detection (AESNI, SSE3, PCLMULQ) at runtime instead of compile
+  time (#53 @Julow, fixed MirageOS support #61, review by @hannesm)
+  performance hit up to 5%
+* Revise entropy collection (#64 @hannesm review by @dinosaure @cfcs)
+  mirage-crypto-entropy has been folded into mirage-crypto-rng.{unix,lwt,mirage}
+  - the RNG is no longer fork() safe, if you use fork in your code, be sure to
+    reseed the RNG in the child process
+  - on Unix and Lwt, the used RNG is Fortuna, seeded by getrandom(),
+    rdrand/rdseed, and whirlwind
+  - Mirage_crypto_rng_lwt does entropy collection for Lwt applications
+  - entropy collection is now similar to FreeBSD:
+    - rdrand/rdseed is executed in a separate task (by default every second)
+    - on Unix, getrandom() is executed in another separate task (by default
+      every 10 seconds)
+    - on every enter of the Lwt event loop, some bits of rdtsc are collected
+      (rdrand/rdseed is not on each even loop enter anymore)
+  - Fortuna only uses entropy pools if the given period is exhausted (defaults
+    to 1s), and the pool size exceeds 64 bytes
+  - The unseeded generator exception prints instructions how to seed the RNG
+* 32 bit support (for ghash), requested by @TImada in #60, #65 @hannesm
+* use Eqaf_cstruct.find_uint8 instead of Cs.ct_find_uint8 (#52 @dinosaure)
+* add (:standard) in C flags to allow cross-compilation #47 @samoht
+* Mirage_crypto.Uncommon: remove several functions (Cs.create, Option),
+  requires OCaml 4.08 (#49 #51 @hannesm)
+* remove ocplib-endian dependency, use Bytes directly (since 4.07) #51 @hannesm
+* bitfn.h cleanup (#56 #58 @hannesm)
+* fix build if opam is not available (#66 @hannesm)
+* update test.yml GitHub actions (#44 #57 @imbsky)
+* Travis CI for arm64 (#55 @hannesm)
+
 ## v0.6.2 (2020-03-19)
 
 * Do not validate hardcoded DH groups to speedup initializatio time
