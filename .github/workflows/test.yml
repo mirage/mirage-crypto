@@ -28,8 +28,7 @@ jobs:
           opam pin add -n mirage-crypto.dev .
           opam pin add -n mirage-crypto-rng.dev .
           opam pin add -n mirage-crypto-pk.dev .
-          opam pin add -n mirage-crypto-entropy.dev .
-          opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-pk mirage-crypto-entropy
+          opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-pk
           opam install -t --deps-only .
 
       - name: Build

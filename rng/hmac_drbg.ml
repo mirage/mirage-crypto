@@ -18,7 +18,7 @@ module Make (H : Mirage_crypto.Hash.S) = struct
     Cstruct.memset buf 0x01;
     buf
 
-  let create () = { k = k0 ; v = v0 ; seeded = false }
+  let create ?time:_ () = { k = k0 ; v = v0 ; seeded = false }
 
   let seeded ~g = g.seeded
 
@@ -31,7 +31,7 @@ module Make (H : Mirage_crypto.Hash.S) = struct
     g.k <- k ; g.v <- v ; g.seeded <- true
 
   let generate ~g bytes =
-    if not g.seeded then raise Boot.Unseeded_generator ;
+    if not g.seeded then raise Rng.Unseeded_generator ;
     let rec go acc k v = function
       | 0 -> (v, Cstruct.concat @@ List.rev acc)
       | i -> let v = H.hmac ~key:k v in go (v::acc) k v (pred i) in
@@ -42,4 +42,6 @@ module Make (H : Mirage_crypto.Hash.S) = struct
 
   (* XXX *)
   let accumulate ~g:_ = invalid_arg "Implement Hmac_drbg.accumulate..."
+
+  let pools = 0
 end

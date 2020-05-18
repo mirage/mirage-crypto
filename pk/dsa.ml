@@ -99,7 +99,7 @@ let generate ?g size =
 module K_gen (H : Mirage_crypto.Hash.S) = struct
 
   let drbg : 'a Mirage_crypto_rng.generator =
-    let module M = Mirage_crypto_rng.Hmac_drbg.Make (H) in (module M)
+    let module M = Mirage_crypto_rng.Hmac_drbg (H) in (module M)
 
   let z_gen ~key:{ q; x; _ } z =
     let repr = Z_extra.to_cstruct_be ~size:(Z.numbits q // 8) in

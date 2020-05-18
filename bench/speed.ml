@@ -306,11 +306,6 @@ let benchmarks = [
     reseed ~g (Cstruct.of_string "abcd") ;
     throughput name (fun cs -> generate ~g (Cstruct.len cs))) ;
 
-  bm "unix rng" (fun name ->
-    let open Mirage_crypto_rng_unix.Getrandom in
-    let g = create () in
-    throughput name (fun cs -> generate ~g (Cstruct.len cs))) ;
-
   bm "md5"    (fun name -> throughput name MD5.digest) ;
   bm "sha1"   (fun name -> throughput name SHA1.digest) ;
   bm "sha256" (fun name -> throughput name SHA256.digest) ;
@@ -334,7 +329,8 @@ let runv fs =
 
 let () =
   let seed = Cstruct.of_string "abcd" in
-  Mirage_crypto_rng.(generator := create ~seed (module Fortuna));
+  let g = Mirage_crypto_rng.(create ~seed (module Fortuna)) in
+  Mirage_crypto_rng.set_default_generator g;
   match Array.to_list Sys.argv with
   | _::(_::_ as args) -> begin
       try

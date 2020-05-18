@@ -49,7 +49,7 @@ enum cpu_rng_t {
   RNG_RDSEED = 2,
 };
 
-static enum cpu_rng_t __cpu_rng = RNG_NONE;
+static int __cpu_rng = RNG_NONE;
 
 #define RETRIES 10
 
@@ -71,7 +71,7 @@ static void detect () {
        https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
     for (int i = 0; i < RETRIES; i++)
       if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
-        __cpu_rng = RNG_RDSEED;
+        __cpu_rng |= RNG_RDSEED;
         break;
       }
 #endif
@@ -87,21 +87,12 @@ CAMLprim value caml_cycle_counter (value __unused(unit)) {
 #endif
 }
 
-CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
+CAMLprim value caml_cpu_rdseed (value __unused(unit)) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
   int i = RETRIES;
-  switch (__cpu_rng) {
-  case RNG_RDSEED:
-    do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
-    break;
-  case RNG_RDRAND:
-    do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
-    break;
-  case RNG_NONE:
-    break;
-  }
+  do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
   return Val_long(r);
 #else
   /* ARM: CPU-assisted randomness here. */
@@ -109,28 +100,13 @@ CAMLprim value caml_cpu_checked_random (value __unused(unit)) {
 #endif
 }
 
-CAMLprim value caml_cpu_unchecked_random (value __unused(unit)) {
+CAMLprim value caml_cpu_rdrand (value __unused(unit)) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
-  /* rdrand/rdseed may fail (and return CR = 0) if insufficient entropy is
-     available (or the hardware DRNG is in the middle of reseeding).
-
-     we could handle these by retrying in a loop - which would be
-     computationally expensive, but since this code is run whenever the Lwt
-     event loop is entered, and only used to feed entropy into the pool, it is
-     fine to add not-so-random entropy.
- */
-  switch (__cpu_rng) {
-  case RNG_RDSEED:
-    _rdseed_step (&r);
-    break;
-  case RNG_RDRAND:
-    _rdrand_step (&r);
-    break;
-  case RNG_NONE:
-    break;
-  }
-  return Val_long (r);
+  int ok = 0;
+  int i = RETRIES;
+  do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
+  return Val_long(r);
 #else
   /* ARM: CPU-assisted randomness here. */
   return Val_long (0);

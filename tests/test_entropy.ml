@@ -5,29 +5,32 @@ module Printing_rng = struct
 
   let block = 16
 
-  let create () = ()
+  let create ?time:_ () = ()
 
   let generate ~g:_ _n = assert false
 
   let reseed ~g:_ data =
     Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
 
-  let accumulate ~g:_ =
-    let print ~source data =
+  let accumulate ~g:_ ~source =
+    let print data =
       Format.printf "accumulate: (src:%d) %a@.%!" source Cstruct.hexdump_pp data
     in
     `Acc print
 
   let seeded ~g:_ = true
+  let pools = 1
 end
 
+module E = Mirage_crypto_rng_mirage.Make(Time)(Mclock)
+
 let with_entropy act =
-  Mirage_crypto_entropy.initialize (module Printing_rng) >>= fun _ ->
+  E.initialize (module Printing_rng) >>= fun () ->
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
-         Mirage_crypto_entropy.pp_source ppf x;
+         Mirage_crypto_rng.Entropy.pp_source ppf x;
          Format.pp_print_space ppf ()))
-    (Mirage_crypto_entropy.sources ());
+    (Mirage_crypto_rng.Entropy.sources ());
   act ()
 
 let () =

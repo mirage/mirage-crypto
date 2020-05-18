@@ -1,22 +1,37 @@
+open Mirage_crypto_rng
 
-module Getrandom = struct
-  type g = unit
-  let create () = ()
-  let reseed ~g:_ _reseed = ()
-  let accumulate ~g:_ = `Acc (fun ~source:_ _buf -> ())
-  let seeded ~g:_ = true
+open Stdlib.Bigarray
+type buffer = (char, int8_unsigned_elt, c_layout) Array1.t
+external getrandom_buf : buffer -> int -> unit = "mc_getrandom"
 
-  let block = 256
+let getrandom size =
+  let buf = Cstruct.create_unsafe size in
+  getrandom_buf buf.Cstruct.buffer size;
+  buf
 
-  open Stdlib.Bigarray
-  type buffer = (char, int8_unsigned_elt, c_layout) Array1.t
-  external getrandom : buffer -> int -> unit = "mc_getrandom"
+let getrandom_init _ =
+  let data = getrandom 128 in
+  Entropy.header `Getrandom data
 
-  let generate ~g:_ size =
-    let data = Cstruct.create_unsafe size in
-    getrandom data.Cstruct.buffer size;
-    data
-end
+let running = ref false
 
 let initialize () =
-  Mirage_crypto_rng.generator := Mirage_crypto_rng.create (module Getrandom)
+  if !running then
+    Logs.warn
+      (fun m -> m "Mirage_crypto_rng_unix.initialize was called before, you \
+                   should ensure this call is intentional.")
+  else
+    (try
+       let _ = default_generator () in
+       Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                              been set, check that this call is intentional");
+     with
+       No_default_generator -> ());
+  running := true ;
+  let seed =
+    List.mapi (fun i f -> f i)
+      Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ] |>
+    Cstruct.concat
+  in
+  Entropy.add_source `Getrandom;
+  set_default_generator (create ~seed (module Fortuna))
