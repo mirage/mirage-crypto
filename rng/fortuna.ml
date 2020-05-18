@@ -87,8 +87,8 @@ let add_pool_entropy g =
       g.last_reseed <- now;
       g.pool0_size <- 0;
       reseedi ~g @@ fun add ->
-      for i = 0 to 31 do
-        if g.reseed_count land (1 lsl i - 1) = 0 then
+      for i = 0 to pools - 1 do
+        if g.reseed_count land ((1 lsl i) - 1) = 0 then
           (SHAd256.get g.pools.(i) |> add; g.pools.(i) <- SHAd256.empty)
       done
     end
@@ -103,7 +103,7 @@ let generate ~g bytes =
   Cstruct.concat @@ chunk [] bytes
 
 let add ~g ~source ~pool data =
-  let pool   = pool land 0x1f
+  let pool   = pool land (pools - 1)
   and source = source land 0xff in
   let header = Cs.of_bytes [ source ; Cstruct.len data ] in
   g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 header data);

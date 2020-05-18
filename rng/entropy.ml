@@ -75,10 +75,10 @@ let cpu_rng = function
   | `Rdseed -> Cpu_native.rdseed
   | `Rdrand -> Cpu_native.rdrand
 
-let random prefered =
+let random preferred =
   match Cpu_native.cpu_rng with
   | [] -> None
-  | xs when List.mem prefered xs -> Some prefered
+  | xs when List.mem preferred xs -> Some preferred
   | y::_ -> Some y
 
 let write_header source data =
