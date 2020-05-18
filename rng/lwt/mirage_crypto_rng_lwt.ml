@@ -8,22 +8,22 @@ let periodic f delta =
       in
       one ())
 
-let getrandom_task g delta =
+let getrandom_task delta =
   let task () =
     let per_pool = 8 in
-    let size = per_pool * pools (Some g) in
+    let size = per_pool * pools None in
     let random = Mirage_crypto_rng_unix.getrandom size in
     let idx = ref 0 in
     let f () =
       incr idx;
       Cstruct.sub random (per_pool * (pred !idx)) per_pool
     in
-    Entropy.feed_pools g `Getrandom f
+    Entropy.feed_pools None `Getrandom f
   in
   periodic task delta
 
-let rdrand_task g delta =
-  let task () = Entropy.cpu_rng g in
+let rdrand_task delta =
+  let task () = Entropy.cpu_rng None in
   periodic task delta
 
 let running = ref false
@@ -53,7 +53,7 @@ let initialize ?(sleep = Duration.of_sec 1) () =
   Entropy.add_source `Getrandom;
   let rng = create ~seed ~time:Mtime_clock.elapsed_ns (module Fortuna) in
   set_default_generator rng;
-  rdrand_task rng sleep;
-  getrandom_task rng (Int64.mul sleep 10L);
-  let _ = Lwt_main.Enter_iter_hooks.add_first (Entropy.timer_accumulator rng) in
+  rdrand_task sleep;
+  getrandom_task (Int64.mul sleep 10L);
+  let _ = Lwt_main.Enter_iter_hooks.add_first (Entropy.timer_accumulator None) in
   Lwt.return_unit

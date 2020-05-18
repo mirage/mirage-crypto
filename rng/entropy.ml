@@ -132,14 +132,16 @@ let interrupt_hook () =
     buf
 
 let timer_accumulator g =
-  let `Acc handle = Rng.accumulate (Some g) ~source:(source_id `Timer) in
+  let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
+  let `Acc handle = Rng.accumulate g ~source:(source_id `Timer) in
   let hook = interrupt_hook () in
   add_source `Timer;
   (fun () -> handle (hook ()))
 
 let feed_pools g source f =
-  let `Acc handle = Rng.accumulate (Some g) ~source:(source_id source) in
-  for _i = 0 to pred (Rng.pools (Some g)) do
+  let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
+  let `Acc handle = Rng.accumulate g ~source:(source_id source) in
+  for _i = 0 to pred (Rng.pools g) do
     let cs = f () in
     handle cs
   done

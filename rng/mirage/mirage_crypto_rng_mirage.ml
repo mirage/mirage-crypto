@@ -61,8 +61,8 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
       in
       let rng = create ?g ~seed ~time:M.elapsed_ns rng in
       set_default_generator rng;
-      rdrand_task rng sleep;
-      Mirage_runtime.at_enter_iter (Entropy.timer_accumulator rng);
+      rdrand_task (Some rng) sleep;
+      Mirage_runtime.at_enter_iter (Entropy.timer_accumulator (Some rng));
       Lwt.return_unit
     end
 end
