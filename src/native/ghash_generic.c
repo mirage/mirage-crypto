@@ -1,6 +1,9 @@
 /* Copyright (c) 2017 David Kaloper Meršinjak. All rights reserved.
    See LICENSE.md. */
 
+#include "mirage_crypto.h"
+#include <string.h>
+
 /* Generic table-driven GHASH.
  *
  * References:
@@ -13,8 +16,7 @@
  * !LARGE_TABLES -> 8K per key, ~3x slower. */
 #define __MC_GHASH_LARGE_TABLES
 
-#include "mirage_crypto.h"
-#include <string.h>
+#if defined (__x86_64__) || defined (__aarch64__)
 
 #define __set_uint128_t(w1, w0) (((__uint128_t) w1 << 64) | w0)
 
@@ -100,3 +102,5 @@ mc_ghash_generic (value m, value hash, value src, value off, value len) {
            _ba_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
+
+#endif /* x86_64 || aarch64 */
