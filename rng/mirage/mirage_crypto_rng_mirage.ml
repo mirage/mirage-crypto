@@ -65,4 +65,9 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
       Mirage_runtime.at_enter_iter (Entropy.timer_accumulator (Some rng));
       Lwt.return_unit
     end
+
+  (* For Mirage_random.S compatibility *)
+  type nonrec g = g
+
+  let generate ?g l = generate ?g l
 end
