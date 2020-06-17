@@ -1,5 +1,8 @@
 open Mirage_crypto_rng
 
+let src = Logs.Src.create "mirage-crypto-rng.lwt" ~doc:"Mirage crypto RNG Lwt"
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let periodic f delta =
   let open Lwt.Infix in
   Lwt.async (fun () ->
@@ -34,16 +37,16 @@ let getrandom_init _ =
 
 let initialize ?(sleep = Duration.of_sec 1) () =
   if !running then
-    Logs.info
+    Log.debug
       (fun m -> m "Mirage_crypto_rng_lwt.initialize has already been called, \
                    ignoring this call.")
   else begin
     (try
        let _ = default_generator () in
-       Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
-                              been set (but not via \
-                              Mirage_crypto_rng_lwt.initialize). Please check \
-                              that this is intentional");
+       Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                             been set (but not via \
+                             Mirage_crypto_rng_lwt.initialize). Please check \
+                             that this is intentional");
      with
        No_default_generator -> ());
     running := true;
