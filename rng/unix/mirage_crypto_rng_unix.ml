@@ -18,20 +18,22 @@ let running = ref false
 let initialize () =
   if !running then
     Logs.warn
-      (fun m -> m "Mirage_crypto_rng_unix.initialize was called before, you \
-                   should ensure this call is intentional.")
-  else
+      (fun m -> m "Mirage_crypto_rng_unix.initialize has already been called, \
+                   ignoring this call.")
+  else begin
     (try
        let _ = default_generator () in
        Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
                               been set, check that this call is intentional");
      with
        No_default_generator -> ());
-  running := true ;
-  let seed =
-    List.mapi (fun i f -> f i)
-      Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ] |>
-    Cstruct.concat
-  in
-  Entropy.add_source `Getrandom;
-  set_default_generator (create ~seed (module Fortuna))
+    running := true ;
+    let seed =
+      let init =
+        Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ]
+      in
+      List.mapi (fun i f -> f i) init |> Cstruct.concat
+    in
+    Entropy.add_source `Getrandom;
+    set_default_generator (create ~seed (module Fortuna))
+  end

@@ -8,4 +8,4 @@
     of entropy from the CPU RNG, every [10 * sleep] getrandom is used to collect
     entropy.
 *)
-val initialize : ?sleep:int64 -> unit -> unit Lwt.t
+val initialize : ?sleep:int64 -> unit -> unit
