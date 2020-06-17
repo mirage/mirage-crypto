@@ -12,9 +12,9 @@ let getrandom size =
   getrandom_buf buf.Cstruct.buffer size;
   buf
 
-let getrandom_init _ =
+let getrandom_init i =
   let data = getrandom 128 in
-  Entropy.header `Getrandom data
+  Entropy.header i data
 
 let running = ref false
 
@@ -37,6 +37,6 @@ let initialize () =
       in
       List.mapi (fun i f -> f i) init |> Cstruct.concat
     in
-    Entropy.add_source `Getrandom;
+    let _ = Entropy.register_source "getrandom" in
     set_default_generator (create ~seed (module Fortuna))
   end

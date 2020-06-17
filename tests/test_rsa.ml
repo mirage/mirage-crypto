@@ -26,7 +26,7 @@ module Null = struct
 
   let seeded ~g = Cstruct.len !g > 0
 
-  let accumulate ~g ~source:_ = `Acc (reseed ~g)
+  let accumulate ~g _source = `Acc (reseed ~g)
 
   let pools = 0
 end

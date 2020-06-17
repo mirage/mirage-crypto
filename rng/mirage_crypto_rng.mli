@@ -46,9 +46,9 @@
     illustrated in the {{!rng_examples}examples}.
 *)
 
-type bits = int
-
 (** {1 Interface} *)
+
+type bits = int
 
 type g
 (** A generator (PRNG) with its state. *)
@@ -58,6 +58,70 @@ exception Unseeded_generator
 
 exception No_default_generator
 (** Thrown when {!set_generator} has not been called. *)
+
+(** Entropy sources and collection *)
+module Entropy : sig
+
+  (** Entropy sources. *)
+  type source
+
+  val sources : unit -> source list
+  (** [sources ()] returns the list of available sources. *)
+
+  val pp_source : Format.formatter -> source -> unit
+  (** [pp_source ppf source] pretty-prints the entropy [source] on [ppf]. *)
+
+  val register_source : string -> source
+  (** [register_source name] registers [name] as entropy source. *)
+
+  (** {1 Bootstrap} *)
+
+  val whirlwind_bootstrap : int -> Cstruct.t
+  (** [whirlwind_bootstrap id] exploits CPU-level data races which lead to
+      execution-time variability. It returns 200 bytes random data prefixed
+      by [id].
+
+      See {{:http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf}}
+      for further details. *)
+
+  val cpu_rng_bootstrap : int -> Cstruct.t
+  (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
+      RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
+      The [id] is used as prefix. *)
+
+  val bootstrap : int -> Cstruct.t
+  (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or
+      [whirlwind_bootstrap] if not. *)
+
+  (** {1 Timer source} *)
+
+  val interrupt_hook : unit -> unit -> Cstruct.t
+  (** [interrupt_hook ()] collects the lower 4 bytes from [rdtsc], to be
+      used for entropy collection in the event loop. *)
+
+  val timer_accumulator : g option -> unit -> unit
+  (** [timer_accumulator g] is the accumulator for the [`Timer] source,
+      applying {!interrupt_hook} on each call. *)
+
+  (** {1 Periodic pulled sources} *)
+
+  val feed_pools : g option -> source -> (unit -> Cstruct.t) -> unit
+  (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
+      [f] for each pool. *)
+
+  val cpu_rng : g option -> unit
+  (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
+      of [g]. *)
+
+  (**/**)
+  val id : source -> int
+  (** [id source] is the identifier used for [source]. *)
+
+  val header : int -> Cstruct.t -> Cstruct.t
+  (** [header id data] constructs a unique header with [id], length of [data],
+      and [data]. *)
+  (**/**)
+end
 
 (** A single PRNG algorithm. *)
 module type Generator = sig
@@ -82,7 +146,7 @@ module type Generator = sig
 
       A generator is seded after a single application of [reseed]. *)
 
-  val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
+  val accumulate : g:g -> Entropy.source -> [`Acc of Cstruct.t -> unit]
   (** [accumulate ~g] is a closure suitable for incrementally feeding
       small amounts of environmentally sourced entropy into [g].
 
@@ -151,7 +215,7 @@ val block : g option -> int
  * Client applications should not use them directly. *)
 
 val reseed     : ?g:g -> Cstruct.t -> unit
-val accumulate : g option -> source:int -> [`Acc of Cstruct.t -> unit]
+val accumulate : g option -> Entropy.source -> [`Acc of Cstruct.t -> unit]
 val seeded     : g option -> bool
 val pools      : g option -> int
 val strict : g option -> bool
@@ -175,65 +239,3 @@ val strict : g option -> bool
   let g = Rng.(create ~seed:secret (module Generators.Fortuna)) in
   Rng.generate ~g 32]}
 *)
-
-(** Entropy sources and collection *)
-module Entropy : sig
-
-  (** The variant of entropy sources. *)
-  type source = [
-    | `Timer
-    | `Rdseed
-    | `Rdrand
-    | `Getrandom
-  ]
-
-  val pp_source : Format.formatter -> source -> unit
-  (** [pp_source ppf source] pretty-prints the entropy [source] on [ppf]. *)
-
-  val sources : unit -> source list
-  (** [sources ()] returns the list of available sources. *)
-
-  (** {1 Bootstrap} *)
-
-  val whirlwind_bootstrap : int -> Cstruct.t
-  (** [whirlwind_bootstrap id] exploits CPU-level data races which lead to
-      execution-time variability. It returns 200 bytes random data prefixed
-      by [id].
-
-      See {{:http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf}}
-      for further details. *)
-
-  val cpu_rng_bootstrap : int -> Cstruct.t
-  (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
-      RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
-      The [id] is used as prefix. *)
-
-  val bootstrap : int -> Cstruct.t
-  (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or
-      [whirlwind_bootstrap] if not. *)
-
-  (** {1 Timer source} *)
-
-  val interrupt_hook : unit -> unit -> Cstruct.t
-  (** [interrupt_hook ()] collects the lower 4 bytes from [rdtsc], to be
-      used for entropy collection in the event loop. *)
-
-  val timer_accumulator : g option -> unit -> unit
-  (** [timer_accumulator g] is the accumulator for the [`Timer] source,
-      applying {!interrupt_hook} on each call. *)
-
-  (** {1 Periodic pulled sources} *)
-
-  val feed_pools : g option -> source -> (unit -> Cstruct.t) -> unit
-  (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
-      [f] for each pool. *)
-
-  val cpu_rng : g option -> unit
-  (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
-      of [g]. *)
-
-  (**/**)
-  val add_source : source -> unit
-  val header : source -> Cstruct.t -> Cstruct.t
-  (**/**)
-end

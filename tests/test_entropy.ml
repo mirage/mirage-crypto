@@ -12,9 +12,10 @@ module Printing_rng = struct
   let reseed ~g:_ data =
     Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
 
-  let accumulate ~g:_ ~source =
+  let accumulate ~g:_ source =
     let print data =
-      Format.printf "accumulate: (src:%d) %a@.%!" source Cstruct.hexdump_pp data
+      Format.printf "accumulate: (src: %a) %a@.%!"
+        Mirage_crypto_rng.Entropy.pp_source source Cstruct.hexdump_pp data
     in
     `Acc print
 
