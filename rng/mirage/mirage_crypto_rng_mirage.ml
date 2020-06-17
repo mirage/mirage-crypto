@@ -28,6 +28,9 @@
  *)
 open Mirage_crypto_rng
 
+let src = Logs.Src.create "mirage-crypto-rng-mirage" ~doc:"Mirage crypto RNG mirage"
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
   let rdrand_task g delta =
     let open Lwt.Infix in
@@ -51,8 +54,8 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
     else begin
       (try
          let _ = default_generator () in
-         Logs.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
-                                been set, check that this call is intentional");
+         Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                               been set, check that this call is intentional");
        with
          No_default_generator -> ());
       running := true;
