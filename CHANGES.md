@@ -1,3 +1,16 @@
+## v0.8.0
+
+* New package mirage-crypto-rng-mirage which contains the entropy collection
+  code for MirageOS (#69 requested by @samoht, implemented by @hannesm)
+* Mirage_crypto_rng_lwt.initialize is not inside the Lwt monad anymore, and
+  thus can be called by libraries at top level (#69, requested by @avsm @xguerin
+  @talex5 in mirage/ocaml-conduit#318, implemented by @hannesm)
+* Both Mirage_crypto_rng_lwt.initialize and Mirage_crypto_rng_unix.initialize
+  don't do anything if called a second time (#69, implemented by @hannesm)
+* Entropy source registration is now open and done via
+  `Entropy.register_source : string -> source`, instead of a closed variant
+  (#69, fixes #68, implemented by @hannesm)
+
 ## v0.7.0 (2020-05-18)
 
 * CPU feature detection (AESNI, SSE3, PCLMULQ) at runtime instead of compile

@@ -1,3 +1,5 @@
+type source = int * string
+
 type bits = int
 
 exception Unseeded_generator
@@ -33,7 +35,7 @@ module type Generator = sig
   val create     : ?time:(unit -> int64) -> unit -> g
   val generate   : g:g -> int -> Cstruct.t
   val reseed     : g:g -> Cstruct.t -> unit
-  val accumulate : g:g -> source:int -> [`Acc of Cstruct.t -> unit]
+  val accumulate : g:g -> source -> [`Acc of Cstruct.t -> unit]
   val seeded     : g:g -> bool
   val pools      : int
 end
@@ -64,10 +66,10 @@ let generate ?(g = default_generator ()) n =
 let reseed ?(g = default_generator ()) cs =
   let Generator (g, _, m) = g in let module M = (val m) in M.reseed ~g cs
 
-let accumulate g ~source =
+let accumulate g source =
   let Generator (g, _, m) = get g in
   let module M = (val m) in
-  M.accumulate ~g ~source
+  M.accumulate ~g source
 
 let seeded g =
   let Generator (g, _, m) = get g in let module M = (val m) in M.seeded ~g

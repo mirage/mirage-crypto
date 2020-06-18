@@ -102,7 +102,7 @@ let generate ~g bytes =
            chunk (generate_rekey ~g n' :: acc) (n - n') in
   Cstruct.concat @@ chunk [] bytes
 
-let add ~g ~source ~pool data =
+let add ~g (source, _) ~pool data =
   let pool   = pool land (pools - 1)
   and source = source land 0xff in
   let header = Cs.of_bytes [ source ; Cstruct.len data ] in
@@ -113,8 +113,8 @@ let add ~g ~source ~pool data =
  * Schneier recommends against using generator-imposed pool-seeding schedule
  * but it just makes for a horrid api.
  *)
-let accumulate ~g ~source =
+let accumulate ~g source =
   let pool = ref 0 in
   `Acc (fun cs ->
-    add ~g ~source ~pool:!pool cs ;
+    add ~g source ~pool:!pool cs ;
     incr pool)

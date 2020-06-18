@@ -43,33 +43,21 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-type source = [
-  | `Timer
-  | `Rdseed
-  | `Rdrand
-  | `Getrandom
-]
+let _sources = ref []
 
-let pp_source ppf s =
-  let str = match s with
-    | `Timer -> "timer"
-    | `Rdseed -> "rdseed"
-    | `Rdrand -> "rdrand"
-    | `Getrandom -> "getrandom"
-  in
-  Format.pp_print_string ppf str
+type source = Rng.source
 
-let source_id = function
-  | `Timer -> 0
-  | `Rdrand -> 1
-  | `Rdseed -> 2
-  | `Getrandom -> 3
+let register_source name =
+  let n = List.length !_sources in
+  let source = (n, name) in
+  _sources := source :: !_sources;
+  source
 
-let _sources : source list ref = ref Cpu_native.cpu_rng
-
-let add_source s = _sources := s :: !_sources
+let id (idx, _) = idx
 
 let sources () = !_sources
+
+let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
 let cpu_rng = function
   | `Rdseed -> Cpu_native.rdseed
@@ -88,7 +76,7 @@ let write_header source data =
 let header source data =
   let hdr = Cstruct.create 2 in
   let buf = Cstruct.append hdr data in
-  write_header (source_id source) buf;
+  write_header source buf;
   buf
 
 (* Note:
@@ -133,14 +121,14 @@ let interrupt_hook () =
 
 let timer_accumulator g =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
-  let `Acc handle = Rng.accumulate g ~source:(source_id `Timer) in
+  let source = register_source "timer" in
+  let `Acc handle = Rng.accumulate g source in
   let hook = interrupt_hook () in
-  add_source `Timer;
   (fun () -> handle (hook ()))
 
 let feed_pools g source f =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
-  let `Acc handle = Rng.accumulate g ~source:(source_id source) in
+  let `Acc handle = Rng.accumulate g source in
   for _i = 0 to pred (Rng.pools g) do
     let cs = f () in
     handle cs
@@ -150,10 +138,14 @@ let cpu_rng g =
   match random `Rdrand with
   | None -> ()
   | Some insn ->
-    let randomf = cpu_rng insn in
+    let randomf = cpu_rng insn
+    and source =
+      let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
+      register_source s
+    in
     let f () =
       let cs = Cstruct.create 8 in
       Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
       cs
     in
-    feed_pools g insn f
+    feed_pools g source f
