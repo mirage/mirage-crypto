@@ -1,4 +1,4 @@
-## v0.8.0
+## v0.8.0 (2020-06-18)
 
 * New package mirage-crypto-rng-mirage which contains the entropy collection
   code for MirageOS (#69 requested by @samoht, implemented by @hannesm)
