@@ -2,21 +2,6 @@ open Uncommon
 
 module S = struct
 
-  (* XXX old block-level sig, remove *)
-  module type Raw = sig
-
-    type ekey
-    type dkey
-
-    val e_of_secret : Cstruct.t -> ekey
-    val d_of_secret : Cstruct.t -> dkey
-
-    val key_sizes  : int array
-    val block_size : int
-    val encrypt_block : key:ekey -> Cstruct.t -> Cstruct.t -> unit
-    val decrypt_block : key:dkey -> Cstruct.t -> Cstruct.t -> unit
-  end
-
   module type Core = sig
 
     type ekey
@@ -148,59 +133,9 @@ module Counters = struct
   end
 end
 
-
 module Modes = struct
 
-  module CCM_of (C : S.Raw) : S.CCM = struct
-
-    assert (C.block_size = 16)
-
-    type key = C.ekey * int
-
-    let mac_sizes = [| 4; 6; 8; 10; 12; 14; 16 |]
-
-    let of_secret ~maclen sec =
-      if Array.mem maclen mac_sizes then
-        (C.e_of_secret sec, maclen)
-      else invalid_arg "CCM: MAC length %d" maclen
-
-    let (key_sizes, block_size) = C.(key_sizes, block_size)
-
-    let encrypt ~key:(key, maclen) ~nonce ?adata cs =
-      Ccm.generation_encryption ~cipher:C.encrypt_block ~key ~nonce ~maclen ?adata cs
-
-    let decrypt ~key:(key, maclen) ~nonce ?adata cs =
-      Ccm.decryption_verification ~cipher:C.encrypt_block ~key ~nonce ~maclen ?adata cs
-
-  end
-
-end
-
-module Modes2 = struct
-
   open Cstruct
-
-  module Raw_of (Core : S.Core) : S.Raw = struct
-
-    type ekey = Core.ekey
-    type dkey = Core.dkey
-
-    let e_of_secret = Core.e_of_secret
-    let d_of_secret = Core.d_of_secret
-
-    let key_sizes  = Core.key
-    let block_size = Core.block
-
-    let encrypt_block ~key:key src dst =
-      if src.len < block_size || dst.len < block_size then
-        invalid_arg "src len %d, dst len %d" src.len dst.len;
-      Core.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
-
-    let decrypt_block ~key:key src dst =
-      if src.len < block_size || dst.len < block_size then
-        invalid_arg "src len %d, dst len %d" src.len dst.len;
-      Core.decrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
-  end
 
   module ECB_of (Core : S.Core) : S.ECB = struct
 
@@ -361,6 +296,32 @@ module Modes2 = struct
       { message = data ; tag = tag ~key ~hkey ~ctr ?adata cdata }
   end
 
+  module CCM_of (C : S.Core) : S.CCM = struct
+
+    let _ = assert (C.block = 16)
+
+    type key = { key : C.ekey ; maclen : int }
+
+    let mac_sizes = [| 4; 6; 8; 10; 12; 14; 16 |]
+
+    let of_secret ~maclen sec =
+      if Array.mem maclen mac_sizes then
+        { key = C.e_of_secret sec ; maclen }
+      else invalid_arg "CCM: MAC length %d" maclen
+
+    let (key_sizes, block_size) = C.(key, block)
+
+    let cipher ~key src dst =
+      if src.len < block_size || dst.len < block_size then
+        invalid_arg "src len %d, dst len %d" src.len dst.len;
+      C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
+
+    let encrypt ~key:{key; maclen} ~nonce ?adata cs =
+      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ?adata cs
+
+    let decrypt ~key:{key; maclen} ~nonce ?adata cs =
+      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ?adata cs
+  end
 end
 
 module AES = struct
@@ -402,12 +363,11 @@ module AES = struct
 
   end
 
-  module ECB = Modes2.ECB_of (Core)
-  module CBC = Modes2.CBC_of (Core)
-  module CTR = Modes2.CTR_of (Core) (Counters.C128be)
-  module GCM = Modes2.GCM_of (Core)
-
-  module CCM = Modes.CCM_of (Modes2.Raw_of(Core))
+  module ECB = Modes.ECB_of (Core)
+  module CBC = Modes.CBC_of (Core)
+  module CTR = Modes.CTR_of (Core) (Counters.C128be)
+  module GCM = Modes.GCM_of (Core)
+  module CCM = Modes.CCM_of (Core)
 
 end
 
@@ -443,9 +403,9 @@ module DES = struct
     let decrypt = encrypt
   end
 
-  module ECB = Modes2.ECB_of (Core)
-  module CBC = Modes2.CBC_of (Core)
-  module CTR = Modes2.CTR_of (Core) (Counters.C64be)
+  module ECB = Modes.ECB_of (Core)
+  module CBC = Modes.CBC_of (Core)
+  module CTR = Modes.CTR_of (Core) (Counters.C64be)
 
 end
 
