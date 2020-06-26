@@ -54,3 +54,42 @@ let crypt ~key ~nonce ?(ctr = 0L) data =
   in
   loop 0 block_count ;
   Cstruct.sub key_stream 0 l
+
+module P = Poly1305.It
+
+let generate_poly1305_key ~key ~nonce =
+  crypt ~key ~nonce (Cstruct.create 32)
+
+let mac ~key ~adata ciphertext =
+  let pad16 b =
+    let len = Cstruct.len b mod 16 in
+    if len = 0 then Cstruct.empty else Cstruct.create (16 - len)
+  and len =
+    let data = Cstruct.create 16 in
+    Cstruct.LE.set_uint64 data 0 (Int64.of_int (Cstruct.len adata));
+    Cstruct.LE.set_uint64 data 8 (Int64.of_int (Cstruct.len ciphertext));
+    data
+  in
+  let ctx = P.empty ~key in
+  let ctx = P.feed ctx adata in
+  let ctx = P.feed ctx (pad16 adata) in
+  let ctx = P.feed ctx ciphertext in
+  let ctx = P.feed ctx (pad16 ciphertext) in
+  let ctx = P.feed ctx len in
+  P.get ctx
+
+let aead_poly1305_encrypt ~key ~nonce ?(adata = Cstruct.empty) data =
+  let poly1305_key = generate_poly1305_key ~key ~nonce in
+  let ciphertext = crypt ~key ~nonce ~ctr:1L data in
+  let mac = mac ~key:poly1305_key ~adata ciphertext in
+  Cstruct.append ciphertext mac
+
+let aead_poly1305_decrypt ~key ~nonce ?(adata = Cstruct.empty) data =
+  if Cstruct.len data < P.mac_size then
+    None
+  else
+    let cipher, tag = Cstruct.split data (Cstruct.len data - P.mac_size) in
+    let poly1305_key = generate_poly1305_key ~key ~nonce in
+    let ctag = mac ~key:poly1305_key ~adata cipher in
+    let plain = crypt ~key ~nonce ~ctr:1L cipher in
+    if Cstruct.equal tag ctag then Some plain else None

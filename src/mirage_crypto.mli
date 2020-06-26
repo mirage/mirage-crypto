@@ -487,6 +487,20 @@ module Chacha20 : sig
       IETF mode (and counter fit into 32 bits), or [key] must be either 16
       bytes or 32 bytes and [nonce] 8 bytes.
   *)
+
+  val aead_poly1305_encrypt : key:Cstruct.t -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
+  (** [aead_poly1305_encrypt ~key ~nonce ~adata data] encrypts [data]
+      with ChaCha20 using [key] and [nonce]. Additionally, an authentication
+      tag using {!Poly1305} is appended to the output. This conforms to
+      RFC 8439 Section 2.8. *)
+
+  val aead_poly1305_decrypt : key:Cstruct.t -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  (** [aead_poly1305_decrypt ~key ~nonce ~adata data] decrypts [data] with
+      ChaCha20 using [key] and [nonce]. Also, the authentication tag is split
+      off the end of [data] and verified using {!Poly1305}. This conforms to
+      RFC 8439 Section 2.8. *)
 end
 
 (** Streaming ciphers. *)
