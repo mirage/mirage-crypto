@@ -316,11 +316,11 @@ module Modes = struct
         invalid_arg "src len %d, dst len %d" src.len dst.len;
       C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
 
-    let encrypt ~key:{key; maclen} ~nonce ?adata cs =
-      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ?adata cs
+    let encrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ~adata cs
 
-    let decrypt ~key:{key; maclen} ~nonce ?adata cs =
-      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ?adata cs
+    let decrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ~adata cs
   end
 end
 
