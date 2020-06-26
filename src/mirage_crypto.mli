@@ -383,9 +383,6 @@ module Cipher_block : sig
 
       type key
 
-      type result = { message : Cstruct.t ; tag : Cstruct.t }
-      (** The transformed message, packed with the authentication tag. *)
-
       val of_secret : Cstruct.t -> key
       (** Construct the encryption key corresponding to [secret].
 
@@ -398,19 +395,25 @@ module Cipher_block : sig
       val block_size : int
       (** The size of a single block. *)
 
-      val encrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
-      (** [encrypt ~key ~iv ?adata msg] is the {{!result}[result]} containing
-          [msg] encrypted under [key], with [iv] as the initialization vector,
-          and the authentication tag computed over both [adata] and [msg].
+      val tag_size : int
+      (** The size of the authentication tag. *)
 
-          @raise Invalid_argument if the length [iv] is 0.
+      val encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
+        Cstruct.t -> Cstruct.t
+      (** [encrypt ~key ~iv ?adata msg] is the result containing the encrypted
+          [msg] with [key] and [nonce], appended with the authentication tag
+          computed over both [adata] and [msg].
+
+          @raise Invalid_argument if the length [nonce] is 0.
       *)
 
-      val decrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
-      (** [decrypt ~key ~iv ?adata msg] is the result containing the inversion
-          of [encrypt] and the same authentication tag.
+      val decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
+        Cstruct.t -> Cstruct.t option
+      (** [decrypt ~key ~nonce ?adata msg] splits off the authentication
+          tag of [msg], and decrypts the remaining cipher test with [key]
+          and [nonce]. The authentication tag is verified.
 
-          @raise Invalid_argument if the length [iv] is 0.
+          @raise Invalid_argument if the length [nonce] is 0.
       *)
     end
 

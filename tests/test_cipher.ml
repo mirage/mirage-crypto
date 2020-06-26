@@ -135,20 +135,18 @@ let aes_ctr_cases =
 let gcm_cases =
   let open Cipher_block in
 
-  let case ~key ~p ~a ~iv ~c ~t =
-    (AES.GCM.of_secret (vx key), vx p, vx a, vx iv, vx c, vx t) in
+  let case ~key ~p ~a ~nonce ~c ~t =
+    (AES.GCM.of_secret (vx key), vx p, vx a, vx nonce, vx c, vx t) in
 
-  let check (key, p, adata, iv, c, t) _ =
-    let open AES.GCM in
-    let { message = cdata ; tag = ctag } =
-      AES.GCM.encrypt ~key ~iv ~adata p in
-    let { message = pdata ; tag = ptag } =
-      AES.GCM.decrypt ~key ~iv ~adata cdata
+  let check (key, p, adata, nonce, c, t) _ =
+    let cipher = AES.GCM.encrypt ~key ~nonce ~adata p in
+    let pdata =
+      match AES.GCM.decrypt ~key ~nonce ~adata cipher with
+      | None -> assert false
+      | Some data -> data
     in
-    assert_cs_equal ~msg:"ciphertext" c cdata ;
-    assert_cs_equal ~msg:"encryption tag" t ctag  ;
-    assert_cs_equal ~msg:"decrypted plaintext" p pdata ;
-    assert_cs_equal ~msg:"decryption tag" t ptag
+    assert_cs_equal ~msg:"ciphertext" (Cstruct.append c t) cipher ;
+    assert_cs_equal ~msg:"decrypted plaintext" p pdata
   in
 
   cases_of check [
@@ -156,13 +154,13 @@ let gcm_cases =
     case ~key: "00000000000000000000000000000000"
          ~p:   ""
          ~a:   ""
-         ~iv:  "000000000000000000000000"
+         ~nonce: "000000000000000000000000"
          ~c:   ""
          ~t:   "58e2fccefa7e3061367f1d57a4e7455a" ;
     case ~key: "00000000000000000000000000000000"
          ~p:   "00000000000000000000000000000000"
          ~a:   ""
-         ~iv:  "000000000000000000000000"
+         ~nonce: "000000000000000000000000"
          ~c:   "0388dace60b6a392f328c2b971b2fe78"
          ~t:   "ab6e47d42cec13bdf53a67b21257bddf" ;
     case ~key: "feffe9928665731c6d6a8f9467308308"
@@ -171,7 +169,7 @@ let gcm_cases =
                 1c3c0c95956809532fcf0e2449a6b525
                 b16aedf5aa0de657ba637b391aafd255"
          ~a:   ""
-         ~iv:  "cafebabefacedbaddecaf888"
+         ~nonce: "cafebabefacedbaddecaf888"
          ~c:   "42831ec2217774244b7221b784d0d49c
                 e3aa212f2c02a4e035c17e2329aca12e
                 21d514b25466931c7d8f6a5aac84aa05
@@ -184,7 +182,7 @@ let gcm_cases =
                 b16aedf5aa0de657ba637b39"
          ~a:   "feedfacedeadbeeffeedfacedeadbeef
                 abaddad2"
-         ~iv:  "cafebabefacedbaddecaf888"
+         ~nonce: "cafebabefacedbaddecaf888"
          ~c:   "42831ec2217774244b7221b784d0d49c
                 e3aa212f2c02a4e035c17e2329aca12e
                 21d514b25466931c7d8f6a5aac84aa05
@@ -197,7 +195,7 @@ let gcm_cases =
                 b16aedf5aa0de657ba637b39"
          ~a:   "feedfacedeadbeeffeedfacedeadbeef
                 abaddad2"
-         ~iv:  "cafebabefacedbad"
+         ~nonce: "cafebabefacedbad"
          ~c:   "61353b4c2806934a777ff51fa22a4755
                 699b2a714fcdc6f83766e5f97b6c7423
                 73806900e49f24b22b097544d4896b42
@@ -210,7 +208,7 @@ let gcm_cases =
                 b16aedf5aa0de657ba637b39"
          ~a:   "feedfacedeadbeeffeedfacedeadbeef
                 abaddad2"
-         ~iv:  "9313225df88406e555909c5aff5269aa
+         ~nonce: "9313225df88406e555909c5aff5269aa
                 6a7a9538534f7da1e4c303d2a318a728
                 c3c0c95156809539fcf0e2429a6b5254
                 16aedbf5a0de6a57a637b39b"
@@ -227,7 +225,7 @@ let gcm_cases =
                 b16aedf5aa0de657ba637b39"
          ~a:   "feedfacedeadbeeffeedfacedeadbeef
                 abaddad2"
-         ~iv:  "cafebabefacedbaddecaf888"
+         ~nonce: "cafebabefacedbaddecaf888"
          ~c:   "3980ca0b3c00e841eb06fac4872a2757
                 859e1ceaa6efd984628593b40ca1e19c
                 7d773d00c144c525ac619d18c84a3f47
@@ -241,7 +239,7 @@ let gcm_cases =
                 b16aedf5aa0de657ba637b39"
          ~a:   "feedfacedeadbeeffeedfacedeadbeef
                 abaddad2"
-         ~iv:  "9313225df88406e555909c5aff5269aa
+         ~nonce: "9313225df88406e555909c5aff5269aa
                 6a7a9538534f7da1e4c303d2a318a728
                 c3c0c95156809539fcf0e2429a6b5254
                 16aedbf5a0de6a57a637b39b"
@@ -269,11 +267,11 @@ let gcm_cases =
                 10101010101010100101010101010101
                 00000000000000000000000000000000
                 ff"
-         ~iv:  "000000000000000000000000"
+         ~nonce: "000000000000000000000000"
          ~c:   ""
          ~t:   "9bfdb8fdac1be65739780c41703c0fb6";
     case ~key: "00000000000000000000000000000002"  (* ctr rollover *)
-         ~iv:  "3222415d"
+         ~nonce: "3222415d"
          ~p:   "deadbeefdeadbeefdeadbeefdeadbeef
                 deadbeefdeadbeefdeadbeefdeadbeef
                 deadbeef"
@@ -395,21 +393,21 @@ let gcm_regressions =
   let open Cipher_block.AES.GCM in
   let msg = vx "000102030405060708090a0b0c0d0e0f" in
   let key = of_secret msg
-  and iv = Cstruct.empty
+  and nonce = Cstruct.empty
   in
-  let iv_zero_length_enc _ =
+  let nonce_zero_length_enc _ =
     (* reported in https://github.com/mirleft/ocaml-nocrypto/issues/169 *)
-    assert_raises ~msg:"GCM with iv of length 0"
-      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
-      (fun () -> encrypt ~key ~iv msg)
-  and iv_zero_length_dec _ =
-    assert_raises ~msg:"GCM with iv of 0"
-      (Invalid_argument "Mirage_crypto: GCM: invalid IV of length 0")
-      (fun () -> decrypt ~key ~iv msg)
+    assert_raises ~msg:"GCM with nonce of length 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid nonce of length 0")
+      (fun () -> encrypt ~key ~nonce msg)
+  and nonce_zero_length_dec _ =
+    assert_raises ~msg:"GCM with nonce of 0"
+      (Invalid_argument "Mirage_crypto: GCM: invalid nonce of length 0")
+      (fun () -> decrypt ~key ~nonce msg)
   in
   [
-    test_case iv_zero_length_enc ;
-    test_case iv_zero_length_dec ;
+    test_case nonce_zero_length_enc ;
+    test_case nonce_zero_length_dec ;
   ]
 
 
