@@ -437,6 +437,23 @@ module Cipher_block : sig
       this build of the library. *)
 end
 
+(** The ChaCha20 cipher proposed by D.J. Bernstein. *)
+module Chacha20 : sig
+  val crypt : key:Cstruct.t -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
+  (** [crypt ~key ~nonce ~ctr data] generates a ChaCha20 key stream using
+      the [key], and [nonce]. The [ctr] defaults to 0. The generated key
+      stream is of the same length as [data], and the output is the XOR
+      of the key stream and [data]. This implements, depending on the size
+      of the [nonce] (8 or 12 bytes) both the original specification (where
+      the counter is 8 byte, same as the nonce) and the IETF RFC 8439
+      specification (where nonce is 12 bytes, and counter 4 bytes).
+
+      @raise Invalid_argument if invalid parameters are provided. Valid
+      parameters are: [key] must be 32 bytes and [nonce] 12 bytes for the
+      IETF mode (and counter fit into 32 bits), or [key] must be either 16
+      bytes or 32 bytes and [nonce] 8 bytes.
+  *)
+end
 
 (** Streaming ciphers. *)
 module Cipher_stream : sig

@@ -30,6 +30,10 @@ module DES = struct
   external k_s     : unit -> int = "mc_des_key_size" [@@noalloc]
 end
 
+module Chacha = struct
+  external round : int -> buffer -> off -> buffer -> off -> unit = "mc_chacha_round" [@@noalloc]
+end
+
 module MD5 = struct
   external init     : ctx -> unit = "mc_md5_init" [@@noalloc]
   external update   : ctx -> buffer -> off -> size -> unit = "mc_md5_update" [@@noalloc]
