@@ -638,6 +638,14 @@ let chacha20_cases =
                   "f3ac30ccfb5e14204f5e4268b90a8804")
     ]
 
+let poly1305_rfc8439_2_5_2 _ =
+  let key = vx "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
+  and data = Cstruct.of_string "Cryptographic Forum Research Group"
+  and output = vx "a8061dc1305136c6c22b8baf0c0127a9"
+  in
+  assert_cs_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
+    (Poly1305.mac ~key data) output
+
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
@@ -647,4 +655,5 @@ let suite = [
   "AES-CCM-REGRESSION" >::: ccm_regressions ;
   "AES-GCM-REGRESSION" >::: gcm_regressions ;
   "Chacha20" >::: chacha20_cases ;
+  "poly1305" >:: poly1305_rfc8439_2_5_2 ;
 ]

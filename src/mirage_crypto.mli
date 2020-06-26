@@ -187,6 +187,40 @@ module Hash : sig
   (** [digest_size algorithm] is the size of the [algorithm] in bytes. *)
 end
 
+(** The poly1305 message authentication code *)
+module Poly1305 : sig
+  type mac = Cstruct.t
+
+  type 'a iter = ('a -> unit) -> unit
+
+  type t
+  (** Represents a running mac computation, suitable for appending inputs. *)
+
+  val mac_size : int
+  (** [mac_size] is the size of the output. *)
+
+  val empty : key:Cstruct.t -> t
+  (** [empty] is the empty context with the given [key].
+
+      @raise Invalid_argument if key is not 32 bytes. *)
+
+  val feed : t -> Cstruct.t -> t
+  (** [feed t msg] adds the information in [msg] to [t]. *)
+
+  val feedi : t -> Cstruct.t iter -> t
+  (** [feedi t iter] feeds iter into [t]. *)
+
+  val get : t -> mac
+  (** [get t] is the mac corresponding to [t]. *)
+
+  val mac : key:Cstruct.t -> Cstruct.t -> mac
+  (** [mac ~key msg] is the all-in-one mac computation:
+      [get (feed (empty ~key) msg)]. *)
+
+  val maci : key:Cstruct.t -> Cstruct.t iter -> mac
+  (** [maci ~key iter] is the all-in-one mac computation:
+      [get (feedi (empty ~key) iter)]. *)
+end
 
 (** {1 Symmetric-key cryptography} *)
 
