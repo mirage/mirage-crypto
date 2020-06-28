@@ -4,6 +4,10 @@ open Uncommon
 
 let block = 64
 
+type key = Cstruct.t
+
+let of_secret a = a
+
 let chacha20_block state idx key_stream =
   Native.Chacha.round 10 state.Cstruct.buffer 0 key_stream.Cstruct.buffer idx
 
@@ -78,13 +82,13 @@ let mac ~key ~adata ciphertext =
   let ctx = P.feed ctx len in
   P.get ctx
 
-let aead_poly1305_encrypt ~key ~nonce ?(adata = Cstruct.empty) data =
+let authenticate_encrypt ~key ~nonce ?(adata = Cstruct.empty) data =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   let ciphertext = crypt ~key ~nonce ~ctr:1L data in
   let mac = mac ~key:poly1305_key ~adata ciphertext in
   Cstruct.append ciphertext mac
 
-let aead_poly1305_decrypt ~key ~nonce ?(adata = Cstruct.empty) data =
+let authenticate_decrypt ~key ~nonce ?(adata = Cstruct.empty) data =
   if Cstruct.len data < P.mac_size then
     None
   else

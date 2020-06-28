@@ -63,25 +63,21 @@ module S = struct
   end
 
   module type GCM = sig
-    type key
+    include Aead.AEAD
     val of_secret : Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
     val tag_size   : int
-    val encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
-    val decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
   end
 
   module type CCM = sig
-    type key
+    include Aead.AEAD
     val of_secret : maclen:int -> Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
     val mac_sizes  : int array
-    val encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
-    val decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
   end
 end
 
@@ -287,13 +283,13 @@ module Modes = struct
         GHASH.digesti ~key:hkey @@
           iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
 
-    let encrypt ~key:{ key; hkey } ~nonce ?adata data =
+    let authenticate_encrypt ~key:{ key; hkey } ~nonce ?adata data =
       let ctr   = counter ~hkey nonce in
       let cdata = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) data) in
       let ctag  = tag ~key ~hkey ~ctr ?adata cdata in
       Cstruct.append cdata ctag
 
-    let decrypt ~key:{ key; hkey } ~nonce ?adata cdata =
+    let authenticate_decrypt ~key:{ key; hkey } ~nonce ?adata cdata =
       let ctr  = counter ~hkey nonce in
       if Cstruct.len cdata < tag_size then
         None
@@ -326,10 +322,10 @@ module Modes = struct
         invalid_arg "src len %d, dst len %d" src.len dst.len;
       C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
 
-    let encrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+    let authenticate_encrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
       Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ~adata cs
 
-    let decrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+    let authenticate_decrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
       Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ~adata cs
   end
 end
