@@ -142,7 +142,7 @@ let gcm_cases =
     let cipher = AES.GCM.authenticate_encrypt ~key ~nonce ~adata p in
     let pdata =
       match AES.GCM.authenticate_decrypt ~key ~nonce ~adata cipher with
-      | None -> assert false
+      | None -> assert_failure "GCM decryption broken"
       | Some data -> data
     in
     assert_cs_equal ~msg:"ciphertext" (Cstruct.append c t) cipher ;
@@ -294,7 +294,7 @@ let ccm_cases =
     assert_cs_equal ~msg:"encrypt" c cip ;
     match authenticate_decrypt ~key ~nonce ~adata c with
       | Some x -> assert_cs_equal ~msg:"decrypt" p x
-      | None -> assert_failure "decryption broken"
+      | None -> assert_failure "CCM decryption broken"
   in
 
   cases_of check [
@@ -454,7 +454,7 @@ let chacha20_cases =
       output;
     assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 decrypt"
       (match Chacha20.authenticate_decrypt ~key ~nonce ~adata output with
-       | Some cs -> cs | None -> assert false)
+       | Some cs -> cs | None -> assert_failure "Chacha20/poly1305 decryption broken")
       rfc8439_input;
     let input = Cstruct.(shift (append (create 16) rfc8439_input) 16) in
     assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt 2"
