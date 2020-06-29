@@ -187,6 +187,40 @@ module Hash : sig
   (** [digest_size algorithm] is the size of the [algorithm] in bytes. *)
 end
 
+(** The poly1305 message authentication code *)
+module Poly1305 : sig
+  type mac = Cstruct.t
+
+  type 'a iter = ('a -> unit) -> unit
+
+  type t
+  (** Represents a running mac computation, suitable for appending inputs. *)
+
+  val mac_size : int
+  (** [mac_size] is the size of the output. *)
+
+  val empty : key:Cstruct.t -> t
+  (** [empty] is the empty context with the given [key].
+
+      @raise Invalid_argument if key is not 32 bytes. *)
+
+  val feed : t -> Cstruct.t -> t
+  (** [feed t msg] adds the information in [msg] to [t]. *)
+
+  val feedi : t -> Cstruct.t iter -> t
+  (** [feedi t iter] feeds iter into [t]. *)
+
+  val get : t -> mac
+  (** [get t] is the mac corresponding to [t]. *)
+
+  val mac : key:Cstruct.t -> Cstruct.t -> mac
+  (** [mac ~key msg] is the all-in-one mac computation:
+      [get (feed (empty ~key) msg)]. *)
+
+  val maci : key:Cstruct.t -> Cstruct.t iter -> mac
+  (** [maci ~key iter] is the all-in-one mac computation:
+      [get (feedi (empty ~key) iter)]. *)
+end
 
 (** {1 Symmetric-key cryptography} *)
 
@@ -437,6 +471,37 @@ module Cipher_block : sig
       this build of the library. *)
 end
 
+(** The ChaCha20 cipher proposed by D.J. Bernstein. *)
+module Chacha20 : sig
+  val crypt : key:Cstruct.t -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
+  (** [crypt ~key ~nonce ~ctr data] generates a ChaCha20 key stream using
+      the [key], and [nonce]. The [ctr] defaults to 0. The generated key
+      stream is of the same length as [data], and the output is the XOR
+      of the key stream and [data]. This implements, depending on the size
+      of the [nonce] (8 or 12 bytes) both the original specification (where
+      the counter is 8 byte, same as the nonce) and the IETF RFC 8439
+      specification (where nonce is 12 bytes, and counter 4 bytes).
+
+      @raise Invalid_argument if invalid parameters are provided. Valid
+      parameters are: [key] must be 32 bytes and [nonce] 12 bytes for the
+      IETF mode (and counter fit into 32 bits), or [key] must be either 16
+      bytes or 32 bytes and [nonce] 8 bytes.
+  *)
+
+  val aead_poly1305_encrypt : key:Cstruct.t -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
+  (** [aead_poly1305_encrypt ~key ~nonce ~adata data] encrypts [data]
+      with ChaCha20 using [key] and [nonce]. Additionally, an authentication
+      tag using {!Poly1305} is appended to the output. This conforms to
+      RFC 8439 Section 2.8. *)
+
+  val aead_poly1305_decrypt : key:Cstruct.t -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  (** [aead_poly1305_decrypt ~key ~nonce ~adata data] decrypts [data] with
+      ChaCha20 using [key] and [nonce]. Also, the authentication tag is split
+      off the end of [data] and verified using {!Poly1305}. This conforms to
+      RFC 8439 Section 2.8. *)
+end
 
 (** Streaming ciphers. *)
 module Cipher_stream : sig
