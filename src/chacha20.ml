@@ -96,4 +96,4 @@ let authenticate_decrypt ~key ~nonce ?(adata = Cstruct.empty) data =
     let poly1305_key = generate_poly1305_key ~key ~nonce in
     let ctag = mac ~key:poly1305_key ~adata cipher in
     let plain = crypt ~key ~nonce ~ctr:1L cipher in
-    if Cstruct.equal tag ctag then Some plain else None
+    if Eqaf_cstruct.equal tag ctag then Some plain else None

@@ -299,7 +299,7 @@ module Modes = struct
         in
         let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cipher) in
         let ctag = tag ~key ~hkey ~ctr ?adata cipher in
-        if Cstruct.equal tag_data ctag then Some data else None
+        if Eqaf_cstruct.equal tag_data ctag then Some data else None
   end
 
   module CCM_of (C : S.Core) : S.CCM = struct
