@@ -63,25 +63,21 @@ module S = struct
   end
 
   module type GCM = sig
-    type key
-    type result = { message : Cstruct.t ; tag : Cstruct.t }
+    include Aead.AEAD
     val of_secret : Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
-    val encrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
-    val decrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
+    val tag_size   : int
   end
 
   module type CCM = sig
-    type key
+    include Aead.AEAD
     val of_secret : maclen:int -> Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
     val mac_sizes  : int array
-    val encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
-    val decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
   end
 end
 
@@ -238,19 +234,21 @@ module Modes = struct
     type key
     val derive  : Cstruct.t -> key
     val digesti : key:key -> (Cstruct.t Uncommon.iter) -> Cstruct.t
+    val tagsize : int
   end = struct
     type key = bytes
     let keysize = Native.GHASH.keysize ()
+    let tagsize = 16
     let derive cs =
-      assert (cs.len >= 16);
+      assert (cs.len >= tagsize);
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs.buffer cs.off k; k
-    let _cs = create_unsafe 16
-    let hash0 = Bytes.make 16 '\x00'
+    let _cs = create_unsafe tagsize
+    let hash0 = Bytes.make tagsize '\x00'
     let digesti ~key i = (* Clobbers `_cs`! *)
       let res = Bytes.copy hash0 in
       i (fun cs -> Native.GHASH.ghash key res cs.buffer cs.off cs.len);
-      blit_from_bytes res 0 _cs 0 16; _cs
+      blit_from_bytes res 0 _cs 0 tagsize; _cs
   end
 
   module GCM_of (C : S.Core) : S.GCM = struct
@@ -259,8 +257,8 @@ module Modes = struct
     module CTR = CTR_of (C) (Counters.C128be32)
 
     type key = { key : C.ekey ; hkey : GHASH.key }
-    type result = { message : Cstruct.t ; tag : Cstruct.t }
 
+    let tag_size = GHASH.tagsize
     let key_sizes, block_size = C.(key, block)
     let z128, h = create block_size, create block_size
 
@@ -273,27 +271,35 @@ module Modes = struct
     let pack64s = let _cs = create_unsafe 16 in fun a b ->
                     BE.set_uint64 _cs 0 a; BE.set_uint64 _cs 8 b; _cs
 
-    let counter ~hkey iv = match len iv with
-      | 0 -> invalid_arg "GCM: invalid IV of length 0"
-      | 12 -> let (w1, w2) = BE.get_uint64 iv 0, BE.get_uint32 iv 8 in
+    let counter ~hkey nonce = match len nonce with
+      | 0 -> invalid_arg "GCM: invalid nonce of length 0"
+      | 12 -> let (w1, w2) = BE.get_uint64 nonce 0, BE.get_uint32 nonce 8 in
               (w1, Int64.(shift_left (of_int32 w2) 32 |> add 1L))
       | _  -> CTR.ctr_of_cstruct @@
-                GHASH.digesti ~key:hkey @@ iter2 iv (pack64s 0L (bits64 iv))
+                GHASH.digesti ~key:hkey @@ iter2 nonce (pack64s 0L (bits64 nonce))
 
     let tag ~key ~hkey ~ctr ?(adata=Cstruct.empty) cdata =
       CTR.encrypt ~key ~ctr @@
         GHASH.digesti ~key:hkey @@
           iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
 
-    let encrypt ~key:{ key; hkey } ~iv ?adata data =
-      let ctr   = counter ~hkey iv in
+    let authenticate_encrypt ~key:{ key; hkey } ~nonce ?adata data =
+      let ctr   = counter ~hkey nonce in
       let cdata = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) data) in
-      { message = cdata ; tag = tag ~key ~hkey ~ctr ?adata cdata }
+      let ctag  = tag ~key ~hkey ~ctr ?adata cdata in
+      Cstruct.append cdata ctag
 
-    let decrypt ~key:{ key; hkey } ~iv ?adata cdata =
-      let ctr  = counter ~hkey iv in
-      let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cdata) in
-      { message = data ; tag = tag ~key ~hkey ~ctr ?adata cdata }
+    let authenticate_decrypt ~key:{ key; hkey } ~nonce ?adata cdata =
+      let ctr  = counter ~hkey nonce in
+      if Cstruct.len cdata < tag_size then
+        None
+      else
+        let cipher, tag_data =
+          Cstruct.split cdata (Cstruct.len cdata - tag_size)
+        in
+        let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cipher) in
+        let ctag = tag ~key ~hkey ~ctr ?adata cipher in
+        if Eqaf_cstruct.equal tag_data ctag then Some data else None
   end
 
   module CCM_of (C : S.Core) : S.CCM = struct
@@ -316,11 +322,11 @@ module Modes = struct
         invalid_arg "src len %d, dst len %d" src.len dst.len;
       C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
 
-    let encrypt ~key:{key; maclen} ~nonce ?adata cs =
-      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ?adata cs
+    let authenticate_encrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ~adata cs
 
-    let decrypt ~key:{key; maclen} ~nonce ?adata cs =
-      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ?adata cs
+    let authenticate_decrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ~adata cs
   end
 end
 

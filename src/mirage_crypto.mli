@@ -224,6 +224,38 @@ end
 
 (** {1 Symmetric-key cryptography} *)
 
+(** Authenticated encryption with associated data.
+
+    This defines a uniform interface of symmetrics cryptographic algorithms
+    which encrypt, and also protect the integrity of the data. Additional data,
+    only used for integrity protection, not encrypted and not part of the
+    ciphertext, can be passed in optionally. This prevents the same ciphertext
+    being used at a different location. See
+    {{:https://tools.ietf.org/html/rfc5116}RFC 5116} for further description.
+*)
+module type AEAD = sig
+
+  type key
+  (** The abstract type for the key. *)
+
+  val authenticate_encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
+    Cstruct.t -> Cstruct.t
+  (** [authenticate_encrypt ~key ~nonce ~adata msg] encrypts [msg] with [key]
+      and [nonce], and appends an authentication tag computed over the encrypted
+      [msg], using [key], [nonce], and [adata].
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  val authenticate_decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
+    Cstruct.t -> Cstruct.t option
+  (** [authenticate_decrypt ~key ~nonce ~adata msg] splits [msg] into encrypted
+      data and authentication tag, computes the authentication tag using [key],
+      [nonce], and [adata], and decrypts the encrypted data. If the
+      authentication tags match, the decrypted data is returned.
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+end
+
 (** Block ciphers.
 
     Each algorithm, and each mode of operation, is contained in its own separate
@@ -381,10 +413,7 @@ module Cipher_block : sig
     (** {e Galois/Counter Mode}. *)
     module type GCM = sig
 
-      type key
-
-      type result = { message : Cstruct.t ; tag : Cstruct.t }
-      (** The transformed message, packed with the authentication tag. *)
+      include AEAD
 
       val of_secret : Cstruct.t -> key
       (** Construct the encryption key corresponding to [secret].
@@ -398,26 +427,14 @@ module Cipher_block : sig
       val block_size : int
       (** The size of a single block. *)
 
-      val encrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
-      (** [encrypt ~key ~iv ?adata msg] is the {{!result}[result]} containing
-          [msg] encrypted under [key], with [iv] as the initialization vector,
-          and the authentication tag computed over both [adata] and [msg].
-
-          @raise Invalid_argument if the length [iv] is 0.
-      *)
-
-      val decrypt : key:key -> iv:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> result
-      (** [decrypt ~key ~iv ?adata msg] is the result containing the inversion
-          of [encrypt] and the same authentication tag.
-
-          @raise Invalid_argument if the length [iv] is 0.
-      *)
+       val tag_size : int
+      (** The size of the authentication tag. *)
     end
 
     (** {e Counter with CBC-MAC} mode. *)
     module type CCM = sig
 
-      type key
+      include AEAD
 
       val of_secret : maclen:int -> Cstruct.t -> key
       (** Construct the encryption key corresponding to [secret], that will
@@ -434,19 +451,6 @@ module Cipher_block : sig
 
       val mac_sizes  : int array
       (** [MAC] lengths allowed with this cipher. *)
-
-      val encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
-      (** [encrypt ~key ~nonce ?adata msg] is [msg] encrypted under [key] and
-          [nonce], packed with authentication data computed over [msg] and
-          [adata].
-
-          @raise Invalid_argument if [nonce] is not between 7 and 13 bytes long.  *)
-
-      val decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
-      (** [decrypt ~key ~nonce ?adata msg] is [Some text] when [msg] was
-          produced by the corresponding [encrypt], or [None] otherwise.
-
-          @raise Invalid_argument if [nonce] is not between 7 and 13 bytes long.  *)
     end
   end
 
@@ -473,7 +477,11 @@ end
 
 (** The ChaCha20 cipher proposed by D.J. Bernstein. *)
 module Chacha20 : sig
-  val crypt : key:Cstruct.t -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
+  include AEAD
+
+  val of_secret : Cstruct.t -> key
+
+  val crypt : key:key -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
   (** [crypt ~key ~nonce ~ctr data] generates a ChaCha20 key stream using
       the [key], and [nonce]. The [ctr] defaults to 0. The generated key
       stream is of the same length as [data], and the output is the XOR
@@ -487,20 +495,6 @@ module Chacha20 : sig
       IETF mode (and counter fit into 32 bits), or [key] must be either 16
       bytes or 32 bytes and [nonce] 8 bytes.
   *)
-
-  val aead_poly1305_encrypt : key:Cstruct.t -> nonce:Cstruct.t ->
-    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t
-  (** [aead_poly1305_encrypt ~key ~nonce ~adata data] encrypts [data]
-      with ChaCha20 using [key] and [nonce]. Additionally, an authentication
-      tag using {!Poly1305} is appended to the output. This conforms to
-      RFC 8439 Section 2.8. *)
-
-  val aead_poly1305_decrypt : key:Cstruct.t -> nonce:Cstruct.t ->
-    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t option
-  (** [aead_poly1305_decrypt ~key ~nonce ~adata data] decrypts [data] with
-      ChaCha20 using [key] and [nonce]. Also, the authentication tag is split
-      off the end of [data] and verified using {!Poly1305}. This conforms to
-      RFC 8439 Section 2.8. *)
 end
 
 (** Streaming ciphers. *)
