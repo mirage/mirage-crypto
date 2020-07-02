@@ -1,3 +1,20 @@
+## v0.8.1 (2020-07-02)
+
+* Add Chacha20 implementation (based on abeaumont/ocaml-chacha), supporting
+  both DJB's original specification (nonce 64 bit, counter 64 bit) and IETF
+  (RFC 8439: nonce 96 bit, counter 32 bit)
+  (#72 @hannesm)
+* Add Poly1305 implementation based on floodyberry/poly1305-donna (#72 @hannesm)
+* Unified AEAD module type, implemented by CCM, GCM, and Chacha20/Poly1305
+  The functions "authenticate_encrypt" and "authenticate_decrypt" are defined,
+  which append (encrypt) and check equality (decrypt, using Eqaf for
+  constant-time comparison) the authentication tag directly.
+  Breaking changes:
+  - GCM "~iv" is now "~nonce"
+  - GCM encrypt returns the encrypted data and authentication tag appended
+  - GCM decrypt returns the plaintext as option (None on authentication failure)
+  (#73 @hannesm)
+
 ## v0.8.0 (2020-06-18)
 
 * New package mirage-crypto-rng-mirage which contains the entropy collection
