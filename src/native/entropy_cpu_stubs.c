@@ -82,6 +82,10 @@ CAMLprim value caml_cycle_counter (value __unused(unit)) {
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
   return Val_long (read_virtual_count ());
+#elif defined(__powerpc64__)
+    uint64_t rval;
+    __asm__ volatile ("mfspr %0, 268":"=r" (rval));
+    return rval;
 #else
 #error ("No known cycle-counting instruction.")
 #endif

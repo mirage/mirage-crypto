@@ -1,3 +1,5 @@
+* Add support for ppc64le. (@avsm)
+
 ## v0.8.1 (2020-07-02)
 
 * Add Chacha20 implementation (based on abeaumont/ocaml-chacha), supporting

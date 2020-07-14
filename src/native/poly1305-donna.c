@@ -7,7 +7,7 @@ typedef struct poly1305_context {
         unsigned char opaque[136];
 } poly1305_context;
 
-#if defined (__x86_64__) || defined (__aarch64__)
+#if defined (__x86_64__) || defined (__aarch64__) || defined(__powerpc64__)
 #include "poly1305-donna-64.h"
 #else
 #include "poly1305-donna-32.h"
