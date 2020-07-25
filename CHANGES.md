@@ -1,4 +1,6 @@
-* Add support for ppc64le. (@avsm)
+## v0.8.2 (2020-07-25)
+
+* Add support for ppc64le. (#76 @avsm)
 
 ## v0.8.1 (2020-07-02)
 
