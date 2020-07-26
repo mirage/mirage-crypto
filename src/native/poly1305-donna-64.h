@@ -53,7 +53,7 @@ U64TO8(unsigned char *p, unsigned long long v) {
 }
 
 void
-poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
+mcrypto_poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
 	poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
 	unsigned long long t0,t1;
 

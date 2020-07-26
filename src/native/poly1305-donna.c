@@ -52,7 +52,7 @@ poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
 
 //stubs for OCaml
 CAMLprim value mc_poly1305_init (value ctx, value key, value off) {
-  poly1305_init ((poly1305_context *) Bytes_val(ctx), _ba_uint8_off(key, off));
+  mcrypto_poly1305_init ((poly1305_context *) Bytes_val(ctx), _ba_uint8_off(key, off));
   return Val_unit;
 }
 

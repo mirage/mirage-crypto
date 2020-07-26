@@ -44,7 +44,7 @@ U32TO8(unsigned char *p, unsigned long v) {
 }
 
 void
-poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
+mcrypto_poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
 	poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
 
 	/* r &= 0xffffffc0ffffffc0ffffffc0fffffff */
