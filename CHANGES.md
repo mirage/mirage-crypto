@@ -1,3 +1,12 @@
+## v0.8.3 (2020-07-27)
+
+* Fix ppc64le cycle_counter (add missing Val_long) (#78 @hannesm)
+  - test_entropy is now test_entropy_collection
+  - test_entropy checks timer and bootstrap functions
+* Avoid polluting symbol table with global non-prefixed symbols
+  (reported by @anmonteiro in #77, fixed #78 @hannesm (suggested by @dinosaure))
+* Avoid "caml_" prefix in entropy_stubs, use "mc_" instead (#78 @hannesm)
+
 ## v0.8.2 (2020-07-25)
 
 * Add support for ppc64le. (#76 @avsm)
