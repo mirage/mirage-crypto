@@ -43,6 +43,30 @@ static inline uint64_t read_virtual_count(void)
 }
 #endif /* aarch64 */
 
+#if defined (__powerpc64__)
+/* from clang's builtin version and gperftools at
+https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclock.h
+*/
+static inline uint64_t read_cycle_counter(void)
+{
+  uint64_t rval;
+  __asm__ volatile ("mfspr %0, 268":"=r" (rval));
+  return rval;
+}
+#endif
+
+CAMLprim value mc_cycle_counter (value __unused(unit)) {
+#if defined (__i386__) || defined (__x86_64__)
+  return Val_long (__rdtsc ());
+#elif defined (__arm__) || defined (__aarch64__)
+  return Val_long (read_virtual_count ());
+#elif defined(__powerpc64__)
+  return Val_long (read_cycle_counter ());
+#else
+#error ("No known cycle-counting instruction.")
+#endif
+}
+
 enum cpu_rng_t {
   RNG_NONE   = 0,
   RNG_RDRAND = 1,
@@ -77,21 +101,7 @@ static void detect () {
 #endif
 }
 
-CAMLprim value caml_cycle_counter (value __unused(unit)) {
-#if defined (__i386__) || defined (__x86_64__)
-  return Val_long (__rdtsc ());
-#elif defined (__arm__) || defined (__aarch64__)
-  return Val_long (read_virtual_count ());
-#elif defined(__powerpc64__)
-    uint64_t rval;
-    __asm__ volatile ("mfspr %0, 268":"=r" (rval));
-    return rval;
-#else
-#error ("No known cycle-counting instruction.")
-#endif
-}
-
-CAMLprim value caml_cpu_rdseed (value __unused(unit)) {
+CAMLprim value mc_cpu_rdseed (value __unused(unit)) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
@@ -104,7 +114,7 @@ CAMLprim value caml_cpu_rdseed (value __unused(unit)) {
 #endif
 }
 
-CAMLprim value caml_cpu_rdrand (value __unused(unit)) {
+CAMLprim value mc_cpu_rdrand (value __unused(unit)) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
@@ -117,11 +127,11 @@ CAMLprim value caml_cpu_rdrand (value __unused(unit)) {
 #endif
 }
 
-CAMLprim value caml_cpu_rng_type (value __unused(unit)) {
+CAMLprim value mc_cpu_rng_type (value __unused(unit)) {
   return Val_int (__cpu_rng);
 }
 
-CAMLprim value caml_entropy_detect (value __unused(unit)) {
+CAMLprim value mc_entropy_detect (value __unused(unit)) {
   detect ();
   return Val_unit;
 }

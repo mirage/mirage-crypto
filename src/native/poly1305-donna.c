@@ -13,7 +13,7 @@ typedef struct poly1305_context {
 #include "poly1305-donna-32.h"
 #endif
 
-void
+static void
 poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
 	poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
 	size_t i;

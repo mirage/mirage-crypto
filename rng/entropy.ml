@@ -29,10 +29,10 @@
 
 module Cpu_native = struct
 
-  external cycles : unit -> int  = "caml_cycle_counter" [@@noalloc]
-  external rdseed : unit -> int  = "caml_cpu_rdseed" [@@noalloc]
-  external rdrand : unit -> int  = "caml_cpu_rdrand" [@@noalloc]
-  external rng_type : unit -> int  = "caml_cpu_rng_type" [@@noalloc]
+  external cycles : unit -> int  = "mc_cycle_counter" [@@noalloc]
+  external rdseed : unit -> int  = "mc_cpu_rdseed" [@@noalloc]
+  external rdrand : unit -> int  = "mc_cpu_rdrand" [@@noalloc]
+  external rng_type : unit -> int  = "mc_cpu_rng_type" [@@noalloc]
 
   let cpu_rng =
     match rng_type () with
