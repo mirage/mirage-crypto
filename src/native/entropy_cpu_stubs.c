@@ -43,6 +43,30 @@ static inline uint64_t read_virtual_count(void)
 }
 #endif /* aarch64 */
 
+#if defined (__powerpc64__)
+/* from clang's builtin version and gperftools at
+https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclock.h
+*/
+static inline uint64_t read_cycle_counter(void)
+{
+  uint64_t rval;
+  __asm__ volatile ("mfspr %0, 268":"=r" (rval));
+  return rval;
+}
+#endif
+
+CAMLprim value caml_cycle_counter (value __unused(unit)) {
+#if defined (__i386__) || defined (__x86_64__)
+  return Val_long (__rdtsc ());
+#elif defined (__arm__) || defined (__aarch64__)
+  return Val_long (read_virtual_count ());
+#elif defined(__powerpc64__)
+  return Val_long (read_cycle_counter ());
+#else
+#error ("No known cycle-counting instruction.")
+#endif
+}
+
 enum cpu_rng_t {
   RNG_NONE   = 0,
   RNG_RDRAND = 1,
@@ -74,20 +98,6 @@ static void detect () {
         __cpu_rng |= RNG_RDSEED;
         break;
       }
-#endif
-}
-
-CAMLprim value caml_cycle_counter (value __unused(unit)) {
-#if defined (__i386__) || defined (__x86_64__)
-  return Val_long (__rdtsc ());
-#elif defined (__arm__) || defined (__aarch64__)
-  return Val_long (read_virtual_count ());
-#elif defined(__powerpc64__)
-    uint64_t rval;
-    __asm__ volatile ("mfspr %0, 268":"=r" (rval));
-    return rval;
-#else
-#error ("No known cycle-counting instruction.")
 #endif
 }
 
