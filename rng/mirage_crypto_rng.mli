@@ -96,11 +96,11 @@ module Entropy : sig
   (** {1 Timer source} *)
 
   val interrupt_hook : unit -> unit -> Cstruct.t
-  (** [interrupt_hook ()] collects the lower 4 bytes from [rdtsc], to be
+  (** [interrupt_hook ()] collects lower bytes from the cycle counter, to be
       used for entropy collection in the event loop. *)
 
   val timer_accumulator : g option -> unit -> unit
-  (** [timer_accumulator g] is the accumulator for the [`Timer] source,
+  (** [timer_accumulator g] is the accumulator for the timer source,
       applying {!interrupt_hook} on each call. *)
 
   (** {1 Periodic pulled sources} *)

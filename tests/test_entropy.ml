@@ -1,38 +1,23 @@
-open Lwt.Infix
 
-module Printing_rng = struct
-  type g = unit
+let data = ref Cstruct.empty
 
-  let block = 16
+let bootstrap_check () =
+  for _i = 0 to 10 do
+    let data' = Mirage_crypto_rng.Entropy.bootstrap 1 in
+    if Cstruct.equal !data data' then failwith "same data from bootstrap" ;
+    data := data'
+  done
 
-  let create ?time:_ () = ()
-
-  let generate ~g:_ _n = assert false
-
-  let reseed ~g:_ data =
-    Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
-
-  let accumulate ~g:_ source =
-    let print data =
-      Format.printf "accumulate: (src: %a) %a@.%!"
-        Mirage_crypto_rng.Entropy.pp_source source Cstruct.hexdump_pp data
-    in
-    `Acc print
-
-  let seeded ~g:_ = true
-  let pools = 1
-end
-
-module E = Mirage_crypto_rng_mirage.Make(Time)(Mclock)
-
-let with_entropy act =
-  E.initialize (module Printing_rng) >>= fun () ->
-  Format.printf "entropy sources: %a@,%!"
-    (fun ppf -> List.iter (fun x ->
-         Mirage_crypto_rng.Entropy.pp_source ppf x;
-         Format.pp_print_space ppf ()))
-    (Mirage_crypto_rng.Entropy.sources ());
-  act ()
+let timer_check () =
+  let data' = Mirage_crypto_rng.Entropy.interrupt_hook () () in
+  data := Cstruct.create (Cstruct.len data');
+  for _i = 0 to 10 do
+    let data' = Mirage_crypto_rng.Entropy.interrupt_hook () () in
+    if Cstruct.equal !data data' then failwith "same data from timer" ;
+    Cstruct.blit data' 0 !data 0 (Cstruct.len data')
+  done
 
 let () =
-  OS.(Main.run (with_entropy (fun () -> Time.sleep_ns 1_000L)))
+  timer_check ();
+  bootstrap_check ();
+  print_endline "test entropy OK"

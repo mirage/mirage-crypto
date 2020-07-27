@@ -28,7 +28,13 @@
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
 
 (test
- (name test_entropy)
- (modules test_entropy)
+ (name test_entropy_collection)
+ (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
  (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix mirage-clock-unix))
+
+(test
+ (name test_entropy)
+ (modules test_entropy)
+ (package mirage-crypto-rng)
+ (libraries mirage-crypto-rng))
