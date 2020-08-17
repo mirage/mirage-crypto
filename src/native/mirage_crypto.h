@@ -2,6 +2,7 @@
 #define H__MIRAGE_CRYPTO
 
 #include <stdint.h>
+#include <string.h>
 #include "bitfn.h"
 
 #include <caml/mlvalues.h>
