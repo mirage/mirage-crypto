@@ -87,7 +87,10 @@ module Entropy : sig
   val cpu_rng_bootstrap : int -> Cstruct.t
   (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
       RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
-      The [id] is used as prefix. *)
+      The [id] is used as prefix.
+
+      @raise Failure if no CPU RNG is available, or if it doesn't return a
+      random value. *)
 
   val bootstrap : int -> Cstruct.t
   (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or

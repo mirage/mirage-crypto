@@ -103,10 +103,12 @@ let whirlwind_bootstrap id =
 
 let cpu_rng_bootstrap id =
   match random `Rdseed with
-  | None -> failwith "expected a CPU rng"
+  | None -> failwith "expected a CPU RNG"
   | Some insn ->
+    let r = cpu_rng insn () in
+    if r = 0 then failwith "bad CPU RNG value";
     let cs = Cstruct.create 10 in
-    Cstruct.LE.set_uint64 cs 2 (Int64.of_int ((cpu_rng insn) ()));
+    Cstruct.LE.set_uint64 cs 2 (Int64.of_int r);
     write_header id cs;
     cs
 
