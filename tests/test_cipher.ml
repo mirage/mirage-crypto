@@ -404,10 +404,25 @@ let gcm_regressions =
     assert_raises ~msg:"GCM with nonce of 0"
       (Invalid_argument "Mirage_crypto: GCM: invalid nonce of length 0")
       (fun () -> authenticate_decrypt ~key ~nonce msg)
+  and unaligned _ =
+    let key = of_secret (vx "00000000000000000000000000000000")
+    and c = vx "0388dace60b6a392f328c2b971b2fe78"
+    and p = vx "00000000000000000000000000000000"
+    and nonce = vx "000000000000000000000000"
+    and t = vx "ab6e47d42cec13bdf53a67b21257bddf"
+    in
+    let cipher = Cstruct.shift (Cstruct.concat [ Cstruct.create 1 ; c ; t ]) 1 in
+    let auth_dec ~key ~nonce cipher = match authenticate_decrypt ~key ~nonce cipher with
+      | None -> assert_failure "GCM decryption failure"
+      | Some x -> x
+    in
+    assert_cs_equal ~msg:"GCM with unaligned msg"
+      (auth_dec ~key ~nonce cipher) p
   in
   [
     test_case nonce_zero_length_enc ;
     test_case nonce_zero_length_dec ;
+    test_case unaligned ;
   ]
 
 
