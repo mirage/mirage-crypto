@@ -1,3 +1,10 @@
+## v0.8.4 (2020-08-22)
+
+* Mirage_crypto_rng: avoid using rdseed if it returned 0 during bootstrap
+  (#82 @hannesm)
+* Avoid misaligned cast in xor (#79 reported by @talex5 on arm32, fixed in #81
+  by @hannesm)
+
 ## v0.8.3 (2020-07-27)
 
 * Fix ppc64le cycle_counter (add missing Val_long) (#78 @hannesm)
