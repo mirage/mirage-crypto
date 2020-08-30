@@ -1,3 +1,8 @@
+## v0.8.5 (2020-08-30)
+
+* Avoid accessing unmapped memory in ChaCha20 (#83 by @hannesm, introduced in
+  0.8.1)
+
 ## v0.8.4 (2020-08-22)
 
 * Mirage_crypto_rng: avoid using rdseed if it returned 0 during bootstrap
