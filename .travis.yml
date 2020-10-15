@@ -20,6 +20,6 @@ jobs:
     env: OCAML_VERSION=4.10
   - name: OCaml 4.09 with freestanding on arm64
     arch: arm64
-    env: OCAML_VERSION=4.09 DEPOPTS="zarith-freestanding ocaml-freestanding"
+    env: OCAML_VERSION=4.09 DEPOPTS="zarith-freestanding ocaml-freestanding" TESTS=false
 notifications:
   email: false
