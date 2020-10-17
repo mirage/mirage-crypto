@@ -9,6 +9,6 @@ freebsd_task:
   pkg_install_script: pkg install -y ocaml-opam gmp gmake pkgconf bash
   ocaml_script: opam init -a --comp=$OCAML_VERSION
   dependencies_script: eval `opam env` && opam install -y --deps-only .
-  freestanding_script: eval `opam env` && opam install -y solo5-bindings-hvt zarith-freestanding
   build_script: eval `opam env` && dune build @install
   test_script: eval `opam env` && opam install -y -t --deps-only . && dune build @runtest
+  test_mirage_script: eval `opam env` && opam install -y solo5-bindings-hvt zarith-freestanding opam-depext && opam pin add -y . && ./.test-mirage.sh

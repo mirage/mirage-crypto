@@ -1,3 +1,15 @@
 _build
 .merlin
 .*.swp
+mirage/Makefile
+mirage/crypto_test*
+mirage/dune
+mirage/dune-project
+mirage/dune.build
+mirage/dune.config
+mirage/key_gen.ml
+mirage/main.ml
+mirage/main.native
+mirage/*opam
+mirage/myocamlbuild.ml
+mirage/.mirage.config
