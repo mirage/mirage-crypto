@@ -24,5 +24,5 @@ let _ =
     | `x86_64 | `x86 -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
     | _ -> []
   in
-  let fs = std_flags @ ent_flags @ accelerate_flags in
-  Format.(printf "(@[%a@])@.%!" (fun ppf -> List.iter (fprintf ppf "%s@ ")) fs)
+  let flags = std_flags @ ent_flags @ accelerate_flags in
+  Configurator.V1.Flags.write_sexp "cflags.sexp" flags

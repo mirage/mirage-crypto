@@ -15,7 +15,7 @@ build: [ ["dune" "subst"] {pinned}
 depends: [
   "conf-pkg-config" {build}
   "ocaml" {>= "4.08.0"}
-  "dune" {>= "1.7"}
+  "dune" {>= "2.6"}
   "dune-configurator" {>= "2.0.0"}
   "ounit" {with-test}
   "cstruct" {>="3.2.0"}
