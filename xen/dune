@@ -1,21 +1,16 @@
-(copy_files# ../src/native/*)
-
-(library
- (name mirage_crypto_xen)
- (public_name mirage-crypto.xen)
- (optional)
- (libraries mirage-xen-posix)
- (foreign_stubs
-  (language c)
-  (names detect_cpu_features misc misc_sse hash_stubs md5 sha1 sha256 sha512
-    aes_generic aes_aesni des_generic chacha poly1305-donna ghash_pclmul
-    ghash_generic ghash_ctmul entropy_cpu_stubs)
-  (flags
-   (:standard)
-   (:include ../src/cflags.sexp)
-   (:include cflags-xen.sexp))))
+(copy_files#
+ (alias install)
+ (files ../src/native/*))
 
 (rule
- (with-stdout-to
-  cflags-xen.sexp
-  (run ./cflags.sh)))
+ (deps ../src/cflags.sexp Makefile)
+ (targets libmirage_crypto_xen_stubs.a)
+ (action
+  (no-infer
+   (progn
+    (run %{make})))))
+
+(install
+ (package mirage-crypto)
+ (section lib)
+ (files libmirage_crypto_xen_stubs.a))
