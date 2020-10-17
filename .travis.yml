@@ -12,9 +12,6 @@ env:
     - DISTRO=alpine
 jobs:
   include:
-  - name: OCaml 4.08 with mirage-xen
-    arch: amd64
-    env: OCAML_VERSION=4.08 DEPOPTS="zarith-xen mirage-xen-posix mirage-xen-ocaml"
   - name: OCaml 4.10 on arm64
     arch: arm64
     env: OCAML_VERSION=4.10

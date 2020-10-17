@@ -22,11 +22,10 @@ depends: [
   "eqaf" {>= "0.7"}
 ]
 depopts: [
-  "mirage-xen-posix" "mirage-xen-ocaml"
   "ocaml-freestanding"
 ]
 conflicts: [
-  "mirage-xen" {< "3.1.0"}
+  "mirage-xen" {< "6.0.0"}
   "ocaml-freestanding" {< "0.4.1"}
 ]
 description: """
