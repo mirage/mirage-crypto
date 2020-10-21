@@ -1,7 +1,8 @@
 (library
  (name test_common)
  (libraries mirage-crypto oUnit)
- (modules test_common))
+ (modules test_common)
+ (optional))
 
 (test
  (name test_symmetric_runner)
@@ -17,13 +18,15 @@
 
 (test
  (name test_random_runner)
- (libraries test_common test_common_random mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix oUnit)
+ (libraries test_common test_common_random mirage-crypto mirage-crypto-rng
+   mirage-crypto-rng.unix oUnit)
  (package mirage-crypto-rng)
  (modules test_random_runner))
 
 (test
  (name test_pk_runner)
- (libraries test_common test_common_random mirage-crypto-pk mirage-crypto-rng.unix oUnit)
+ (libraries test_common test_common_random mirage-crypto-pk
+   mirage-crypto-rng.unix oUnit)
  (package mirage-crypto-pk)
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
 
@@ -31,7 +34,8 @@
  (name test_entropy_collection)
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
- (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix mirage-clock-unix))
+ (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix
+   mirage-clock-unix))
 
 (test
  (name test_entropy)

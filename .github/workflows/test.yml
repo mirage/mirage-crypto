@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: ["4.11.0", "4.10.1", "4.09.0", "4.08.1"]
+        ocaml-version: ["4.11.1", "4.10.1", "4.09.0", "4.08.1"]
         operating-system: [macos-latest, ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.operating-system }}

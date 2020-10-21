@@ -6,20 +6,17 @@ services:
 os: linux
 env:
   global:
-    - PINS="mirage-crypto.dev:. mirage-crypto-rng.dev:. mirage-crypto-rng-mirage.dev:. mirage-crypto-pk.dev:."
+    - PINS="mirage-crypto:. mirage-crypto-rng:. mirage-crypto-rng-mirage:. mirage-crypto-pk:."
     - PACKAGE="mirage-crypto-pk"
     - TESTS=true
     - DISTRO=alpine
 jobs:
   include:
-  - name: OCaml 4.08 with mirage-xen
-    arch: amd64
-    env: OCAML_VERSION=4.08 DEPOPTS="zarith-xen mirage-xen-posix"
   - name: OCaml 4.10 on arm64
     arch: arm64
     env: OCAML_VERSION=4.10
   - name: OCaml 4.09 with freestanding on arm64
     arch: arm64
-    env: OCAML_VERSION=4.09 DEPOPTS="zarith-freestanding ocaml-freestanding" TESTS=false
+    env: OCAML_VERSION=4.09 TESTS=false POST_INSTALL_HOOK=./.test-mirage.sh
 notifications:
   email: false
