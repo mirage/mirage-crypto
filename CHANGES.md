@@ -1,3 +1,10 @@
+## v0.8.6 (2020-10-21)
+
+* Detect CPU architecture from C compiler, allowing cross-compiling to Android
+  and iOS (#84 by @EduardoRFC)
+* Upgrade to dune2, use a Makefile for building freestanding libraries, drop
+  mirage-xen-posix support (solo5-based PVH exists now) #86 by @hannesm
+
 ## v0.8.5 (2020-08-30)
 
 * Avoid accessing unmapped memory in ChaCha20 (#83 by @hannesm, introduced in
