@@ -28,13 +28,12 @@ jobs:
               "mirage-crypto-pk": "./mirage-crypto-pk.opam",
               "mirage-crypto-rng": "./mirage-crypto-rng.opam",
               "mirage-crypto-rng-mirage": "./mirage-crypto-rng-mirage.opam",
-              "generate": "github:EduardoRFS/reason-mobile:generate.json#66f694b2d083624a4f971f897441b106585783e7"
+              "generate": "github:EduardoRFS/reason-mobile:generate.json#5e2685f419ac88aad3d4d37932d62620c90b40d8"
             },
             "resolutions": {
               "@opam/mtime": "github:dune-universe/mtime:mtime.opam#9584b66cecc891208b31cec4628dd412b8cffe75",
               "@opam/zarith": "github:dune-universe/Zarith:zarith.opam#c62b045106fafa407874053bdd79273a8f591352",
-              "@opam/num": "github:dune-universe/num:num.opam#bdb2d7653e927e142b701b51d89f393471279713",
-              "esy-gmp": "EduardoRFS/esy-gmp:package.json#c7112b03da47a5ed5fa4b77a97a11210387f42e3"
+              "@opam/num": "github:dune-universe/num:num.opam#bdb2d7653e927e142b701b51d89f393471279713"
             }
           }' > esy.json
 
