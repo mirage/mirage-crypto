@@ -12,7 +12,7 @@ else
 CC ?= cc
 FREESTANDING_CFLAGS := $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --cflags ocaml-freestanding)
 MIRAGE_CRYPTO_CFLAGS := $(shell sed 's/^(\(.*\))$$/\1/' ../src/cflags.sexp | tr -d '"')
-CFLAGS := $(MIRAGE_CRYPTO_CFLAGS) $(FREESTANDING_CFLAGS)
+CFLAGS := -I../src/native $(MIRAGE_CRYPTO_CFLAGS) $(FREESTANDING_CFLAGS)
 
 OBJS=detect_cpu_features.o misc.o misc_sse.o hash_stubs.o md5.o sha1.o \
   sha256.o sha512.o aes_generic.o aes_aesni.o des_generic.o chacha.o \

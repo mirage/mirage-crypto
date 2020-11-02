@@ -1,9 +1,10 @@
-(copy_files#
- (alias install)
- (files ../src/native/*))
+(copy_files# ../src/native/*.c)
 
 (rule
- (deps ../src/cflags.sexp Makefile)
+ (deps ../src/cflags.sexp Makefile detect_cpu_features.c misc.c misc_sse.c
+   md5.c sha1.c sha256.c sha512.c hash_stubs.c aes_generic.c aes_aesni.c
+   ghash_generic.c ghash_pclmul.c ghash_ctmul.c des_generic.c chacha.c
+   poly1305-donna.c entropy_cpu_stubs.c)
  (targets libmirage_crypto_freestanding_stubs.a)
  (action
   (no-infer
