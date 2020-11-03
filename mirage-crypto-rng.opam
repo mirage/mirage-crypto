@@ -14,7 +14,7 @@ build: [ ["dune" "subst"] {pinned}
 
 depends: [
   "ocaml" {>= "4.08.0"}
-  "dune" {>= "2.7"}
+  "dune" {>= "2.6"}
   "dune-configurator" {>= "2.0.0"}
   "duration"
   "cstruct" {>= "4.0.0"}
