@@ -1,3 +1,7 @@
+## v0.8.7 (2020-11-03)
+
+- revise MirageOS cross-compilation (#89, @hannesm)
+
 ## v0.8.6 (2020-10-21)
 
 * Detect CPU architecture from C compiler, allowing cross-compiling to Android
