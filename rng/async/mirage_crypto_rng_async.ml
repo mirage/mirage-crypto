@@ -27,15 +27,13 @@ let periodically_collect_getrandom_entropy time_source span =
     (fun () ->
       let per_pool = 8 in
       let size = per_pool * pools None in
-      (* Might block so run it in a thread. *)
-      In_thread.run (fun () -> Mirage_crypto_rng_unix.getrandom size)
-      >>> fun random ->
-        let idx = ref 0 in
-        let f () = 
-          incr idx;
-          Cstruct.sub random (per_pool * (pred !idx)) per_pool
-        in
-        Entropy.feed_pools None source f)
+      let random = Mirage_crypto_rng_unix.getrandom size in
+      let idx = ref 0 in
+      let f () =
+        incr idx;
+        Cstruct.sub random (per_pool * (pred !idx)) per_pool
+      in
+      Entropy.feed_pools None source f)
 
 let read_cpu_counter_at_the_start_of_every_cycle () =
   Scheduler.Expert.run_every_cycle_start (fun () ->
