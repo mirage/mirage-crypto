@@ -12,14 +12,12 @@ let ns_since_epoch time_source () =
   Synchronous_time_source.now time_source
   |> Time_ns.to_int_ns_since_epoch
   |> Int64.of_int
-;;
 
 let periodically_collect_cpu_entropy time_source span =
   Synchronous_time_source.run_at_intervals
     time_source
     span
-    (fun () -> Entropy.cpu_rng None);
-;;
+    (fun () -> Entropy.cpu_rng None)
 
 let periodically_collect_getrandom_entropy time_source span =
   let source = Entropy.register_source "getrandom" in
@@ -38,17 +36,14 @@ let periodically_collect_getrandom_entropy time_source span =
           Cstruct.sub random (per_pool * (pred !idx)) per_pool
         in
         Entropy.feed_pools None source f)
-;;
 
 let read_cpu_counter_at_the_start_of_every_cycle () =
   Scheduler.Expert.run_every_cycle_start (fun () ->
     Entropy.timer_accumulator None ())
-;;
 
 let getrandom_init i =
   let data = Mirage_crypto_rng_unix.getrandom 128 in
   Entropy.header i data
-;;
 
 let initialize ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) () =
   let time_source =
