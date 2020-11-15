@@ -18,7 +18,7 @@ depends: [
   "dune-configurator" {>= "2.0.0"}
   "async" 
   "logs"
-  "mirage-crypto" {=version}
+  "mirage-crypto"
 ]
 conflicts: [ "mirage-runtime" {< "3.8.0"} ]
 description: """
