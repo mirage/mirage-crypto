@@ -19,6 +19,7 @@ depends: [
   "async" 
   "logs"
   "mirage-crypto"
+  "mirage-crypto-rng"
 ]
 conflicts: [ "mirage-runtime" {< "3.8.0"} ]
 description: """
