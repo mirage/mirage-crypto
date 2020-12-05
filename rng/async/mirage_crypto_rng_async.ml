@@ -36,14 +36,14 @@ let periodically_collect_getrandom_entropy time_source span =
       Entropy.feed_pools None source f)
 
 let read_cpu_counter_at_the_start_of_every_cycle () =
-  Scheduler.Expert.run_every_cycle_start (fun () ->
-    Entropy.timer_accumulator None ())
+  Scheduler.Expert.run_every_cycle_start
+    (Entropy.timer_accumulator None)
 
 let getrandom_init i =
   let data = Mirage_crypto_rng_unix.getrandom 128 in
   Entropy.header i data
 
-let initialize ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) () =
+let initialize ?g ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) generator =
   let time_source =
     Option.value ~default:(Synchronous_time_source.wall_clock ()) time_source
   in
@@ -70,7 +70,7 @@ let initialize ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) () =
       List.mapi ~f:(fun i f -> f i) init |> Cstruct.concat
     in
     let rng = 
-      create ~seed ~time:(ns_since_epoch time_source) (module Fortuna) 
+      create ?g ~seed ~time:(ns_since_epoch time_source) generator
     in
     set_default_generator rng;
     periodically_collect_cpu_entropy time_source sleep;
