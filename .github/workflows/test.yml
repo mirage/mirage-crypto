@@ -31,10 +31,31 @@ jobs:
           opam pin add -n mirage-crypto-rng-async.dev .
           opam pin add -n mirage-crypto-pk.dev .
           opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk
-          opam install -t --best-effort --deps-only .
+          for x in mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-rng-async mirage-crypto-pk; do
+            opam install --dry-run $x > /dev/null
+            if [ $? -eq 0 ]; then
+              opam install -t --deps-only $x
+            fi
+          done
 
       - name: Build
-        run: opam exec -- dune build
+        run: |
+          pkg="mirage-crypto"
+          for x in mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-rng-async mirage-crypto-pk; do
+            opam install --dry-run $x > /dev/null
+            if [ $? -eq 0 ]; then
+              pkg=$(echo "$pkg,$x")
+            fi
+          done
+          opam exec -- dune build -p $pkg
 
       - name: Test
-        run: opam exec -- dune runtest
+        run: |
+          pkg="mirage-crypto"
+          for x in mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-rng-async mirage-crypto-pk; do
+            opam install --dry-run $x > /dev/null
+            if [ $? -eq 0 ]; then
+              pkg=$(echo "$pkg,$x")
+            fi
+          done
+          opam exec -- dune runtest -p $pkg
