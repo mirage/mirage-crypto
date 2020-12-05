@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         ocaml-version: ["4.11.1", "4.10.1", "4.09.0", "4.08.1"]
-        operating-system: [macos-latest, ubuntu-latest]
+        operating-system: [windows-latest]
 
     runs-on: ${{ matrix.operating-system }}
 
@@ -28,13 +28,12 @@ jobs:
           opam pin add -n mirage-crypto.dev .
           opam pin add -n mirage-crypto-rng.dev .
           opam pin add -n mirage-crypto-rng-mirage.dev .
-          opam pin add -n mirage-crypto-rng-async.dev .
           opam pin add -n mirage-crypto-pk.dev .
           opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk
-          opam install -t --deps-only .
+          opam install -t --deps-only mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk
 
       - name: Build
-        run: opam exec -- dune build
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk
 
       - name: Test
-        run: opam exec -- dune runtest
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk
