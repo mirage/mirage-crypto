@@ -49,7 +49,7 @@ let initialize ?g ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) generator =
   in
   if !running then
     Log.debug
-      (fun m -> m "Mirage_crypto_rng_lwt.initialize has already been called, \
+      (fun m -> m "Mirage_crypto_rng_async.initialize has already been called, \
                    ignoring this call.")
   else begin
     (try
