@@ -56,7 +56,7 @@ let initialize ?g ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) generator =
        let _ = default_generator () in
        Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
                              been set (but not via \
-                             Mirage_crypto_rng_lwt.initialize). Please check \
+                             Mirage_crypto_rng_async.initialize). Please check \
                              that this is intentional");
      with
        No_default_generator -> ());
