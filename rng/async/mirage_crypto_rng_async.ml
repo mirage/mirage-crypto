@@ -17,7 +17,7 @@ let periodically_collect_cpu_entropy time_source span =
   Synchronous_time_source.run_at_intervals
     time_source
     span
-    (fun () -> Entropy.cpu_rng None)
+    (Entropy.cpu_rng None)
 
 let periodically_collect_getrandom_entropy time_source span =
   let source = Entropy.register_source "getrandom" in

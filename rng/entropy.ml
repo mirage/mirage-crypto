@@ -116,7 +116,8 @@ let bootstrap id =
   try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
 
 let interrupt_hook () =
-  let buf = Cstruct.create 4 in fun () ->
+  let buf = Cstruct.create 4 in
+  fun () ->
     let a = Cpu_native.cycles () in
     Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
     buf
@@ -132,22 +133,21 @@ let feed_pools g source f =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
   let `Acc handle = Rng.accumulate g source in
   for _i = 0 to pred (Rng.pools g) do
-    let cs = f () in
-    handle cs
+    handle (f ())
   done
 
 let cpu_rng g =
   match random `Rdrand with
-  | None -> ()
+  | None -> fun () -> ()
   | Some insn ->
     let randomf = cpu_rng insn
     and source =
       let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
       register_source s
     in
+    let cs = Cstruct.create 8 in
     let f () =
-      let cs = Cstruct.create 8 in
       Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
       cs
     in
-    feed_pools g source f
+    fun () -> feed_pools g source f
