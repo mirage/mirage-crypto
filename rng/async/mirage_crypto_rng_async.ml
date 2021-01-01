@@ -14,10 +14,13 @@ let ns_since_epoch time_source () =
   |> Int64.of_int
 
 let periodically_collect_cpu_entropy time_source span =
-  Synchronous_time_source.run_at_intervals
-    time_source
-    span
-    (Entropy.cpu_rng None)
+  match Entropy.cpu_rng with
+  | Error `Not_supported -> ()
+  | Ok cpu_rng ->
+    Synchronous_time_source.run_at_intervals
+      time_source
+      span
+      (cpu_rng None)
 
 let periodically_collect_getrandom_entropy time_source span =
   let source = Entropy.register_source "getrandom" in

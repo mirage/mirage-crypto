@@ -84,7 +84,7 @@ module Entropy : sig
       See {{:http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf}}
       for further details. *)
 
-  val cpu_rng_bootstrap : int -> Cstruct.t
+  val cpu_rng_bootstrap : (int -> Cstruct.t, [`Not_supported]) Result.t
   (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
       RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
       The [id] is used as prefix.
@@ -112,7 +112,7 @@ module Entropy : sig
   (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
       [f] for each pool. *)
 
-  val cpu_rng : g option -> unit -> unit
+  val cpu_rng : (g option -> unit -> unit, [`Not_supported]) Result.t
   (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
       of [g]. It uses {!feed_pools} internally. If neither rdrand nor rdseed
       are available, [fun () -> ()] is returned. *)

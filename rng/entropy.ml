@@ -101,19 +101,25 @@ let whirlwind_bootstrap id =
   write_header id cs;
   cs
 
-let cpu_rng_bootstrap id =
+let cpu_rng_bootstrap =
   match random `Rdseed with
-  | None -> failwith "expected a CPU RNG"
+  | None -> Error `Not_supported
   | Some insn ->
-    let r = cpu_rng insn () in
-    if r = 0 then failwith "bad CPU RNG value";
-    let cs = Cstruct.create 10 in
-    Cstruct.LE.set_uint64 cs 2 (Int64.of_int r);
-    write_header id cs;
-    cs
+    let cpu_rng_bootstrap id =
+      let r = cpu_rng insn () in
+      if r = 0 then failwith "bad CPU RNG value";
+      let cs = Cstruct.create 10 in
+      Cstruct.LE.set_uint64 cs 2 (Int64.of_int r);
+      write_header id cs;
+      cs
+    in
+    Ok cpu_rng_bootstrap
 
 let bootstrap id =
-  try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
+  match cpu_rng_bootstrap with
+  | Error `Not_supported -> whirlwind_bootstrap id
+  | Ok cpu_rng_bootstrap ->
+    try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
 
 let interrupt_hook () =
   let buf = Cstruct.create 4 in
@@ -136,18 +142,21 @@ let feed_pools g source f =
     handle (f ())
   done
 
-let cpu_rng g =
+let cpu_rng =
   match random `Rdrand with
-  | None -> fun () -> ()
+  | None -> Error `Not_supported
   | Some insn ->
-    let randomf = cpu_rng insn
-    and source =
-      let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
-      register_source s
+    let cpu_rng g =
+      let randomf = cpu_rng insn
+      and source =
+        let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
+        register_source s
+      in
+      let cs = Cstruct.create 8 in
+      let f () =
+        Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
+        cs
+      in
+      fun () -> feed_pools g source f
     in
-    let cs = Cstruct.create 8 in
-    let f () =
-      Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
-      cs
-    in
-    fun () -> feed_pools g source f
+    Ok cpu_rng
