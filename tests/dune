@@ -35,7 +35,7 @@
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
  (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix
-   mirage-clock-unix))
+   mirage-clock-unix duration))
 
 (test
  (name test_entropy_collection_async)

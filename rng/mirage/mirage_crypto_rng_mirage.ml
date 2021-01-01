@@ -34,9 +34,10 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
   let rdrand_task g delta =
     let open Lwt.Infix in
+    let rdrand = Entropy.cpu_rng g in
     Lwt.async (fun () ->
         let rec one () =
-          Entropy.cpu_rng g;
+          rdrand ();
           T.sleep_ns delta >>=
           one
         in

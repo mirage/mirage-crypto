@@ -26,8 +26,7 @@ let getrandom_task delta source =
   periodic task delta
 
 let rdrand_task delta =
-  let task () = Entropy.cpu_rng None in
-  periodic task delta
+  periodic (Entropy.cpu_rng None) delta
 
 let running = ref false
 
