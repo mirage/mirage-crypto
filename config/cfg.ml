@@ -1,6 +1,6 @@
 let std_flags = ["--std=c99"; "-Wall"; "-Wextra"; "-Wpedantic"; "-O3"]
 
-let _ =
+let () =
   let c = Configurator.V1.create "mirage-crypto" in
   let arch =
     let defines =
@@ -24,5 +24,7 @@ let _ =
     | `x86_64 | `x86 -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
     | _ -> []
   in
-  let flags = std_flags @ ent_flags @ accelerate_flags in
+  let flags = std_flags @ ent_flags in
+  let opt_flags = flags @ accelerate_flags in
+  Configurator.V1.Flags.write_sexp "cflags_optimized.sexp" opt_flags;
   Configurator.V1.Flags.write_sexp "cflags.sexp" flags

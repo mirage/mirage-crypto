@@ -2,10 +2,6 @@
 
 #include "mirage_crypto.h"
 
-extern void mc_chacha_core_generic(int count, uint8_t *src, uint8_t *dst);
-
-#ifdef __mc_ACCELERATE__
-
 static inline void mc_chacha_quarterround(uint32_t *x, int a, int b, int c, int d) {
   x[a] += x[b]; x[d] = rol32(x[d] ^ x[a], 16);
   x[c] += x[d]; x[b] = rol32(x[b] ^ x[c], 12);
@@ -27,7 +23,7 @@ static inline void mc_set_u32_le(uint8_t *input, int offset, uint32_t value) {
   input[offset + 3] = (uint8_t) (value >> 24);
 }
 
-static void mc_chacha_core(int count, uint8_t *src, uint8_t *dst) {
+void mc_chacha_core_generic(int count, uint8_t *src, uint8_t *dst) {
   uint32_t x[16];
   for (int i = 0; i < 16; i++) {
     x[i] = mc_get_u32_le(src, i * 4);
@@ -50,22 +46,3 @@ static void mc_chacha_core(int count, uint8_t *src, uint8_t *dst) {
   }
 }
 
-CAMLprim value
-mc_chacha_round(value count, value src, value off1, value dst, value off2)
-{
-  _mc_switch_accel(ssse3,
-    mc_chacha_core_generic(Int_val(count), _ba_uint8_off(src, off1), _ba_uint8_off(dst, off2)),
-    mc_chacha_core(Int_val(count), _ba_uint8_off(src, off1), _ba_uint8_off(dst, off2)));
-  return Val_unit;
-}
-
-#else //#ifdef __mc_ACCELERATE__
-
-CAMLprim value
-mc_chacha_round(value count, value src, value off1, value dst, value off2)
-{
-  mc_chacha_core_generic(Int_val(count), _ba_uint8_off(src, off1), _ba_uint8_off(dst, off2));
-  return Val_unit;
-}
-
-#endif

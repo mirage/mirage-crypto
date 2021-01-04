@@ -11,6 +11,12 @@
     chacha poly1305-donna entropy_cpu_stubs)
   (flags
    (:standard)
+   (:include cflags_optimized.sexp)))
+ (foreign_stubs
+  (language c)
+  (names chacha_generic)
+  (flags
+   (:standard)
    (:include cflags.sexp))))
 
 (env
@@ -20,6 +26,6 @@
 (include_subdirs unqualified)
 
 (rule
- (targets cflags.sexp)
+ (targets cflags.sexp cflags_optimized.sexp)
  (action
   (run ../config/cfg.exe)))
