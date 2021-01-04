@@ -1,3 +1,16 @@
+## v0.8.8 (2021-01-04)
+
+- new package mirage-crypto-rng-async, entropy feeding using async (#90 @seliopou)
+- Entropy.cpu_rng and Entropy.cpu_rng_bootstrap result in Error `Not_supported
+  on CPUs without RDRAND/RDSEED support (previously an exception was raised
+  in cpu_rng_bootstrap, and cpu_rng resulted in a no-op) (#92 @seliopou)
+- Entropy.cpu_rng delays entropy feeding (returns unit -> unit instead of unit).
+  This fixes a memory leak, reported by @talex5 #94, fixed in #95 by @hannesm
+- Avoid illegal instructions on X86 CPUs without SSSE3 instruction set. Both
+  SHA256 and ChaCha used PSHUFB which is not available on e.g. AMD Phenom II
+  (report #93 by @dinosaure @samoht @pirbo @RichAyotte @sebeec, fixed in #96 by
+  @hannesm)
+
 ## v0.8.7 (2020-11-03)
 
 - revise MirageOS cross-compilation (#89, @hannesm)
