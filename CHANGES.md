@@ -6,6 +6,7 @@
   in cpu_rng_bootstrap, and cpu_rng resulted in a no-op) (#92 @seliopou)
 - Entropy.cpu_rng delays entropy feeding (returns unit -> unit instead of unit).
   This fixes a memory leak, reported by @talex5 #94, fixed in #95 by @hannesm
+  The leak was introduced in v0.8.0.
 - Avoid illegal instructions on X86 CPUs without SSSE3 instruction set. Both
   SHA256 and ChaCha used PSHUFB which is not available on e.g. AMD Phenom II
   (report #93 by @dinosaure @samoht @pirbo @RichAyotte @sebeec, fixed in #96 by
