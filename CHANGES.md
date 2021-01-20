@@ -1,3 +1,9 @@
+## v0.8.9 (2021-01-20)
+
+- Rsa: Adapt computation of d = e ^ -1 mod (lam n), with
+  lam n = lcm (p - 1) (q - 1) (previously lam n = (p - 1) * (q - 1))
+  Fixes #62 reported by @mattjbray, investigated by @psafont, code by @hannesm
+
 ## v0.8.8 (2021-01-04)
 
 - new package mirage-crypto-rng-async, entropy feeding using async (#90 @seliopou)
