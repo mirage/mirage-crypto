@@ -1,8 +1,14 @@
+## v0.8.10 (2021-01-21)
+
+- Rsa.priv: require 1 = d * e mod (lam n). This allows interoperability with
+  OpenSSL generated keys. Reported and fixed by @psafont in #100.
+
 ## v0.8.9 (2021-01-20)
 
 - Rsa: Adapt computation of d = e ^ -1 mod (lam n), with
   lam n = lcm (p - 1) (q - 1) (previously lam n = (p - 1) * (q - 1))
-  Fixes #62 reported by @mattjbray, investigated by @psafont, code by @hannesm
+  Fixes #62 reported by @mattjbray, investigated by @psafont,
+  fixed in #99 by @hannesm
 
 ## v0.8.8 (2021-01-04)
 
