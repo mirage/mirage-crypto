@@ -31,7 +31,7 @@
 ## v0.8.6 (2020-10-21)
 
 * Detect CPU architecture from C compiler, allowing cross-compiling to Android
-  and iOS (#84 by @EduardoRFC)
+  and iOS (#84 by @EduardoRFS)
 * Upgrade to dune2, use a Makefile for building freestanding libraries, drop
   mirage-xen-posix support (solo5-based PVH exists now) #86 by @hannesm
 
@@ -692,8 +692,6 @@ compared to nocrypto 0.5.4:
      1024:  258.055383 MB/s  (523524 iters in 1.981 s)
      8192:  302.046584 MB/s  (76448 iters in 1.977 s)
 
-
-
 ## mirage-entropy v0.5.1 (2020-02-24)
 
 * use dune for building this package (#47 @hannesm)
@@ -709,6 +707,7 @@ compared to nocrypto 0.5.4:
 * Aarch64 support (#39 by @reynir)
 
 ## nocrypto v0.5.4 2017-01-31:
+
 * Relicense from BSD2 to ISC.
 * Support MirageOS 3.0.
 * Replace OASIS with topkg.
@@ -724,21 +723,25 @@ compared to nocrypto 0.5.4:
 * Move `noalloc` to 4.03-style annotations
 
 ## nocrypto v0.5.3 2016-03-21:
+
 * Move from Camlp4 to PPX.
 * Tweaked the supporting Cstruct module's API.
 * Dh.shared returns option instead of throwing if the public message is degenerate.
 * Base64.decode returns option instead of throwing
 
 ## nocrypto 0.5.2 2015-12-03:
+
 * Avoid including intrinsics-related headers if SSE/AES-NI is disabled.
 * Replace opam variable `nocrypto-inhibit-modernity` with `$NOCRYPTO_NO_ACCEL`.
 * Remove cstruct equality.
 
 ## nocrypto 0.5.1 2015-07-07:
+
 * Disable AES-NI if not supported in the `./configure` step.
 * Support the global opam variable `nocrypto-inhibit-modernity`.
 
 ## nocrypto 0.5.0 2015-07-02:
+
 * Support for AES-NI and SSE2.
 * Support RSA-OAEP and RSA-PSS.
 * Drop `ctypes` for internal C calls.
@@ -757,6 +760,7 @@ compared to nocrypto 0.5.4:
 * The API is no longer `V1.ENTROPY` compatible.
 
 ## nocrypto 0.4.0 2015-05-02:
+
 * Module for injecting entropy into RNG on Unix/Lwt (optional).
 * Module for injecting entropy into RNG on Mirage/Xen (optional; depends on mirage-entropy-xen).
 * API changes in `Rng`.
@@ -769,20 +773,24 @@ compared to nocrypto 0.5.4:
 * Xen: read entropy from a Xen PV device.  This is implemented by the `xentropyd` daemon.
 
 ## nocrypto 0.3.1 2015-02-01:
+
 * Support for Mirage/Xen (contributed by Thomas Leonard <talex5@gmail.com>).
 
 ## nocrypto 0.3.0 2014-12-21:
+
 * Removed ad-hoc key marshalling functions as key material typically comes non-trivially encoded anyways.
 * Changed how module interfaces for the packed module are handled: `module type of` constructs are gone.
 * More consistent errors in `Rsa`.
 * Small API breakage here and there.
 
 ## nocrypto 0.2.2 2014-11-04:
+
 * Replaced hashing sources with the ones from hs-cryptohash
   (https://github.com/vincenthz/hs-cryptohash) by Vincent Hanquez.
 * Renamed various symbols likely to conflict with other crypto libraries.
 
 ## nocrypto 0.2.0 2014-10-30:
+
 * DSA (initial version contributed by Hannes Mehnert <hannes@mehnert.org>).
 * CCM mode for AES (contributed by Hannes Mehnert <hannes@mehnert.org>).
 * Switched from hand written stubs to ctypes for intefacing with the C code.
