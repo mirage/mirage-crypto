@@ -52,12 +52,19 @@
 (test
  (name test_ec)
  (modules test_ec)
- (libraries alcotest mirage-crypto-ec)
+ (libraries alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng.unix
+   hex)
  (package mirage-crypto-ec))
 
 (test
- (name test_ec_wycheproof_secp256r1)
- (modules test_ec_wycheproof_secp256r1)
- (deps ecdh_secp256r1_test.json)
- (libraries alcotest mirage-crypto-ec wycheproof asn1-combinators)
+ (name test_ec_wycheproof)
+ (modules test_ec_wycheproof)
+ (deps ecdh_secp224r1_test.json ecdsa_secp224r1_sha224_test.json
+   ecdsa_secp224r1_sha256_test.json ecdsa_secp224r1_sha512_test.json
+   ecdh_secp256r1_test.json ecdsa_secp256r1_sha256_test.json
+   ecdsa_secp256r1_sha512_test.json ecdh_secp384r1_test.json
+   ecdsa_secp384r1_sha384_test.json ecdsa_secp384r1_sha512_test.json
+   ecdh_secp521r1_test.json ecdsa_secp521r1_sha512_test.json)
+ (libraries alcotest mirage-crypto-ec wycheproof asn1-combinators
+   mirage-crypto-pk mirage-crypto)
  (package mirage-crypto-ec))

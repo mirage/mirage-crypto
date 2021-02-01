@@ -27,18 +27,18 @@ bug-reports: "https://github.com/mirage/mirage-crypto/issues"
 depends: [
   "dune" {>= "2.6"}
   "alcotest" {with-test}
-  "asn1-combinators" {with-test}
+  "asn1-combinators" {with-test} # & >= "0.2.5"}
   "ocaml" {>= "4.08.0"}
   "cstruct" {>= "3.5.0"}
   "dune-configurator"
-  "eqaf" {>= "0.5"}
-  "hex"
+  "eqaf" {>= "0.7"}
+  "hex" {with-test}
   "conf-pkg-config" {build}
   "ppx_deriving_yojson" {with-test}
   "ppx_deriving" {with-test}
-  "rresult" {with-test}
-  "stdlib-shims" {with-test}
   "yojson" {with-test & >= "1.6.0"}
+  "mirage-crypto" #{=version}
+  "mirage-crypto-rng" #{=version}
 ]
 depopts: ["ocaml-freestanding"]
 conflicts: [

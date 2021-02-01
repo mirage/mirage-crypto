@@ -29,11 +29,12 @@ jobs:
           opam pin add -n mirage-crypto-rng.dev .
           opam pin add -n mirage-crypto-rng-mirage.dev .
           opam pin add -n mirage-crypto-pk.dev .
-          opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk
-          opam install -t --deps-only mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk
+          opam pin add -n mirage-crypto-ec.dev .
+          opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
+          opam install -t --deps-only mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
 
       - name: Test
-        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec

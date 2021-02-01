@@ -1,5 +1,3 @@
-[@@@ocaml.warning "-39"]
-
 type json = Yojson.Safe.t [@@deriving of_yojson]
 
 let pp_json = Yojson.Safe.pretty_print
@@ -24,7 +22,7 @@ let test_result_of_yojson = function
   | `String "invalid" -> Ok Invalid
   | _ -> Error "test_result"
 
-type test = {
+type ecdh_test = {
   tcId : int;
   comment : string;
   curve : json option; [@yojson.default None]
@@ -41,10 +39,40 @@ let has_ignored_flag test ~ignored_flags =
     (fun ignored_flag -> List.mem ignored_flag test.flags)
     ignored_flags
 
-type test_group = {
-  curve : json;
-  tests : test list;
+type ecdh_test_group = {
+  curve : string;
+  tests : ecdh_test list;
   encoding : json option; [@yojson.default None]
+  type_ : json option; [@yojson.default None] [@yojson.key "type"]
+}
+[@@deriving of_yojson, show]
+
+type ecdsa_key = {
+  curve : string;
+  keySize : int;
+  type_ : json; [@yojson.key "type"]
+  uncompressed : hex;
+  wx : hex;
+  wy : hex;
+}
+[@@deriving of_yojson, show]
+
+type ecdsa_test = {
+  tcId : int;
+  comment : string;
+  msg : hex;
+  sig_ : hex; [@yojson.key "sig"]
+  result : test_result;
+  flags : string list;
+}
+[@@deriving of_yojson, show]
+
+type ecdsa_test_group = {
+  key : ecdsa_key;
+  keyDer : string;
+  keyPem : string;
+  sha : string;
+  tests : ecdsa_test list;
   type_ : json option; [@yojson.default None] [@yojson.key "type"]
 }
 [@@deriving of_yojson, show]
@@ -55,7 +83,8 @@ type test_file = {
   header : json;
   notes : json;
   numberOfTests : json;
-  testGroups : test_group list;
+  schema : json;
+  testGroups : json list;
 }
 [@@deriving of_yojson, show]
 
@@ -63,3 +92,7 @@ let get_json = function Ok x -> x | Error s -> failwith s
 
 let load_file_exn path =
   Yojson.Safe.from_file path |> [%of_yojson: test_file] |> get_json
+
+let ecdh_test_group_exn json = [%of_yojson: ecdh_test_group] json |> get_json
+
+let ecdsa_test_group_exn json = [%of_yojson: ecdsa_test_group] json |> get_json

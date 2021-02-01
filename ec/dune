@@ -1,13 +1,18 @@
 (library
  (name mirage_crypto_ec)
  (public_name mirage-crypto-ec)
- (libraries cstruct eqaf.cstruct hex)
+ (libraries cstruct eqaf.cstruct mirage-crypto mirage-crypto-rng)
  (foreign_stubs
   (language c)
-  (names p256_stubs)
+  (names p224_stubs np224_stubs p256_stubs np256_stubs p384_stubs np384_stubs
+    p521_stubs np521_stubs)
   (flags
    (:standard -I../src/native)
    (:include cflags_optimized.sexp))))
+
+(env
+ (dev
+  (c_flags (-Werror))))
 
 (include_subdirs unqualified)
 
@@ -15,25 +20,3 @@
  (targets cflags_optimized.sexp)
  (action
   (run ../config/cfg.exe)))
-
-(rule
- (targets upstream_p256_32)
- (action
-  (bash
-    "wget https://raw.githubusercontent.com/mit-plv/fiat-crypto/ecdfd03c636ab63e167fbe4fc4d7ab0ed5d9db74/p256_32.c -O %{targets}")))
-
-(rule
- (targets upstream_p256_64)
- (action
-  (bash
-    "wget https://raw.githubusercontent.com/mit-plv/fiat-crypto/ecdfd03c636ab63e167fbe4fc4d7ab0ed5d9db74/p256_64.c -O %{targets}")))
-
-(rule
- (alias check_vendors)
- (action
-  (diff native/p256_32.h upstream_p256_32)))
-
-(rule
- (alias check_vendors)
- (action
-  (diff native/p256_64.h upstream_p256_64)))
