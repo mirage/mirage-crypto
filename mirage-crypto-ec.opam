@@ -1,0 +1,54 @@
+opam-version: "2.0"
+synopsis: "Primitives for Elliptic Curve Cryptography taken from Fiat"
+description: """
+This is an implementation of the ECDH over P-256 key exchange algorithm, using
+code from Fiat (<https://github.com/mit-plv/fiat-crypto>).
+
+Cryptographic primitives should not be used in end applications, they are better
+used as part of a cryptographic library.
+"""
+maintainer: "Hannes Mehnert <hannes@mehnert.org>"
+authors: [
+  "Hannes Mehnert <hannes@mehnert.org>"
+  "Nathan Rebours <nathan.p.rebours@gmail.com>"
+  "Clément Pascutto <clement@tarides.com>"
+  "Etienne Millon <me@emillon.org>"
+# and from the fiat-crypto AUTHORS file
+  "Andres Erbsen <andreser@mit.edu>"
+  "Google Inc."
+  "Jade Philipoom <jadep@mit.edu> <jade.philipoom@gmail.com>"
+  "Massachusetts Institute of Technology"
+  "Zoe Paraskevopoulou <zoe.paraskevopoulou@gmail.com>"
+]
+license: "MIT"
+homepage: "https://github.com/mirage/mirage-crypto"
+doc: "https://mirage.github.io/mirage-crypto/doc"
+bug-reports: "https://github.com/mirage/mirage-crypto/issues"
+depends: [
+  "dune" {>= "2.6"}
+  "alcotest" {with-test}
+  "asn1-combinators" {with-test}
+  "ocaml" {>= "4.08.0"}
+  "cstruct" {>= "3.5.0"}
+  "dune-configurator"
+  "eqaf" {>= "0.5"}
+  "hex"
+  "conf-pkg-config" {build}
+  "ppx_deriving_yojson" {with-test}
+  "ppx_deriving" {with-test}
+  "rresult" {with-test}
+  "stdlib-shims" {with-test}
+  "yojson" {with-test & >= "1.6.0"}
+]
+depopts: ["ocaml-freestanding"]
+conflicts: [
+  "mirage-xen" {< "6.0.0"}
+  "ocaml-freestanding" {< "0.4.1"}
+]
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+dev-repo: "git+https://github.com/mirage/mirage-crypto.git"
+tags: ["org:mirage"]

@@ -48,3 +48,16 @@
  (modules test_entropy)
  (package mirage-crypto-rng)
  (libraries mirage-crypto-rng))
+
+(test
+ (name test_ec)
+ (modules test_ec)
+ (libraries alcotest mirage-crypto-ec)
+ (package mirage-crypto-ec))
+
+(test
+ (name test_ec_wycheproof_secp256r1)
+ (modules test_ec_wycheproof_secp256r1)
+ (deps ecdh_secp256r1_test.json)
+ (libraries alcotest mirage-crypto-ec wycheproof asn1-combinators)
+ (package mirage-crypto-ec))
