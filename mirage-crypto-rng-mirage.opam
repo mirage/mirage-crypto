@@ -5,7 +5,7 @@ bug-reports:  "https://github.com/mirage/mirage-crypto/issues"
 doc:          "https://mirage.github.io/mirage-crypto/doc"
 authors:      ["David Kaloper <dk505@cam.ac.uk>" "Hannes Mehnert <hannes@mehnert.org>" ]
 maintainer:   "Hannes Mehnert <hannes@mehnert.org>"
-license:      "ISC"
+license:      "BSD-2-Clause"
 synopsis:     "Entropy collection for a cryptographically secure PRNG"
 
 build: [ ["dune" "subst"] {pinned}
