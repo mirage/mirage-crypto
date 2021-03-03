@@ -6,6 +6,32 @@
 
 struct _mc_cpu_features mc_detected_cpu_features = { 0 };
 
+#ifndef bit_PCLMUL
+#ifndef bit_PCLMULQDQ
+#define bit_PCLMULQDQ 0x00000002
+#endif
+#define bit_PCLMUL bit_PCLMULQDQ
+#endif
+
+#ifndef bit_SSSE3
+#define bit_SSSE3 0x00000200
+#endif
+
+#ifndef bit_AES
+#ifndef bit_AESNI
+#define bit_AESNI 0x02000000
+#endif
+#define bit_AES bit_AESNI
+#endif
+
+#ifndef bit_RDRND
+#define bit_RDRND 0x40000000
+#endif
+
+#ifndef bit_RDSEED
+#define bit_RDSEED 0x00040000
+#endif
+
 CAMLprim value
 mc_detect_cpu_features (__unit ()) {
   unsigned int sig = 0, eax = 0, ebx = 0, ecx = 0, edx = 0;
