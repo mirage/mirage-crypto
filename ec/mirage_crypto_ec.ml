@@ -40,8 +40,7 @@ module type Dsa = sig
 
   val generate : rng:(int -> Cstruct.t) -> priv * pub
 
-  val sign : ?mask:[ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ] ->
-    key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
 
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
 
@@ -467,33 +466,11 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let q = S.scalar_mult d P.params_g in
     (d, q)
 
-  let blind mask =
-    let inv a =
-      let b = create () in
-      F.inv b a;
-      F.to_montgomery b b;
-      b
-    in
-    let rec rng g =
-      let r = Mirage_crypto_rng.generate ?g Param.byte_length in
-      if not_zero r && smaller_n r then begin
-        let ba = from_be_cstruct r in
-        F.to_montgomery ba ba;
-        Some (ba, inv ba)
-      end else
-        rng g
-    in
-    match mask with
-    | `No -> None
-    | `Yes -> rng None
-    | `Yes_with g -> rng (Some g)
-
-  let sign ?(mask = `Yes) ~key ?k msg =
+  let sign ~key ?k msg =
     (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
        we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
        s = k^-1 * blind^-1 (blind * m + blind * r * priv_key) mod n
     *)
-    let b = blind mask in
     let msg = padded msg in
     let e = from_be_cstruct msg in
     let g = K_gen_default.g ~key msg in
@@ -524,16 +501,13 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         let rd = create () in
         let dmon = from_be_cstruct (S.to_cstruct key) in
         F.to_montgomery dmon dmon;
-        (match b with None -> () | Some (b, _) -> F.mul dmon b dmon);
         F.mul rd r_mon dmon;
         let cmon = create () in
         let zmon = create () in
         F.to_montgomery zmon e;
-        (match b with None -> () | Some (b, _) -> F.mul zmon b zmon);
         F.add cmon zmon rd;
         let smon = create () in
         F.mul smon kmon cmon;
-        (match b with None -> () | Some (_, b') -> F.mul smon b' smon);
         let s = create () in
         F.from_montgomery s smon;
         let s = to_be_cstruct s in
