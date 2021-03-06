@@ -6,7 +6,7 @@ services:
 os: linux
 env:
   global:
-    - PINS="mirage-crypto:. mirage-crypto-rng:. mirage-crypto-rng-mirage:. mirage-crypto-pk:. mirage-crypto-rng-async:."
+    - PINS="mirage-crypto:. mirage-crypto-rng:. mirage-crypto-rng-mirage:. mirage-crypto-pk:. mirage-crypto-rng-async:. mirage-crypto-ec:."
     - PACKAGE="mirage-crypto-pk"
     - TESTS=true
     - DISTRO=alpine
