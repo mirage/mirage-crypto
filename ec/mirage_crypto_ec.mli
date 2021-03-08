@@ -100,14 +100,11 @@ module type Dsa = sig
 
   (** {2 Cryptographic operations} *)
 
-  val sign : ?mask:[ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ] ->
-    key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
-  (** [sign ~mask ~key ~k digest] signs the message [digest] using the private
-      [key]. Only the leftmost bits within the curve order are considered. If
-      [mask] is provided, the computation is blinded to protect the private
-      key operation. If [k] is not provided, it is computed using the
-      deterministic construction from RFC 6979. The result is a pair of
-      [r] and [s]. *)
+  val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  (** [sign ~key ~k digest] signs the message [digest] using the private
+      [key]. Only the leftmost bits within the curve order are considered.
+      If [k] is not provided, it is computed using the deterministic
+      construction from RFC 6979. The result is a pair of [r] and [s]. *)
 
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
   (** [verify ~key (r, s) digest] verifies the signature [r, s] on the message
