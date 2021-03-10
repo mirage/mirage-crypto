@@ -169,6 +169,8 @@ module type Point = sig
 
   val to_cstruct : point -> Cstruct.t
 
+  val to_affine_raw : point -> (field_element * field_element) option
+
   val x_of_finite_point : point -> Cstruct.t
 
   val params_g : point
@@ -239,11 +241,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
 
-  let to_affine p =
-    if is_infinity p then None
+  let to_affine_raw p =
+    if is_infinity p then
+      None
     else
-      let out_x = Cstruct.create P.byte_length in
-      let out_y = Cstruct.create P.byte_length in
       let z1 = Fe.create () in
       let z2 = Fe.create () in
       Fe.copy z1 p.f_z;
@@ -254,11 +255,19 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       let x = Fe.create () in
       Fe.copy x p.f_x;
       Fe.mul x x z1;
-      Fe.to_bytes out_x x;
       let y = Fe.create () in
       Fe.copy y p.f_y;
       Fe.mul z1 z1 z2;
       Fe.mul y y z1;
+      Some (x, y)
+
+  let to_affine p =
+    match to_affine_raw p with
+    | None -> None
+    | Some (x, y) ->
+      let out_x = Cstruct.create P.byte_length in
+      let out_y = Cstruct.create P.byte_length in
+      Fe.to_bytes out_x x;
       Fe.to_bytes out_y y;
       Some (out_x, out_y)
 
@@ -424,15 +433,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     F.to_bytes (Cstruct.to_bigarray cs) v;
     Cstruct.rev cs
 
-  let mod_n v =
-    let v' = from_be_cstruct v in
-    F.to_montgomery v' v';
-    let o = create () in
-    F.one o;
-    F.mul v' v' o;
-    F.from_montgomery v' v';
-    to_be_cstruct v'
-
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
 
@@ -476,6 +476,17 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let q = S.scalar_mult d P.params_g in
     (d, q)
 
+  let x_of_finite_point_mod_n p =
+    match P.to_affine_raw p with
+    | None -> assert false
+    | Some (x, _) ->
+      F.to_montgomery x x;
+      let o = create () in
+      F.one o;
+      F.mul x x o;
+      F.from_montgomery x x;
+      to_be_cstruct x
+
   let sign ~key ?k msg =
     let msg = padded msg in
     let e = from_be_cstruct msg in
@@ -495,8 +506,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
       if P.is_infinity point then
         again ()
       else
-        let x1 = P.x_of_finite_point point in
-        let r = mod_n x1 in
+        let r = x_of_finite_point_mod_n point in
         let r_mon = from_be_cstruct r in
         F.to_montgomery r_mon r_mon;
         let kinv = create () in
@@ -562,7 +572,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
               (S.scalar_mult u2 key)
           in
           not (P.is_infinity point) &&
-          Cstruct.equal (mod_n (P.x_of_finite_point point)) r
+          Cstruct.equal (x_of_finite_point_mod_n point) r
         | Error _, _ | _, Error _ -> false
       with
       | Message_too_long -> false
