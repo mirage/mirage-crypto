@@ -298,6 +298,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
 end
 
 module type Scalar = sig
+  val not_zero : Cstruct.t -> bool
+
+  val is_in_range : Cstruct.t -> bool
+
   val of_cstruct : Cstruct.t -> (scalar, error) result
 
   val to_cstruct : scalar -> Cstruct.t
@@ -306,9 +310,12 @@ module type Scalar = sig
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
-  let is_in_range cs =
+  let not_zero =
     let zero = Cstruct.create Param.byte_length in
-    Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length cs zero > 0
+    fun cs -> Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length cs zero > 0
+
+  let is_in_range cs =
+    not_zero cs
     && Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length Param.n cs > 0
 
   let of_cstruct cs =
@@ -417,10 +424,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     F.to_bytes (Cstruct.to_bigarray cs) v;
     Cstruct.rev cs
 
-  let not_zero =
-    let zero = Cstruct.create Param.byte_length in
-    fun n -> not (Cstruct.equal zero n)
-
   let mod_n v =
     let v' = from_be_cstruct v in
     F.to_montgomery v' v';
@@ -429,9 +432,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     F.mul v' v' o;
     F.from_montgomery v' v';
     to_be_cstruct v'
-
-  let smaller_n v =
-    Cstruct.equal v (mod_n v)
 
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
@@ -449,7 +449,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let gen g =
       let rec go () =
         let r = Mirage_crypto_rng.generate ~g Param.byte_length in
-        if not_zero r && smaller_n r then r else go ()
+        if S.is_in_range r then r else go ()
       in
       go ()
 
@@ -517,7 +517,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         let s = create () in
         F.from_montgomery s smon;
         let s = to_be_cstruct s in
-        if not_zero s && not_zero r then
+        if S.not_zero s && S.not_zero r then
           r, s
         else
           again ()
@@ -527,7 +527,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let pub_of_priv priv = S.scalar_mult priv P.params_g
 
   let verify ~key (r, s) msg =
-    if not (smaller_n r && not_zero r && smaller_n s && not_zero s) then
+    if not (S.is_in_range r && S.is_in_range s) then
       false
     else
       try
