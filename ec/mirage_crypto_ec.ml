@@ -478,14 +478,14 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
 
   let x_of_finite_point_mod_n p =
     match P.to_affine_raw p with
-    | None -> assert false
+    | None -> None
     | Some (x, _) ->
       F.to_montgomery x x;
       let o = create () in
       F.one o;
       F.mul x x o;
       F.from_montgomery x x;
-      to_be_cstruct x
+      Some (to_be_cstruct x)
 
   let sign ~key ?k msg =
     let msg = padded msg in
@@ -503,10 +503,9 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         | Error _ -> invalid_arg "k not in range" (* if no k is provided, this cannot happen since K_gen_*.gen already preserves the Scalar invariants *)
       in
       let point = S.scalar_mult ksc P.params_g in
-      if P.is_infinity point then
-        again ()
-      else
-        let r = x_of_finite_point_mod_n point in
+      match x_of_finite_point_mod_n point with
+      | None -> again ()
+      | Some r ->
         let r_mon = from_be_cstruct r in
         F.to_montgomery r_mon r_mon;
         let kinv = create () in
@@ -571,8 +570,10 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
               (S.scalar_mult u1 P.params_g)
               (S.scalar_mult u2 key)
           in
-          not (P.is_infinity point) &&
-          Cstruct.equal (x_of_finite_point_mod_n point) r
+          begin match x_of_finite_point_mod_n point with
+            | None -> false (* point is infinity *)
+            | Some r' -> Cstruct.equal r r'
+          end
         | Error _, _ | _, Error _ -> false
       with
       | Message_too_long -> false
