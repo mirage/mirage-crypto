@@ -20,6 +20,9 @@ type error =
 val pp_error : Format.formatter -> error -> unit
 (** Pretty printer for errors *)
 
+exception Message_too_long
+(** Raised if the provided message is too long for the curve. *)
+
 (** Diffie-Hellman key exchange. *)
 module type Dh = sig
 
@@ -102,14 +105,17 @@ module type Dsa = sig
 
   val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
   (** [sign ~key ~k digest] signs the message [digest] using the private
-      [key]. Only the leftmost bits within the curve order are considered.
-      If [k] is not provided, it is computed using the deterministic
-      construction from RFC 6979. The result is a pair of [r] and [s]. *)
+      [key]. If [k] is not provided, it is computed using the deterministic
+      construction from RFC 6979. The result is a pair of [r] and [s].
+
+      @raise Invalid_argument if [k] is not suitable or not in range.
+      @raise Message_too_long if [msg] is too long for the curve. *)
 
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
   (** [verify ~key (r, s) digest] verifies the signature [r, s] on the message
       [digest] with the public [key]. The return value is [true] if verification
-      was successful, [false] otherwise. *)
+      was successful, [false] otherwise. If the message has more bits than the
+      group order, the result is false. *)
 
   (** [K_gen] can be instantiated over a hashing module to obtain an RFC6979
       compliant [k]-generator for that hash. *)

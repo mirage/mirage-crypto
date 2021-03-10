@@ -15,6 +15,8 @@ let error_to_string = function
 let pp_error fmt e =
   Format.fprintf fmt "Cannot parse point: %s" (error_to_string e)
 
+exception Message_too_long
+
 module type Dh = sig
   type secret
 
@@ -64,6 +66,7 @@ module type Parameters = sig
   val n : Cstruct.t
   val byte_length : int
   val fe_length : int
+  val first_byte_bits : int option
 end
 
 type field_element = Cstruct.buffer
@@ -392,8 +395,15 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let padded msg =
     let l = Cstruct.len msg in
     let bl = Param.byte_length in
-    if l >= bl then
-      Cstruct.sub msg 0 (min l bl)
+    let first_byte_ok () =
+      match Param.first_byte_bits with
+      | None -> true
+      | Some m -> (Cstruct.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
+    in
+    if l > bl || (l = bl && not (first_byte_ok ())) then
+      raise Message_too_long
+    else if l = bl then
+      msg
     else
       Cstruct.append (Cstruct.create (bl - l)) msg
 
@@ -467,10 +477,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     (d, q)
 
   let sign ~key ?k msg =
-    (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
-       we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
-       s = k^-1 * blind^-1 (blind * m + blind * r * priv_key) mod n
-    *)
     let msg = padded msg in
     let e = from_be_cstruct msg in
     let g = K_gen_default.g ~key msg in
@@ -524,40 +530,42 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     if not (smaller_n r && not_zero r && smaller_n s && not_zero s) then
       false
     else
-      (* take the Ln leftmost bits (with Ln bitsize of group order n = 256) *)
-      let msg = padded msg in
-      let z = from_be_cstruct msg in
-      let s_inv = create () in
-      let s_mon = from_be_cstruct s in
-      F.to_montgomery s_mon s_mon;
-      F.inv s_inv s_mon;
-      let u1 = create () in
-      let s_inv_mon = create () in
-      F.to_montgomery s_inv_mon s_inv;
-      let z_mon = create () in
-      F.to_montgomery z_mon z;
-      F.mul u1 z_mon s_inv_mon;
-      let u2 = create () in
-      let r_mon = from_be_cstruct r in
-      F.to_montgomery r_mon r_mon;
-      F.mul u2 r_mon s_inv_mon;
-      let u1_out = create () in
-      F.from_montgomery u1_out u1;
-      let u2_out = create () in
-      F.from_montgomery u2_out u2;
-      match
-        S.of_cstruct (to_be_cstruct u1_out),
-        S.of_cstruct (to_be_cstruct u2_out)
+      try
+        let msg = padded msg in
+        let z = from_be_cstruct msg in
+        let s_inv = create () in
+        let s_mon = from_be_cstruct s in
+        F.to_montgomery s_mon s_mon;
+        F.inv s_inv s_mon;
+        let u1 = create () in
+        let s_inv_mon = create () in
+        F.to_montgomery s_inv_mon s_inv;
+        let z_mon = create () in
+        F.to_montgomery z_mon z;
+        F.mul u1 z_mon s_inv_mon;
+        let u2 = create () in
+        let r_mon = from_be_cstruct r in
+        F.to_montgomery r_mon r_mon;
+        F.mul u2 r_mon s_inv_mon;
+        let u1_out = create () in
+        F.from_montgomery u1_out u1;
+        let u2_out = create () in
+        F.from_montgomery u2_out u2;
+        match
+          S.of_cstruct (to_be_cstruct u1_out),
+          S.of_cstruct (to_be_cstruct u2_out)
+        with
+        | Ok u1, Ok u2 ->
+          let point =
+            P.add
+              (S.scalar_mult u1 P.params_g)
+              (S.scalar_mult u2 key)
+          in
+          not (P.is_infinity point) &&
+          Cstruct.equal (mod_n (P.x_of_finite_point point)) r
+        | Error _, _ | _, Error _ -> false
       with
-      | Ok u1, Ok u2 ->
-        let point =
-          P.add
-            (S.scalar_mult u1 P.params_g)
-            (S.scalar_mult u2 key)
-        in
-        not (P.is_infinity point) &&
-        Cstruct.equal (mod_n (P.x_of_finite_point point)) r
-      | _ -> false
+      | Message_too_long -> false
 end
 
 module P224 : Dh_dsa = struct
@@ -570,6 +578,7 @@ module P224 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D"
     let byte_length = 28
     let fe_length = if Sys.word_size == 64 then 32 else 28 (* TODO: is this congruent with C code? *)
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -619,6 +628,7 @@ module P256 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
     let byte_length = 32
     let fe_length = 32
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -668,6 +678,7 @@ module P384 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973"
     let byte_length = 48
     let fe_length = 48
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -717,6 +728,7 @@ module P521 : Dh_dsa = struct
     let n = Cstruct.of_hex "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409"
     let byte_length = 66
     let fe_length = if Sys.word_size == 64 then 72 else 68  (* TODO: is this congruent with C code? *)
+    let first_byte_bits = Some 0x01
   end
 
   module Foreign = struct

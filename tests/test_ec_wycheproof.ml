@@ -158,8 +158,11 @@ let parse_sig size cs =
 
 let make_ecdsa_test curve key hash (tst : ecdsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
-  let msg = Mirage_crypto.Hash.digest hash (Cstruct.of_string tst.msg) in
   let size = len curve in
+  let msg =
+    let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string tst.msg) in
+    Cstruct.sub h 0 (min size (Cstruct.len h))
+  in
   let verified (r,s) =
     match curve with
     | "secp224r1" ->

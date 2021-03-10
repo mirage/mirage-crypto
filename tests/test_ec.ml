@@ -289,7 +289,9 @@ let ecdsa_rfc6979_p224 =
     | Error _ -> Alcotest.fail "bad public key"
   in
   let case hash ~message ~k ~r ~s () =
-    let msg = Mirage_crypto.Hash.digest hash (Cstruct.of_string message)
+    let msg =
+      let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
+      Cstruct.sub h 0 (min (Cstruct.len h) 28)
     and k = Cstruct.of_hex k
     in
     let k' =
@@ -383,7 +385,9 @@ let ecdsa_rfc6979_p256 =
     | Error _ -> Alcotest.fail "bad public key"
   in
   let case hash ~message ~k ~r ~s () =
-    let msg = Mirage_crypto.Hash.digest hash (Cstruct.of_string message)
+    let msg =
+      let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
+      Cstruct.sub h 0 (min (Cstruct.len h) 32)
     and k = Cstruct.of_hex k
     in
     let k' =
@@ -466,7 +470,9 @@ let ecdsa_rfc6979_p384 =
     | Error _ -> Alcotest.fail "bad public key"
   in
   let case hash ~message ~k ~r ~s () =
-    let msg = Mirage_crypto.Hash.digest hash (Cstruct.of_string message)
+    let msg =
+      let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
+      Cstruct.sub h 0 (min (Cstruct.len h) 48)
     and k = Cstruct.of_hex k
     in
     let k' =
