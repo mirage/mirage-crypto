@@ -38,7 +38,7 @@ type ecdsa_key = {
 }
 [@@deriving show]
 
-type ecdsa_test = {
+type dsa_test = {
   tcId : int;
   comment : string;
   msg : hex;
@@ -53,10 +53,29 @@ type ecdsa_test_group = {
   keyDer : string;
   keyPem : string;
   sha : string;
-  tests : ecdsa_test list;
+  tests : dsa_test list;
   type_ : json option;
 }
 [@@deriving show]
+
+type eddsa_key = {
+  curve : string;
+  keySize : int;
+  pk : hex;
+  sk : hex;
+  type_ : json; [@yojson.key "type"]
+}
+[@@deriving of_yojson, show]
+
+type eddsa_test_group = {
+  jwk : json;
+  key : eddsa_key;
+  keyDer : string;
+  keyPem : string;
+  type_ : json; [@yojson.key "type"]
+  tests : dsa_test list;
+}
+[@@deriving of_yojson, show]
 
 type test_file = {
   algorithm : json;
@@ -74,3 +93,5 @@ val load_file_exn : string -> test_file
 val ecdh_test_group_exn : json -> ecdh_test_group
 
 val ecdsa_test_group_exn : json -> ecdsa_test_group
+
+val eddsa_test_group_exn : json -> eddsa_test_group

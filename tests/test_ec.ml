@@ -1,11 +1,12 @@
-module Testable = struct
-  let fiat_error = Alcotest.testable Mirage_crypto_ec.pp_error ( = )
+open Mirage_crypto_ec
 
-  let ok_or_error = Alcotest.result Alcotest.unit fiat_error
+module Testable = struct
+  let ok_or_error =
+    Alcotest.result Alcotest.unit (Alcotest.testable pp_error ( = ))
 end
 
 let key_pair_of_hex h =
-  Mirage_crypto_ec.P256.Dh.gen_key ~rng:(fun _ -> Hex.to_cstruct h)
+  P256.Dh.gen_key ~rng:(fun _ -> Hex.to_cstruct h)
 
 let scalar_of_hex h = fst (key_pair_of_hex h)
 
@@ -18,14 +19,14 @@ let pp_hex_le fmt cs =
 
 let pp_result ppf = function
   | Ok cs -> pp_hex_le ppf cs
-  | Error e -> Format.fprintf ppf "%a" Mirage_crypto_ec.pp_error e
+  | Error e -> Format.fprintf ppf "%a" pp_error e
 
 let key_exchange =
   let test ~name d p ~expected =
     ( name,
       `Quick,
       fun () ->
-        Mirage_crypto_ec.P256.Dh.key_exchange d p
+        P256.Dh.key_exchange d p
         |> Format.asprintf "%a" pp_result
         |> Alcotest.check Alcotest.string __LOC__ expected )
   in
@@ -59,7 +60,7 @@ let scalar_mult =
     ( Printf.sprintf "Scalar mult (#%d)" n,
       `Quick,
       fun () ->
-        Mirage_crypto_ec.P256.Dh.key_exchange scalar point
+        P256.Dh.key_exchange scalar point
         |> Format.asprintf "%a" pp_result
         |> Alcotest.check Alcotest.string __LOC__ expected )
   in
@@ -133,7 +134,7 @@ let point_validation =
     ( name,
       `Quick,
       fun () ->
-        Mirage_crypto_ec.P256.Dh.key_exchange scalar point
+        P256.Dh.key_exchange scalar point
         |> to_ok_or_error
         |> Alcotest.check Testable.ok_or_error __LOC__ expected )
   in
@@ -186,7 +187,7 @@ let scalar_validation =
     ( name,
       `Quick,
       fun () ->
-        let _, _ = Mirage_crypto_ec.P256.Dh.gen_key ~rng in
+        let _, _ = P256.Dh.gen_key ~rng in
         let got = !ncalls in
         Alcotest.check Alcotest.int __LOC__ expected got )
   in
@@ -216,7 +217,7 @@ let scalar_validation =
 let ecdsa_gen () =
   let d = Cstruct.of_hex "C477F9F6 5C22CCE2 0657FAA5 B2D1D812 2336F851 A508A1ED 04E479C3 4985BF96" in
   let p = match
-      Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
+      P256.Dsa.pub_of_cstruct
         (Cstruct.of_hex {|04
                         B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
                         3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
@@ -224,11 +225,9 @@ let ecdsa_gen () =
     | Ok a -> a
     | Error _ -> assert false
   in
-  let _priv, pub = Mirage_crypto_ec.P256.Dsa.generate ~rng:(fun _ -> d) in
+  let _priv, pub = P256.Dsa.generate ~rng:(fun _ -> d) in
   let pub_eq a b =
-    Cstruct.equal
-      (Mirage_crypto_ec.P256.Dsa.pub_to_cstruct a)
-      (Mirage_crypto_ec.P256.Dsa.pub_to_cstruct b)
+    Cstruct.equal (P256.Dsa.pub_to_cstruct a) (P256.Dsa.pub_to_cstruct b)
   in
   Alcotest.(check bool __LOC__ true (pub_eq pub p))
 
@@ -240,13 +239,13 @@ let ecdsa_sign () =
   let r = Cstruct.of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
   and s = Cstruct.of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
   in
-  let key, _pub = Mirage_crypto_ec.P256.Dsa.generate ~rng:(fun _ -> d) in
-  let (r', s') = Mirage_crypto_ec.P256.Dsa.sign ~key ~k e in
+  let key, _pub = P256.Dsa.generate ~rng:(fun _ -> d) in
+  let (r', s') = P256.Dsa.sign ~key ~k e in
   Alcotest.(check bool __LOC__ true (Cstruct.equal r r' && Cstruct.equal s s'))
 
 let ecdsa_verify () =
   let key =
-    match Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
+    match P256.Dsa.pub_of_cstruct
             (Cstruct.of_hex {|04
                         B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
                         3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
@@ -257,7 +256,7 @@ let ecdsa_verify () =
   and r = Cstruct.of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
   and s = Cstruct.of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
   in
-  Alcotest.(check bool __LOC__ true (Mirage_crypto_ec.P256.Dsa.verify ~key (r, s) e))
+  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r, s) e))
 
 let ecdsa = [
   (* from https://csrc.nist.rip/groups/ST/toolkit/documents/Examples/ECDSA_Prime.pdf *)
@@ -270,7 +269,7 @@ let ecdsa_rfc6979_p224 =
   (* A.2.4 - P 224 *)
   let priv, pub =
     let data = Cstruct.of_hex "F220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1" in
-    Mirage_crypto_ec.P224.Dsa.generate ~rng:(fun _ -> data)
+    P224.Dsa.generate ~rng:(fun _ -> data)
   in
   let pub_rfc () =
     let fst = Cstruct.create 1 in
@@ -278,12 +277,10 @@ let ecdsa_rfc6979_p224 =
     let ux = Cstruct.of_hex "00CF08DA5AD719E42707FA431292DEA11244D64FC51610D94B130D6C"
     and uy = Cstruct.of_hex "EEAB6F3DEBE455E3DBF85416F7030CBD94F34F2D6F232C69F3C1385A"
     in
-    match Mirage_crypto_ec.P224.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P224.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal
-          (Mirage_crypto_ec.P224.Dsa.pub_to_cstruct pub)
-          (Mirage_crypto_ec.P224.Dsa.pub_to_cstruct p)
+        Cstruct.equal (P224.Dsa.pub_to_cstruct pub) (P224.Dsa.pub_to_cstruct p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
@@ -296,14 +293,14 @@ let ecdsa_rfc6979_p224 =
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
-      let module K = Mirage_crypto_ec.P224.Dsa.K_gen (H) in
+      let module K = P224.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
     Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
     let sig_eq (r', s') =
       Cstruct.equal (Cstruct.of_hex r) r' && Cstruct.equal (Cstruct.of_hex s) s'
     in
-    let sig' = Mirage_crypto_ec.P224.Dsa.sign ~key:priv ~k msg in
+    let sig' = P224.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
   in
   let cases = [
@@ -366,7 +363,7 @@ let ecdsa_rfc6979_p256 =
   (* A.2.5 - P 256 *)
   let priv, pub =
     let data = Cstruct.of_hex "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721" in
-    Mirage_crypto_ec.P256.Dsa.generate ~rng:(fun _ -> data)
+    P256.Dsa.generate ~rng:(fun _ -> data)
   in
   let pub_rfc () =
     let fst = Cstruct.create 1 in
@@ -374,12 +371,10 @@ let ecdsa_rfc6979_p256 =
     let ux = Cstruct.of_hex "60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6"
     and uy = Cstruct.of_hex "7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299"
     in
-    match Mirage_crypto_ec.P256.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P256.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal
-          (Mirage_crypto_ec.P256.Dsa.pub_to_cstruct pub)
-          (Mirage_crypto_ec.P256.Dsa.pub_to_cstruct p)
+        Cstruct.equal (P256.Dsa.pub_to_cstruct pub) (P256.Dsa.pub_to_cstruct p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
@@ -392,14 +387,14 @@ let ecdsa_rfc6979_p256 =
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
-      let module K = Mirage_crypto_ec.P256.Dsa.K_gen (H) in
+      let module K = P256.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
     Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
     let sig_eq (r', s') =
       Cstruct.equal (Cstruct.of_hex r) r' && Cstruct.equal (Cstruct.of_hex s) s'
     in
-    let sig' = Mirage_crypto_ec.P256.Dsa.sign ~key:priv ~k msg in
+    let sig' = P256.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
   in
   let cases = [
@@ -451,7 +446,7 @@ let ecdsa_rfc6979_p384 =
   (* A.2.6 - P 384 *)
   let priv, pub =
     let data = Cstruct.of_hex "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D896D5724E4C70A825F872C9EA60D2EDF5" in
-    Mirage_crypto_ec.P384.Dsa.generate ~rng:(fun _ -> data)
+    P384.Dsa.generate ~rng:(fun _ -> data)
   in
   let pub_rfc () =
     let fst = Cstruct.create 1 in
@@ -459,12 +454,10 @@ let ecdsa_rfc6979_p384 =
     let ux = Cstruct.of_hex "EC3A4E415B4E19A4568618029F427FA5DA9A8BC4AE92E02E06AAE5286B300C64DEF8F0EA9055866064A254515480BC13"
     and uy = Cstruct.of_hex "8015D9B72D7D57244EA8EF9AC0C621896708A59367F9DFB9F54CA84B3F1C9DB1288B231C3AE0D4FE7344FD2533264720"
     in
-    match Mirage_crypto_ec.P384.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P384.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal
-          (Mirage_crypto_ec.P384.Dsa.pub_to_cstruct pub)
-          (Mirage_crypto_ec.P384.Dsa.pub_to_cstruct p)
+        Cstruct.equal (P384.Dsa.pub_to_cstruct pub) (P384.Dsa.pub_to_cstruct p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
@@ -477,14 +470,14 @@ let ecdsa_rfc6979_p384 =
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
-      let module K = Mirage_crypto_ec.P384.Dsa.K_gen (H) in
+      let module K = P384.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
     Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
     let sig_eq (r', s') =
       Cstruct.equal (Cstruct.of_hex r) r' && Cstruct.equal (Cstruct.of_hex s) s'
     in
-    let sig' = Mirage_crypto_ec.P384.Dsa.sign ~key:priv ~k msg in
+    let sig' = P384.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
   in
   let cases = [
@@ -580,7 +573,7 @@ let ecdsa_rfc6979_p521 =
          AA896EB32F1F47C70855836A6D16FCC1466F6D8FBEC67DB89EC0C08B0E996B83
          538"
     in
-    Mirage_crypto_ec.P521.Dsa.generate ~rng:(fun _ -> data)
+    P521.Dsa.generate ~rng:(fun _ -> data)
   in
   let pub_rfc () =
     let fst = Cstruct.create 1 in
@@ -594,12 +587,10 @@ let ecdsa_rfc6979_p521 =
          8A0DB25741B5B34A828008B22ACC23F924FAAFBD4D33F81EA66956DFEAA2BFDF
          CF5"
     in
-    match Mirage_crypto_ec.P521.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P521.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal
-          (Mirage_crypto_ec.P521.Dsa.pub_to_cstruct pub)
-          (Mirage_crypto_ec.P521.Dsa.pub_to_cstruct p)
+        Cstruct.equal (P521.Dsa.pub_to_cstruct pub) (P521.Dsa.pub_to_cstruct p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
@@ -610,14 +601,14 @@ let ecdsa_rfc6979_p521 =
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
-      let module K = Mirage_crypto_ec.P521.Dsa.K_gen (H) in
+      let module K = P521.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
     Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
     let sig_eq (r', s') =
       Cstruct.equal (of_h r) r' && Cstruct.equal (of_h s) s'
     in
-    let sig' = Mirage_crypto_ec.P521.Dsa.sign ~key:priv ~k msg in
+    let sig' = P521.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
   in
   let _cases = [
@@ -735,19 +726,215 @@ let ecdsa_rfc6979_p521 =
   ] in
   [ ("public key matches", `Quick, pub_rfc) ]
   (* TODO: our deterministic generator for bit_size mod 8 <> 0 is different from RFC 6979 *)
-  (* List.mapi (fun i c -> "RFC 6979 A.2.7 " ^ string_of_int i, `Quick, c) cases *)
+(* List.mapi (fun i c -> "RFC 6979 A.2.7 " ^ string_of_int i, `Quick, c) cases *)
+
+let x25519 () =
+  (* RFC 7748, 6.1 *)
+  let a = Cstruct.of_hex "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"
+  and apub = Cstruct.of_hex "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"
+  and b = Cstruct.of_hex "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb"
+  and bpub = Cstruct.of_hex "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"
+  and shared = Cstruct.of_hex "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"
+  in
+  let apriv, apub' = X25519.gen_key ~rng:(fun _ -> a) in
+  Alcotest.(check bool __LOC__ true (Cstruct.equal apub apub'));
+  let bpriv, bpub' = X25519.gen_key ~rng:(fun _ -> b) in
+  Alcotest.(check bool __LOC__ true (Cstruct.equal bpub bpub'));
+  (match X25519.key_exchange apriv bpub with
+   | Ok shared' ->
+     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
+   | Error e ->
+     Alcotest.failf "X25519 key exchange failed %a" pp_error e);
+  (match X25519.key_exchange bpriv apub with
+   | Ok shared' ->
+     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
+   | Error e ->
+     Alcotest.failf "X25519 key exchange failed %a" pp_error e)
+
+let ed25519 =
+  let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal in
+  let test secret public msg signature =
+    Alcotest.(
+      check cs "public key is ok" (Ed25519.pub_to_cstruct public)
+        Ed25519.(pub_to_cstruct (pub_of_priv secret)));
+    Alcotest.(check cs "signature is ok" signature (Ed25519.sign ~key:secret msg));
+    Alcotest.(check bool "verify is ok" true
+                (Ed25519.verify ~key:public signature ~msg))
+  in
+  let case i ~secret ~public ~msg ~signature =
+    "RFC 8032 " ^ string_of_int i, `Quick, fun () ->
+      let s =
+        match Ed25519.priv_of_cstruct (Cstruct.of_hex secret) with
+        | Ok p ->
+          Alcotest.(check cs "private key encoding is good"
+                      (Cstruct.of_hex secret) (Ed25519.priv_to_cstruct p));
+          p
+        | Error _ -> Alcotest.fail "failed to decode private key"
+      and p =
+        match Ed25519.pub_of_cstruct (Cstruct.of_hex public) with
+        | Ok p ->
+          Alcotest.(check cs "public key encoding is good"
+                      (Cstruct.of_hex public) (Ed25519.pub_to_cstruct p));
+          p
+        | Error _ -> Alcotest.fail "failed to decode public key"
+      and m = Cstruct.of_hex msg
+      and si = Cstruct.of_hex signature
+      in
+      test s p m si
+  in
+  [
+    case 1
+      ~secret:
+        "9d61b19deffd5a60ba844af492ec2cc4 4449c5697b326919703bac031cae7f60"
+      ~public:
+        "d75a980182b10ab7d54bfed3c964073a 0ee172f3daa62325af021a68f707511a"
+      ~msg:""
+      ~signature:
+        {|
+        e5564300c360ac729086e2cc806e828a
+        84877f1eb8e5d974d873e06522490155
+        5fb8821590a33bacc61e39701cf9b46b
+        d25bf5f0595bbe24655141438e7a100b
+      |};
+    case 2
+      ~secret:
+        "4ccd089b28ff96da9db6c346ec114e0f 5b8a319f35aba624da8cf6ed4fb8a6fb"
+      ~public:
+        "3d4017c3e843895a92b70aa74d1b7ebc 9c982ccf2ec4968cc0cd55f12af4660c"
+      ~msg:"72"
+      ~signature:
+        {|
+        92a009a9f0d4cab8720e820b5f642540
+        a2b27b5416503f8fb3762223ebdb69da
+        085ac1e43e15996e458f3613d0f11d8c
+        387b2eaeb4302aeeb00d291612bb0c00
+     |};
+    case 3
+      ~secret:
+        "c5aa8df43f9f837bedb7442f31dcb7b1 66d38535076f094b85ce3a2e0b4458f7"
+      ~public:
+        "fc51cd8e6218a1a38da47ed00230f058 0816ed13ba3303ac5deb911548908025"
+      ~msg:"af82"
+      ~signature:
+        {|
+        6291d657deec24024827e69c3abe01a3
+        0ce548a284743a445e3680d7db5ac3ac
+        18ff9b538d16f290ae67f760984dc659
+        4a7c15e9716ed28dc027beceea1ec40a
+      |};
+    case 4
+      ~secret:
+        "f5e5767cf153319517630f226876b86c 8160cc583bc013744c6bf255f5cc0ee5"
+      ~public:
+        "278117fc144c72340f67d0f2316e8386 ceffbf2b2428c9c51fef7c597f1d426e"
+      ~msg:
+        {|
+   08b8b2b733424243760fe426a4b54908
+   632110a66c2f6591eabd3345e3e4eb98
+   fa6e264bf09efe12ee50f8f54e9f77b1
+   e355f6c50544e23fb1433ddf73be84d8
+   79de7c0046dc4996d9e773f4bc9efe57
+   38829adb26c81b37c93a1b270b20329d
+   658675fc6ea534e0810a4432826bf58c
+   941efb65d57a338bbd2e26640f89ffbc
+   1a858efcb8550ee3a5e1998bd177e93a
+   7363c344fe6b199ee5d02e82d522c4fe
+   ba15452f80288a821a579116ec6dad2b
+   3b310da903401aa62100ab5d1a36553e
+   06203b33890cc9b832f79ef80560ccb9
+   a39ce767967ed628c6ad573cb116dbef
+   efd75499da96bd68a8a97b928a8bbc10
+   3b6621fcde2beca1231d206be6cd9ec7
+   aff6f6c94fcd7204ed3455c68c83f4a4
+   1da4af2b74ef5c53f1d8ac70bdcb7ed1
+   85ce81bd84359d44254d95629e9855a9
+   4a7c1958d1f8ada5d0532ed8a5aa3fb2
+   d17ba70eb6248e594e1a2297acbbb39d
+   502f1a8c6eb6f1ce22b3de1a1f40cc24
+   554119a831a9aad6079cad88425de6bd
+   e1a9187ebb6092cf67bf2b13fd65f270
+   88d78b7e883c8759d2c4f5c65adb7553
+   878ad575f9fad878e80a0c9ba63bcbcc
+   2732e69485bbc9c90bfbd62481d9089b
+   eccf80cfe2df16a2cf65bd92dd597b07
+   07e0917af48bbb75fed413d238f5555a
+   7a569d80c3414a8d0859dc65a46128ba
+   b27af87a71314f318c782b23ebfe808b
+   82b0ce26401d2e22f04d83d1255dc51a
+   ddd3b75a2b1ae0784504df543af8969b
+   e3ea7082ff7fc9888c144da2af58429e
+   c96031dbcad3dad9af0dcbaaaf268cb8
+   fcffead94f3c7ca495e056a9b47acdb7
+   51fb73e666c6c655ade8297297d07ad1
+   ba5e43f1bca32301651339e22904cc8c
+   42f58c30c04aafdb038dda0847dd988d
+   cda6f3bfd15c4b4c4525004aa06eeff8
+   ca61783aacec57fb3d1f92b0fe2fd1a8
+   5f6724517b65e614ad6808d6f6ee34df
+   f7310fdc82aebfd904b01e1dc54b2927
+   094b2db68d6f903b68401adebf5a7e08
+   d78ff4ef5d63653a65040cf9bfd4aca7
+   984a74d37145986780fc0b16ac451649
+   de6188a7dbdf191f64b5fc5e2ab47b57
+   f7f7276cd419c17a3ca8e1b939ae49e4
+   88acba6b965610b5480109c8b17b80e1
+   b7b750dfc7598d5d5011fd2dcc5600a3
+   2ef5b52a1ecc820e308aa342721aac09
+   43bf6686b64b2579376504ccc493d97e
+   6aed3fb0f9cd71a43dd497f01f17c0e2
+   cb3797aa2a2f256656168e6c496afc5f
+   b93246f6b1116398a346f1a641f3b041
+   e989f7914f90cc2c7fff357876e506b5
+   0d334ba77c225bc307ba537152f3f161
+   0e4eafe595f6d9d90d11faa933a15ef1
+   369546868a7f3a45a96768d40fd9d034
+   12c091c6315cf4fde7cb68606937380d
+   b2eaaa707b4c4185c32eddcdd306705e
+   4dc1ffc872eeee475a64dfac86aba41c
+   0618983f8741c5ef68d3a101e8a3b8ca
+   c60c905c15fc910840b94c00a0b9d0
+     |}
+      ~signature:
+        {|
+   0aab4c900501b3e24d7cdf4663326a3a
+   87df5e4843b2cbdb67cbf6e460fec350
+   aa5371b1508f9f4528ecea23c436d94b
+   5e8fcd4f681e30a6ac00a9704a188a03
+     |};
+    case 5
+      ~secret:
+        "833fe62409237b9d62ec77587520911e 9a759cec1d19755b7da901b96dca3d42"
+      ~public:
+        "ec172b93ad5e563bf4932c70e1245034 c35467ef2efd4d64ebf819683467e2bf"
+      ~msg:
+        {|
+   ddaf35a193617abacc417349ae204131
+   12e6fa4e89a97ea20a9eeee64b55d39a
+   2192992a274fc1a836ba3c23a3feebbd
+   454d4423643ce80e2a9ac94fa54ca49f
+     |}
+      ~signature:
+        {|
+   dc2a4459e7369633a52b1bf277839a00
+   201009a3efbf3ecb69bea2186c26b589
+   09351fc9ac90b3ecfdfbc7c66431e030
+   3dca179c138ac17ad9bef1177331a704
+     |};
+  ]
 
 let () =
   Mirage_crypto_rng_unix.initialize ();
-  Alcotest.run "P256 EC"
+  Alcotest.run "EC"
     [
-      ("Key exchange", key_exchange);
-      ("Low level scalar mult", scalar_mult);
-      ("Point validation", point_validation);
-      ("Scalar validation when generating", scalar_validation);
+      ("P256 Key exchange", key_exchange);
+      ("P256 Low level scalar mult", scalar_mult);
+      ("P256 Point validation", point_validation);
+      ("P256 Scalar validation when generating", scalar_validation);
       ("ECDSA NIST", ecdsa);
       ("ECDSA RFC 6979 P224", ecdsa_rfc6979_p224);
       ("ECDSA RFC 6979 P256", ecdsa_rfc6979_p256);
       ("ECDSA RFC 6979 P384", ecdsa_rfc6979_p384);
       ("ECDSA RFC 6979 P521", ecdsa_rfc6979_p521);
+      ("X25519", [ "RFC 7748", `Quick, x25519 ]);
+      ("ED25519", ed25519);
     ]

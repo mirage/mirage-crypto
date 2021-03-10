@@ -5,6 +5,7 @@
 # 52561d2c59d2ef87af9676ad2039a8c5d8c22a21 (February 24th 2021)
 
 WBW_MONT ?= ../../../fiat-crypto/src/ExtractionOCaml/word_by_word_montgomery --static --use-value-barrier
+UNSAT_SOLINAS ?= ../../../fiat-crypto/src/ExtractionOCaml/unsaturated_solinas --static --use-value-barrier
 N_FUNCS=mul add opp from_montgomery to_montgomery one msat divstep_precomp divstep to_bytes from_bytes
 
 # The NIST curve P-224 (AKA SECP224R1)
@@ -108,12 +109,29 @@ np521_32.h:
 .PHONY: p521
 p521: p521_64.h p521_32.h np521_64.h np521_32.h
 
+# 25519
+25519="2^255 - 19"
+25519_FUNS=carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes carry_scmul121666
+
+.PHONY: curve25519_64.h
+curve25519_64.h:
+	$(UNSAT_SOLINAS) 25519 64 '(auto)' $(25519) $(25519_FUNS) > $@
+
+.PHONY: curve25519_32.h
+curve25519_32.h:
+	$(UNSAT_SOLINAS) 25519 32 '(auto)' $(25519) $(25519_FUNS) > $@
+
+.PHONY: curve25519
+curve25519: curve25519_64.h curve25519_32.h
+
+
 .PHONY: clean
 clean:
 	$(RM) p224_32.h p224_64.h np224_32.h np224_64.h
 	$(RM) p256_32.h p256_64.h np256_32.h np256_64.h
 	$(RM) p384_32.h p384_64.h np384_32.h np384_64.h
 	$(RM) p521_32.h p521_64.h np521_32.h np521_64.h
+	$(RM) curve25519_32.h curve25519_64.h
 
 .PHONY: all
-all: p224 p256 p384 p521
+all: p224 p256 p384 p521 curve25519

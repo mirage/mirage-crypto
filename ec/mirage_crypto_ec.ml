@@ -1,9 +1,11 @@
-type error =
-  [ `Invalid_format
+type error = [
+  | `Invalid_format
   | `Invalid_length
   | `Invalid_range
   | `Not_on_curve
-  | `At_infinity ]
+  | `At_infinity
+  | `Low_order
+]
 
 let error_to_string = function
   | `Invalid_format -> "invalid format"
@@ -11,6 +13,7 @@ let error_to_string = function
   | `At_infinity -> "point is at infinity"
   | `Invalid_length -> "invalid length"
   | `Invalid_range -> "invalid range"
+  | `Low_order -> "low order"
 
 let pp_error fmt e =
   Format.fprintf fmt "Cannot parse point: %s" (error_to_string e)
@@ -321,7 +324,7 @@ end
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
   let not_zero =
     let zero = Cstruct.create Param.byte_length in
-    fun cs -> Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length cs zero > 0
+    fun cs -> not (Eqaf_cstruct.equal cs zero)
 
   let is_in_range cs =
     not_zero cs
@@ -777,3 +780,132 @@ module P521 : Dh_dsa = struct
   module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA512)
 end
 
+module X25519 = struct
+  (* RFC 7748 *)
+  external x25519_scalar_mult_generic : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
+
+  let key_len = 32
+
+  let scalar_mult in_ base =
+    let out = Cstruct.create key_len in
+    x25519_scalar_mult_generic out.Cstruct.buffer in_.Cstruct.buffer base.Cstruct.buffer;
+    out
+
+  type secret = Cstruct.t
+
+  let basepoint =
+    let data = Cstruct.create key_len in
+    Cstruct.set_uint8 data 0 9;
+    data
+
+  let public priv = scalar_mult priv basepoint
+
+  let gen_key ~rng =
+    let secret = rng key_len in
+    secret, public secret
+
+  let is_zero =
+    let zero = Cstruct.create key_len in
+    fun cs -> Cstruct.equal zero cs
+
+  let key_exchange secret public =
+    if Cstruct.len public = key_len then
+      let res = scalar_mult secret public in
+      if is_zero res then Error `Low_order else Ok res
+    else
+      Error `Invalid_length
+end
+
+module Ed25519 = struct
+
+  external scalar_mult_base_to_bytes : Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
+  external reduce_l : Cstruct.buffer -> unit = "mc_25519_reduce_l" [@@noalloc]
+  external muladd : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_muladd" [@@noalloc]
+  external double_scalar_mult : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
+  external pub_ok : Cstruct.buffer -> bool = "mc_25519_pub_ok" [@@noalloc]
+
+  type pub = Cstruct.t
+
+  type priv = Cstruct.t
+
+  (* RFC 8032 *)
+  let key_len = 32
+
+  let public secret =
+    (* section 5.1.5 *)
+    (* step 1 *)
+    let h = Mirage_crypto.Hash.SHA512.digest secret in
+    (* step 2 *)
+    let s, rest = Cstruct.split h key_len in
+    Cstruct.set_uint8 s 0 (Cstruct.get_uint8 s 0 land 248);
+    Cstruct.set_uint8 s 31 ((Cstruct.get_uint8 s 31 land 127) lor 64);
+    (* step 3 and 4 *)
+    let public = Cstruct.create key_len in
+    scalar_mult_base_to_bytes public.Cstruct.buffer s.Cstruct.buffer;
+    public, (s, rest)
+
+  let pub_of_priv secret = fst (public secret)
+
+  let priv_of_cstruct cs =
+    if Cstruct.len cs = key_len then Ok cs else Error `Invalid_length
+
+  let priv_to_cstruct priv = priv
+
+  let pub_of_cstruct cs =
+    if Cstruct.len cs = key_len then
+      let cs_copy = Cstruct.create key_len in
+      Cstruct.blit cs 0 cs_copy 0 key_len;
+      if pub_ok cs_copy.Cstruct.buffer then
+        Ok cs_copy
+      else
+        Error `Not_on_curve
+    else
+      Error `Invalid_length
+
+  let pub_to_cstruct pub = pub
+
+  let generate ~rng =
+    let secret = rng key_len in
+    secret, pub_of_priv secret
+
+  let sign ~key msg =
+    (* section 5.1.6 *)
+    let pub, (s, prefix) = public key in
+    let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.append prefix msg) in
+    reduce_l r.Cstruct.buffer;
+    let r_big = Cstruct.create key_len in
+    scalar_mult_base_to_bytes r_big.Cstruct.buffer r.Cstruct.buffer;
+    let k = Mirage_crypto.Hash.SHA512.digest (Cstruct.concat [ r_big ; pub ; msg ]) in
+    reduce_l k.Cstruct.buffer;
+    let s_out = Cstruct.create key_len in
+    muladd s_out.Cstruct.buffer k.Cstruct.buffer s.Cstruct.buffer r.Cstruct.buffer;
+    Cstruct.append r_big s_out
+
+  let verify ~key signature ~msg =
+    (* section 5.1.7 *)
+    if Cstruct.len signature = 2 * key_len then
+      let r, s = Cstruct.split signature key_len in
+      let s_smaller_l =
+        (* check s within 0 <= s < L *)
+        let s' = Cstruct.create (key_len * 2) in
+        Cstruct.blit s 0 s' 0 key_len;
+        reduce_l s'.Cstruct.buffer;
+        let s'' = Cstruct.(append s (create key_len)) in
+        Cstruct.equal s'' s'
+      in
+      if s_smaller_l then begin
+        let k =
+          Mirage_crypto.Hash.SHA512.digest (Cstruct.concat [ r ; key ; msg ])
+        in
+        reduce_l k.Cstruct.buffer;
+        let r' = Cstruct.create key_len in
+        let success =
+          double_scalar_mult r'.Cstruct.buffer k.Cstruct.buffer
+            key.Cstruct.buffer s.Cstruct.buffer
+        in
+        success && Cstruct.equal r r'
+      end else
+        false
+    else
+      false
+end

@@ -5,9 +5,9 @@
  (foreign_stubs
   (language c)
   (names p224_stubs np224_stubs p256_stubs np256_stubs p384_stubs np384_stubs
-    p521_stubs np521_stubs)
+    p521_stubs np521_stubs curve25519_stubs)
   (flags
-   (:standard -I../src/native)
+   (:standard -I../src/native -DNDEBUG)
    (:include cflags_optimized.sexp))))
 
 (env
