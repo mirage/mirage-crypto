@@ -15,6 +15,8 @@ let error_to_string = function
 let pp_error fmt e =
   Format.fprintf fmt "Cannot parse point: %s" (error_to_string e)
 
+exception Message_too_long
+
 module type Dh = sig
   type secret
 
@@ -64,6 +66,7 @@ module type Parameters = sig
   val n : Cstruct.t
   val byte_length : int
   val fe_length : int
+  val first_byte_bits : int option
 end
 
 type field_element = Cstruct.buffer
@@ -166,6 +169,8 @@ module type Point = sig
 
   val to_cstruct : point -> Cstruct.t
 
+  val to_affine_raw : point -> (field_element * field_element) option
+
   val x_of_finite_point : point -> Cstruct.t
 
   val params_g : point
@@ -236,11 +241,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
 
-  let to_affine p =
-    if is_infinity p then None
+  let to_affine_raw p =
+    if is_infinity p then
+      None
     else
-      let out_x = Cstruct.create P.byte_length in
-      let out_y = Cstruct.create P.byte_length in
       let z1 = Fe.create () in
       let z2 = Fe.create () in
       Fe.copy z1 p.f_z;
@@ -251,11 +255,19 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       let x = Fe.create () in
       Fe.copy x p.f_x;
       Fe.mul x x z1;
-      Fe.to_bytes out_x x;
       let y = Fe.create () in
       Fe.copy y p.f_y;
       Fe.mul z1 z1 z2;
       Fe.mul y y z1;
+      Some (x, y)
+
+  let to_affine p =
+    match to_affine_raw p with
+    | None -> None
+    | Some (x, y) ->
+      let out_x = Cstruct.create P.byte_length in
+      let out_y = Cstruct.create P.byte_length in
+      Fe.to_bytes out_x x;
       Fe.to_bytes out_y y;
       Some (out_x, out_y)
 
@@ -295,6 +307,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
 end
 
 module type Scalar = sig
+  val not_zero : Cstruct.t -> bool
+
+  val is_in_range : Cstruct.t -> bool
+
   val of_cstruct : Cstruct.t -> (scalar, error) result
 
   val to_cstruct : scalar -> Cstruct.t
@@ -303,9 +319,12 @@ module type Scalar = sig
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
-  let is_in_range cs =
+  let not_zero =
     let zero = Cstruct.create Param.byte_length in
-    Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length cs zero > 0
+    fun cs -> Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length cs zero > 0
+
+  let is_in_range cs =
+    not_zero cs
     && Eqaf_cstruct.compare_be_with_len ~len:Param.byte_length Param.n cs > 0
 
   let of_cstruct cs =
@@ -392,8 +411,15 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let padded msg =
     let l = Cstruct.len msg in
     let bl = Param.byte_length in
-    if l >= bl then
-      Cstruct.sub msg 0 (min l bl)
+    let first_byte_ok () =
+      match Param.first_byte_bits with
+      | None -> true
+      | Some m -> (Cstruct.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
+    in
+    if l > bl || (l = bl && not (first_byte_ok ())) then
+      raise Message_too_long
+    else if l = bl then
+      msg
     else
       Cstruct.append (Cstruct.create (bl - l)) msg
 
@@ -406,22 +432,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let cs = Cstruct.create Param.byte_length in
     F.to_bytes (Cstruct.to_bigarray cs) v;
     Cstruct.rev cs
-
-  let not_zero =
-    let zero = Cstruct.create Param.byte_length in
-    fun n -> not (Cstruct.equal zero n)
-
-  let mod_n v =
-    let v' = from_be_cstruct v in
-    F.to_montgomery v' v';
-    let o = create () in
-    F.one o;
-    F.mul v' v' o;
-    F.from_montgomery v' v';
-    to_be_cstruct v'
-
-  let smaller_n v =
-    Cstruct.equal v (mod_n v)
 
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
@@ -439,7 +449,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let gen g =
       let rec go () =
         let r = Mirage_crypto_rng.generate ~g Param.byte_length in
-        if not_zero r && smaller_n r then r else go ()
+        if S.is_in_range r then r else go ()
       in
       go ()
 
@@ -466,11 +476,18 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let q = S.scalar_mult d P.params_g in
     (d, q)
 
+  let x_of_finite_point_mod_n p =
+    match P.to_affine_raw p with
+    | None -> None
+    | Some (x, _) ->
+      F.to_montgomery x x;
+      let o = create () in
+      F.one o;
+      F.mul x x o;
+      F.from_montgomery x x;
+      Some (to_be_cstruct x)
+
   let sign ~key ?k msg =
-    (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
-       we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
-       s = k^-1 * blind^-1 (blind * m + blind * r * priv_key) mod n
-    *)
     let msg = padded msg in
     let e = from_be_cstruct msg in
     let g = K_gen_default.g ~key msg in
@@ -486,11 +503,9 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         | Error _ -> invalid_arg "k not in range" (* if no k is provided, this cannot happen since K_gen_*.gen already preserves the Scalar invariants *)
       in
       let point = S.scalar_mult ksc P.params_g in
-      if P.is_infinity point then
-        again ()
-      else
-        let x1 = P.x_of_finite_point point in
-        let r = mod_n x1 in
+      match x_of_finite_point_mod_n point with
+      | None -> again ()
+      | Some r ->
         let r_mon = from_be_cstruct r in
         F.to_montgomery r_mon r_mon;
         let kinv = create () in
@@ -511,7 +526,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         let s = create () in
         F.from_montgomery s smon;
         let s = to_be_cstruct s in
-        if not_zero s && not_zero r then
+        if S.not_zero s && S.not_zero r then
           r, s
         else
           again ()
@@ -521,43 +536,47 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let pub_of_priv priv = S.scalar_mult priv P.params_g
 
   let verify ~key (r, s) msg =
-    if not (smaller_n r && not_zero r && smaller_n s && not_zero s) then
+    if not (S.is_in_range r && S.is_in_range s) then
       false
     else
-      (* take the Ln leftmost bits (with Ln bitsize of group order n = 256) *)
-      let msg = padded msg in
-      let z = from_be_cstruct msg in
-      let s_inv = create () in
-      let s_mon = from_be_cstruct s in
-      F.to_montgomery s_mon s_mon;
-      F.inv s_inv s_mon;
-      let u1 = create () in
-      let s_inv_mon = create () in
-      F.to_montgomery s_inv_mon s_inv;
-      let z_mon = create () in
-      F.to_montgomery z_mon z;
-      F.mul u1 z_mon s_inv_mon;
-      let u2 = create () in
-      let r_mon = from_be_cstruct r in
-      F.to_montgomery r_mon r_mon;
-      F.mul u2 r_mon s_inv_mon;
-      let u1_out = create () in
-      F.from_montgomery u1_out u1;
-      let u2_out = create () in
-      F.from_montgomery u2_out u2;
-      match
-        S.of_cstruct (to_be_cstruct u1_out),
-        S.of_cstruct (to_be_cstruct u2_out)
+      try
+        let msg = padded msg in
+        let z = from_be_cstruct msg in
+        let s_inv = create () in
+        let s_mon = from_be_cstruct s in
+        F.to_montgomery s_mon s_mon;
+        F.inv s_inv s_mon;
+        let u1 = create () in
+        let s_inv_mon = create () in
+        F.to_montgomery s_inv_mon s_inv;
+        let z_mon = create () in
+        F.to_montgomery z_mon z;
+        F.mul u1 z_mon s_inv_mon;
+        let u2 = create () in
+        let r_mon = from_be_cstruct r in
+        F.to_montgomery r_mon r_mon;
+        F.mul u2 r_mon s_inv_mon;
+        let u1_out = create () in
+        F.from_montgomery u1_out u1;
+        let u2_out = create () in
+        F.from_montgomery u2_out u2;
+        match
+          S.of_cstruct (to_be_cstruct u1_out),
+          S.of_cstruct (to_be_cstruct u2_out)
+        with
+        | Ok u1, Ok u2 ->
+          let point =
+            P.add
+              (S.scalar_mult u1 P.params_g)
+              (S.scalar_mult u2 key)
+          in
+          begin match x_of_finite_point_mod_n point with
+            | None -> false (* point is infinity *)
+            | Some r' -> Cstruct.equal r r'
+          end
+        | Error _, _ | _, Error _ -> false
       with
-      | Ok u1, Ok u2 ->
-        let point =
-          P.add
-            (S.scalar_mult u1 P.params_g)
-            (S.scalar_mult u2 key)
-        in
-        not (P.is_infinity point) &&
-        Cstruct.equal (mod_n (P.x_of_finite_point point)) r
-      | _ -> false
+      | Message_too_long -> false
 end
 
 module P224 : Dh_dsa = struct
@@ -570,6 +589,7 @@ module P224 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D"
     let byte_length = 28
     let fe_length = if Sys.word_size == 64 then 32 else 28 (* TODO: is this congruent with C code? *)
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -619,6 +639,7 @@ module P256 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
     let byte_length = 32
     let fe_length = 32
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -668,6 +689,7 @@ module P384 : Dh_dsa = struct
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973"
     let byte_length = 48
     let fe_length = 48
+    let first_byte_bits = None
   end
 
   module Foreign = struct
@@ -717,6 +739,7 @@ module P521 : Dh_dsa = struct
     let n = Cstruct.of_hex "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409"
     let byte_length = 66
     let fe_length = if Sys.word_size == 64 then 72 else 68  (* TODO: is this congruent with C code? *)
+    let first_byte_bits = Some 0x01
   end
 
   module Foreign = struct
