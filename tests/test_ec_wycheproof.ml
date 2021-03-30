@@ -1,5 +1,7 @@
 open Wycheproof
 
+open Mirage_crypto_ec
+
 let hex = Alcotest.testable Wycheproof.pp_hex Wycheproof.equal_hex
 
 let parse_asn1 curve s =
@@ -68,7 +70,6 @@ type test = {
 }
 
 let perform_key_exchange curve ~public_key ~raw_private_key =
-  let open Mirage_crypto_ec in
   let rng _ = raw_private_key in
   to_string_result ~pp_error
     (match curve with
@@ -156,7 +157,7 @@ let parse_sig size cs =
         Ok (Mirage_crypto_pk.Z_extra.to_cstruct_be ~size r,
             Mirage_crypto_pk.Z_extra.to_cstruct_be ~size s)
 
-let make_ecdsa_test curve key hash (tst : ecdsa_test) =
+let make_ecdsa_test curve key hash (tst : dsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
   let size = len curve in
   let msg =
@@ -166,23 +167,23 @@ let make_ecdsa_test curve key hash (tst : ecdsa_test) =
   let verified (r,s) =
     match curve with
     | "secp224r1" ->
-      begin match Mirage_crypto_ec.P224.Dsa.pub_of_cstruct key with
-        | Ok key -> Mirage_crypto_ec.P224.Dsa.verify ~key (r, s) msg
+      begin match P224.Dsa.pub_of_cstruct key with
+        | Ok key -> P224.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | "secp256r1" ->
-      begin match Mirage_crypto_ec.P256.Dsa.pub_of_cstruct key with
-        | Ok key -> Mirage_crypto_ec.P256.Dsa.verify ~key (r, s) msg
+      begin match P256.Dsa.pub_of_cstruct key with
+        | Ok key -> P256.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | "secp384r1" ->
-      begin match Mirage_crypto_ec.P384.Dsa.pub_of_cstruct key with
-        | Ok key -> Mirage_crypto_ec.P384.Dsa.verify ~key (r, s) msg
+      begin match P384.Dsa.pub_of_cstruct key with
+        | Ok key -> P384.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | "secp521r1" ->
-      begin match Mirage_crypto_ec.P521.Dsa.pub_of_cstruct key with
-        | Ok key -> Mirage_crypto_ec.P521.Dsa.verify ~key (r, s) msg
+      begin match P521.Dsa.pub_of_cstruct key with
+        | Ok key -> P521.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | _ -> assert false
@@ -221,6 +222,98 @@ let ecdsa_tests file =
   in
   concat_map to_ecdsa_tests groups
 
+let to_x25519_test (x : ecdh_test) =
+  let name = Printf.sprintf "%d - %s" x.tcId x.comment in
+  let pub = Hex.(to_cstruct (of_string x.public))
+  and priv =
+    fst (X25519.gen_key ~rng:(fun _ -> Hex.(to_cstruct (of_string x.private_))))
+  and shared = Hex.(to_cstruct (of_string x.shared))
+  in
+  match x.result with
+  | Acceptable ->
+    let f () =
+      match
+        X25519.key_exchange priv pub,
+        has_ignored_flag x ~ignored_flags:[ "LowOrderPublic" ]
+      with
+      | Ok _, true -> Alcotest.fail "acceptable should have errored"
+      | Ok r, false ->
+        Alcotest.(check bool __LOC__ true (Cstruct.equal r shared))
+      | Error _, true -> ()
+      | Error e, false ->
+        Alcotest.failf "acceptable errored %a" pp_error e
+    in
+    name, `Quick, f
+  | Invalid ->
+    let f () =
+      match X25519.key_exchange priv pub with
+      | Ok r ->
+        Alcotest.(check bool __LOC__ false (Cstruct.equal r shared))
+      | Error e ->
+        Alcotest.failf "invalid errored %a" pp_error e
+    in
+    name, `Quick, f
+  | Valid ->
+    let f () =
+      match X25519.key_exchange priv pub with
+      | Ok r ->
+        Alcotest.(check bool __LOC__ true (Cstruct.equal r shared))
+      | Error e ->
+        Alcotest.failf "valid errored %a" pp_error e
+    in
+    name, `Quick, f
+
+let x25519_tests =
+  let data = load_file_exn "x25519_test.json" in
+  let groups : ecdh_test_group list =
+    List.map ecdh_test_group_exn data.testGroups
+  in
+  concat_map (fun (group : ecdh_test_group) ->
+      List.map to_x25519_test group.tests)
+    groups
+
+let to_ed25519_test (priv, pub) (x : dsa_test) =
+  let name = Printf.sprintf "%d - %s" x.tcId x.comment in
+  let msg = Hex.(to_cstruct (of_string x.msg))
+  and sig_cs = Hex.(to_cstruct (of_string x.sig_))
+  in
+  match x.result with
+  | Invalid ->
+    let f () =
+      Alcotest.(check bool __LOC__ false (Ed25519.verify ~key:pub sig_cs ~msg));
+      let s = Ed25519.sign ~key:priv msg in
+      Alcotest.(check bool __LOC__ false (Cstruct.equal s sig_cs))
+    in
+    name, `Quick, f
+  | Valid ->
+    let f () =
+      Alcotest.(check bool __LOC__ true (Ed25519.verify ~key:pub sig_cs ~msg));
+      let s = Ed25519.sign ~key:priv msg in
+      Alcotest.(check bool __LOC__ true (Cstruct.equal s sig_cs))
+    in
+    name, `Quick, f
+  | Acceptable -> assert false
+
+let to_ed25519_keys (key : eddsa_key) =
+  let priv_cs = Hex.(to_cstruct (of_string key.sk))
+  and pub_cs = Hex.(to_cstruct (of_string key.pk))
+  in
+  match Ed25519.priv_of_cstruct priv_cs, Ed25519.pub_of_cstruct pub_cs with
+  | Ok priv, Ok pub ->
+    assert (Cstruct.equal Ed25519.(pub_to_cstruct (pub_of_priv priv)) pub_cs);
+    priv, pub
+  | _ -> assert false
+
+let ed25519_tests =
+  let data = load_file_exn "eddsa_test.json" in
+  let groups : eddsa_test_group list =
+    List.map eddsa_test_group_exn data.testGroups
+  in
+  concat_map (fun (group : eddsa_test_group) ->
+      let keys = to_ed25519_keys group.key in
+      List.map (to_ed25519_test keys) group.tests)
+    groups
+
 let () =
   Alcotest.run "Wycheproof NIST curves" [
     ("ECDH P224 test vectors", ecdh_tests "ecdh_secp224r1_test.json") ;
@@ -234,5 +327,7 @@ let () =
     ("ECDSA P384 test vectors (SHA384)", ecdsa_tests "ecdsa_secp384r1_sha384_test.json") ;
     ("ECDSA P384 test vectors (SHA512)", ecdsa_tests "ecdsa_secp384r1_sha512_test.json") ;
     ("ECDH P521 test vectors", ecdh_tests "ecdh_secp521r1_test.json") ;
-    ("ECDSA P521 test vectors (SHA512)", ecdsa_tests "ecdsa_secp521r1_sha512_test.json")
+    ("ECDSA P521 test vectors (SHA512)", ecdsa_tests "ecdsa_secp521r1_sha512_test.json") ;
+    ("X25519 test vectors", x25519_tests) ;
+    ("ED25519 test vectors", ed25519_tests) ;
   ]

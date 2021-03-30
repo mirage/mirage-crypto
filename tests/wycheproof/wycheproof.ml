@@ -57,7 +57,7 @@ type ecdsa_key = {
 }
 [@@deriving of_yojson, show]
 
-type ecdsa_test = {
+type dsa_test = {
   tcId : int;
   comment : string;
   msg : hex;
@@ -72,8 +72,27 @@ type ecdsa_test_group = {
   keyDer : string;
   keyPem : string;
   sha : string;
-  tests : ecdsa_test list;
+  tests : dsa_test list;
   type_ : json option; [@yojson.default None] [@yojson.key "type"]
+}
+[@@deriving of_yojson, show]
+
+type eddsa_key = {
+  curve : string;
+  keySize : int;
+  pk : hex;
+  sk : hex;
+  type_ : json; [@yojson.key "type"]
+}
+[@@deriving of_yojson, show]
+
+type eddsa_test_group = {
+  jwk : json;
+  key : eddsa_key;
+  keyDer : string;
+  keyPem : string;
+  type_ : json; [@yojson.key "type"]
+  tests : dsa_test list;
 }
 [@@deriving of_yojson, show]
 
@@ -96,3 +115,5 @@ let load_file_exn path =
 let ecdh_test_group_exn json = [%of_yojson: ecdh_test_group] json |> get_json
 
 let ecdsa_test_group_exn json = [%of_yojson: ecdsa_test_group] json |> get_json
+
+let eddsa_test_group_exn json = [%of_yojson: eddsa_test_group] json |> get_json

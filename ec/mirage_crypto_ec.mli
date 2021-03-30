@@ -9,12 +9,14 @@
     consume a constant amount of time, independent of the input values.
 *)
 
-type error =
-  [ `Invalid_range
+type error = [
+  | `Invalid_range
   | `Invalid_format
   | `Invalid_length
   | `Not_on_curve
-  | `At_infinity ]
+  | `At_infinity
+  | `Low_order
+]
 (** The type for errors. *)
 
 val pp_error : Format.formatter -> error -> unit
@@ -105,11 +107,13 @@ module type Dsa = sig
 
   val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
   (** [sign ~key ~k digest] signs the message [digest] using the private
-      [key]. If [k] is not provided, it is computed using the deterministic
-      construction from RFC 6979. The result is a pair of [r] and [s].
+      [key]. The [digest] is not processed further - it should be the hash of
+      the message to sign. If [k] is not provided, it is computed using the
+      deterministic construction from RFC 6979. The result is a pair of [r]
+      and [s].
 
       @raise Invalid_argument if [k] is not suitable or not in range.
-      @raise Message_too_long if [msg] is too long for the curve. *)
+      @raise Message_too_long if the bit size of [msg] exceeds the curve. *)
 
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
   (** [verify ~key (r, s) digest] verifies the signature [r, s] on the message
@@ -148,3 +152,53 @@ module P384 : Dh_dsa
 
 (** The NIST P-521 curve, also known as SECP521R1. *)
 module P521 : Dh_dsa
+
+(** Curve 25519 Diffie-Hellman, also known as X25519. *)
+module X25519 : Dh
+
+(** Curve 25519 DSA, also known as Ed25519. *)
+module Ed25519 : sig
+  type priv
+  (** The type for private keys. *)
+
+  type pub
+  (** The type for public keys. *)
+
+  (** {2 Serialisation} *)
+
+  val priv_of_cstruct : Cstruct.t -> (priv, error) result
+  (** [priv_of_cstruct cs] decodes a private key from the buffer [cs]. If the
+      provided data is invalid, an error is returned. *)
+
+  val priv_to_cstruct : priv -> Cstruct.t
+  (** [priv_to_cstruct p] encode the private key [p] to a buffer. *)
+
+  val pub_of_cstruct : Cstruct.t -> (pub, error) result
+  (** [pub_of_cstruct cs] decodes a public key from the buffer [cs]. If the
+      provided data is invalid, an error is returned. *)
+
+  val pub_to_cstruct : pub -> Cstruct.t
+  (** [pub_to_cstruct p] encodes the public key [p] into a buffer. *)
+
+  (** {2 Deriving the public key} *)
+
+  val pub_of_priv : priv -> pub
+  (** [pub_of_priv p] extracts the public key from the private key [p]. *)
+
+  (** {2 Key generation} *)
+
+  val generate : rng:(int -> Cstruct.t) -> priv * pub
+  (** [generate ~rng] generates a key pair using the provided random number
+      generator. *)
+
+  (** {2 Cryptographic operations} *)
+
+  val sign : key:priv -> Cstruct.t -> Cstruct.t
+  (** [sign ~key msg] signs the message [msg] using the private [key]. The
+      result is the concatenation of [r] and [s], as specified in RFC 8032. *)
+
+  val verify : key:pub -> Cstruct.t -> msg:Cstruct.t -> bool
+  (** [verify ~key signature msg] verifies the [signature] on the message
+      [msg] with the public [key]. The return value is [true] if verification
+      was successful, [false] otherwise. *)
+end
