@@ -31,8 +31,8 @@ depends: [
   "cstruct" {>= "3.5.0"}
   "dune-configurator"
   "eqaf" {>= "0.7"}
-  "mirage-crypto" #{=version}
-  "mirage-crypto-rng" #{=version}
+  "mirage-crypto" {=version}
+  "mirage-crypto-rng" {=version}
   "hex" {with-test}
   "alcotest" {with-test}
   "asn1-combinators" {with-test & >= "0.2.5"}

@@ -1,4 +1,4 @@
-## v0.9.0 (2021-03-30)
+## v0.9.0 (2021-03-31)
 
 - Elliptic curve support in the new package mirage-crypto-ec
 
