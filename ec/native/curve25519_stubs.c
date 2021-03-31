@@ -470,7 +470,7 @@ static void fe_pow22523(fe *out, const fe *z) {
 
 
 // Group operations.
-void x25519_ge_tobytes(uint8_t s[32], const ge_p2 *h) {
+static void x25519_ge_tobytes(uint8_t s[32], const ge_p2 *h) {
   fe recip;
   fe x;
   fe y;
