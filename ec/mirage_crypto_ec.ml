@@ -539,10 +539,11 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let pub_of_priv priv = S.scalar_mult priv P.params_g
 
   let verify ~key (r, s) msg =
-    if not (S.is_in_range r && S.is_in_range s) then
-      false
-    else
-      try
+    try
+      let r = padded r and s = padded s in
+      if not (S.is_in_range r && S.is_in_range s) then
+        false
+      else
         let msg = padded msg in
         let z = from_be_cstruct msg in
         let s_inv = create () in
@@ -578,8 +579,8 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
             | Some r' -> Cstruct.equal r r'
           end
         | Error _, _ | _, Error _ -> false
-      with
-      | Message_too_long -> false
+    with
+    | Message_too_long -> false
 end
 
 module P224 : Dh_dsa = struct

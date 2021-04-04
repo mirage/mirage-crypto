@@ -922,6 +922,41 @@ let ed25519 =
      |};
   ]
 
+let p521_regression () =
+  let key = Cstruct.of_hex
+"04 01 e4 f8 8a 40 3d fe  2f 65 a0 20 50 01 9b 87
+86 2c 30 2f 64 58 de 68  63 ab 92 72 88 04 c6 20
+7b 6f 9a 52 95 2d ff c7  80 df 50 44 b1 c4 91 e3
+a7 65 39 e6 9c cf ed d2  2a eb 47 84 ea 0f 3d 05
+dd 25 0e 00 95 6e 19 fb  7f b7 ce 47 5a 59 01 5f
+35 33 fc 85 ac 34 1a b0  7a 67 86 e8 3e 31 fe 38
+35 5c bb a1 b5 74 f4 47  a3 4c 0a f0 5f 6d 68 47
+85 0f e9 79 74 23 e8 75  47 6e 2b e5 ea 1b 0a 36
+b9 c3 94 ca b0"
+  and data = Cstruct.of_hex
+"a8 98 57 b9 3f 58 02 c7  9a 37 e2 d7 89 d8 0b f4
+2d 84 c2 24 7c 7f ff 5f  7b 65 c5 17 cf 79 7d 36
+ff d3 9d 47 5e 68 90 57  f1 61 48 18 04 c3 fe ee
+59 b2 15 2d 75 8b 9a 3c  52 60 96 5c 52 a8 55 9c"
+  and sigr = Cstruct.of_hex
+"3a 2c 99 0b 61 a1 da 06  20 bf 6c fe 1f d3 f8 2a
+cb f1 e5 0f 78 11 61 58  22 e4 a0 5f 18 81 8d 98
+f8 7a ca 8b f8 f8 cc b8  95 f7 6f 03 54 1b 66 6e
+cf c5 cb f1 7b 48 82 d2  c3 0e 0e 1b b4 ad e6 a4
+5c"
+  and sigs = Cstruct.of_hex
+"01 7b 8c 82 a5 aa 80 c5  ee 23 0f 91 55 89 a7 b0
+3c 46 7f 56 ff b4 52 89  52 99 59 1e 5e b7 f2 c1
+df f8 a0 4f d3 dd 1d f0  07 78 3a 2f 29 d6 61 61
+55 dc 3b be 14 82 93 75  c2 0d be 7e ca 50 e4 3c
+98 88"
+  in
+  match P521.Dsa.pub_of_cstruct key with
+  | Ok key ->
+    Alcotest.check Alcotest.bool "regression 1" true
+      (P521.Dsa.verify ~key (sigr, sigs) data)
+  | Error _ -> Alcotest.fail "regression failed"
+
 let () =
   Mirage_crypto_rng_unix.initialize ();
   Alcotest.run "EC"
@@ -937,4 +972,5 @@ let () =
       ("ECDSA RFC 6979 P521", ecdsa_rfc6979_p521);
       ("X25519", [ "RFC 7748", `Quick, x25519 ]);
       ("ED25519", ed25519);
+      ("ECDSA P521 regression", [ "regreesion1", `Quick, p521_regression ]);
     ]

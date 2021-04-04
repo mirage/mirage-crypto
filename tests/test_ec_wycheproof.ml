@@ -135,27 +135,16 @@ let ecdh_tests file =
       concat_map (to_ecdh_tests group.curve) group.tests)
     groups
 
-let parse_sig size cs =
+let parse_sig cs =
   let asn = Asn.S.(sequence2 (required integer) (required integer)) in
   match Asn.(decode (codec der asn) cs) with
   | Error _ -> Error "ASN1 parse error"
   | Ok ((r, s), rest) ->
     if Cstruct.len rest <> 0 then Error "ASN1 leftover"
+    else if Z.sign r < 0 || Z.sign s < 0 then
+      Error "r and s must be >= 0"
     else
-      let check_size y =
-        let bytes x = 1 + ((x - 1) / 8) in
-        if bytes (Z.numbits y) > size then
-          Error "signature too long"
-        else
-          Ok ()
-      in
-      check_size r >>= fun () ->
-      check_size s >>= fun () ->
-      if Z.sign r < 0 || Z.sign s < 0 then
-        Error "r or s must be > 0"
-      else
-        Ok (Mirage_crypto_pk.Z_extra.to_cstruct_be ~size r,
-            Mirage_crypto_pk.Z_extra.to_cstruct_be ~size s)
+      Ok Mirage_crypto_pk.Z_extra.(to_cstruct_be r, to_cstruct_be s)
 
 let make_ecdsa_test curve key hash (tst : dsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
@@ -192,14 +181,14 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
   | Acceptable
   | Invalid ->
     let f () =
-      match parse_sig size (Cstruct.of_string tst.sig_) with
+      match parse_sig (Cstruct.of_string tst.sig_) with
       | Ok (r, s) -> Alcotest.(check bool __LOC__ false (verified (r, s)))
       | Error _s -> ()
     in
     name, `Quick, f
   | Valid ->
     let f () =
-      match parse_sig size (Cstruct.of_string tst.sig_) with
+      match parse_sig (Cstruct.of_string tst.sig_) with
       | Ok (r, s) -> Alcotest.(check bool __LOC__ true (verified (r, s)))
       | Error s -> Alcotest.fail s
     in
