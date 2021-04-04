@@ -1,3 +1,9 @@
+## v0.9.1 (2021-04-04)
+
+- mirage-crypto-ec: fix ECDSA verify if r or s are shorter than the modulus
+  (#117 by @hannesm)
+- Fixed esy cross-compile CI (#116 by @EduardoRFS)
+
 ## v0.9.0 (2021-03-31)
 
 - Elliptic curve support in the new package mirage-crypto-ec
