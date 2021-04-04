@@ -9,10 +9,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [android.arm64, linux.musl.arm64]
-        ocaml-version: ["~4.10.1000"]
+        system: [ubuntu, macos]
+        target: [android.arm64, linux.musl.arm64, macos.arm64]
+        ocaml-version: ["~4.10.2000"]
+        exclude:
+          - system: ubuntu
+            target: macos.arm64
+          - system: macos
+            target: linux.musl.arm64
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.system }}-latest
 
     steps:
       - name: Checkout code
@@ -24,16 +30,23 @@ jobs:
             "name": "cross-compile",
             "dependencies": {
               "ocaml": "${{ matrix.ocaml-version }}",
-              "mirage-crypto": "./mirage-crypto.opam",
-              "mirage-crypto-pk": "./mirage-crypto-pk.opam",
-              "mirage-crypto-rng": "./mirage-crypto-rng.opam",
-              "mirage-crypto-rng-mirage": "./mirage-crypto-rng-mirage.opam",
-              "generate": "github:EduardoRFS/reason-mobile:generate.json#5e2685f419ac88aad3d4d37932d62620c90b40d8"
+              "@opam/mirage-crypto": "*",
+              "@opam/mirage-crypto-ec": "*",
+              "@opam/mirage-crypto-pk": "*",
+              "@opam/mirage-crypto-rng": "*",
+              "@opam/mirage-crypto-rng-mirage": "*",
+              "generate": "EduardoRFS/reason-mobile:generate.json"
             },
             "resolutions": {
+              "@opam/mirage-crypto": "./mirage-crypto.opam",
+              "@opam/mirage-crypto-ec": "./mirage-crypto-ec.opam",
+              "@opam/mirage-crypto-pk": "./mirage-crypto-pk.opam",
+              "@opam/mirage-crypto-rng": "./mirage-crypto-rng.opam",
+              "@opam/mirage-crypto-rng-mirage": "./mirage-crypto-rng-mirage.opam",
               "@opam/mtime": "github:dune-universe/mtime:mtime.opam#9584b66cecc891208b31cec4628dd412b8cffe75",
               "@opam/zarith": "github:dune-universe/Zarith:zarith.opam#c62b045106fafa407874053bdd79273a8f591352",
-              "@opam/num": "github:dune-universe/num:num.opam#bdb2d7653e927e142b701b51d89f393471279713"
+              "@opam/num": "github:dune-universe/num:num.opam#bdb2d7653e927e142b701b51d89f393471279713",
+              "esy-gmp": "github:EduardoRFS/esy-gmp:package.json#336668546d995962806520b913218414dd0ff83f"
             }
           }' > esy.json
 
