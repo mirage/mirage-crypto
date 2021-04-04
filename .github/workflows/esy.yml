@@ -25,6 +25,7 @@ jobs:
             "dependencies": {
               "ocaml": "${{ matrix.ocaml-version }}",
               "mirage-crypto": "./mirage-crypto.opam",
+              "mirage-crypto-ec": "./mirage-crypto-ec.opam",
               "mirage-crypto-pk": "./mirage-crypto-pk.opam",
               "mirage-crypto-rng": "./mirage-crypto-rng.opam",
               "mirage-crypto-rng-mirage": "./mirage-crypto-rng-mirage.opam",
