@@ -376,7 +376,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     match secret_of_cs candidate with
     | Ok secret -> secret
     | Error `Invalid_length ->
-      failwith "Fiat_p256.gen_key: generator returned an invalid length"
+      failwith "Mirage_crypto_ec.Dh.gen_key: generator returned an invalid length"
     | Error _ -> generate_private_key ~rng ()
 
   let gen_key ~rng =
@@ -469,9 +469,8 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
 
   let generate ~rng =
     (* FIPS 186-4 B 4.2 *)
-    let n = Param.byte_length in
     let rec one () =
-      match S.of_cstruct (rng n) with
+      match S.of_cstruct (rng Param.byte_length) with
       | Ok x -> x
       | Error _ -> one ()
     in
@@ -551,22 +550,18 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         F.to_montgomery s_mon s_mon;
         F.inv s_inv s_mon;
         let u1 = create () in
-        let s_inv_mon = create () in
-        F.to_montgomery s_inv_mon s_inv;
-        let z_mon = create () in
-        F.to_montgomery z_mon z;
-        F.mul u1 z_mon s_inv_mon;
+        F.to_montgomery s_inv s_inv;
+        F.to_montgomery z z;
+        F.mul u1 z s_inv;
         let u2 = create () in
         let r_mon = from_be_cstruct r in
         F.to_montgomery r_mon r_mon;
-        F.mul u2 r_mon s_inv_mon;
-        let u1_out = create () in
-        F.from_montgomery u1_out u1;
-        let u2_out = create () in
-        F.from_montgomery u2_out u2;
+        F.mul u2 r_mon s_inv;
+        F.from_montgomery u1 u1;
+        F.from_montgomery u2 u2;
         match
-          S.of_cstruct (to_be_cstruct u1_out),
-          S.of_cstruct (to_be_cstruct u2_out)
+          S.of_cstruct (to_be_cstruct u1),
+          S.of_cstruct (to_be_cstruct u2)
         with
         | Ok u1, Ok u2 ->
           let point =
