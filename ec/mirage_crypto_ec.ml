@@ -376,7 +376,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     match secret_of_cs candidate with
     | Ok secret -> secret
     | Error `Invalid_length ->
-      failwith "Fiat_p256.gen_key: generator returned an invalid length"
+      failwith "Mirage_crypto_ec.Dh.gen_key: generator returned an invalid length"
     | Error _ -> generate_private_key ~rng ()
 
   let gen_key ~rng =
@@ -469,9 +469,8 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
 
   let generate ~rng =
     (* FIPS 186-4 B 4.2 *)
-    let n = Param.byte_length in
     let rec one () =
-      match S.of_cstruct (rng n) with
+      match S.of_cstruct (rng Param.byte_length) with
       | Ok x -> x
       | Error _ -> one ()
     in
@@ -551,22 +550,18 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         F.to_montgomery s_mon s_mon;
         F.inv s_inv s_mon;
         let u1 = create () in
-        let s_inv_mon = create () in
-        F.to_montgomery s_inv_mon s_inv;
-        let z_mon = create () in
-        F.to_montgomery z_mon z;
-        F.mul u1 z_mon s_inv_mon;
+        F.to_montgomery s_inv s_inv;
+        F.to_montgomery z z;
+        F.mul u1 z s_inv;
         let u2 = create () in
         let r_mon = from_be_cstruct r in
         F.to_montgomery r_mon r_mon;
-        F.mul u2 r_mon s_inv_mon;
-        let u1_out = create () in
-        F.from_montgomery u1_out u1;
-        let u2_out = create () in
-        F.from_montgomery u2_out u2;
+        F.mul u2 r_mon s_inv;
+        F.from_montgomery u1 u1;
+        F.from_montgomery u2 u2;
         match
-          S.of_cstruct (to_be_cstruct u1_out),
-          S.of_cstruct (to_be_cstruct u2_out)
+          S.of_cstruct (to_be_cstruct u1),
+          S.of_cstruct (to_be_cstruct u2)
         with
         | Ok u1, Ok u2 ->
           let point =
@@ -783,13 +778,14 @@ end
 
 module X25519 = struct
   (* RFC 7748 *)
-  external x25519_scalar_mult_generic : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
+  external x25519_scalar_mult_generic : Cstruct.buffer -> Cstruct.buffer -> int -> Cstruct.buffer -> int -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
 
   let key_len = 32
 
   let scalar_mult in_ base =
     let out = Cstruct.create key_len in
-    x25519_scalar_mult_generic out.Cstruct.buffer in_.Cstruct.buffer base.Cstruct.buffer;
+    x25519_scalar_mult_generic out.Cstruct.buffer
+      in_.Cstruct.buffer in_.Cstruct.off base.Cstruct.buffer base.Cstruct.off;
     out
 
   type secret = Cstruct.t
@@ -822,7 +818,7 @@ module Ed25519 = struct
   external scalar_mult_base_to_bytes : Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
   external reduce_l : Cstruct.buffer -> unit = "mc_25519_reduce_l" [@@noalloc]
   external muladd : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_muladd" [@@noalloc]
-  external double_scalar_mult : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
+  external double_scalar_mult : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> int -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
   external pub_ok : Cstruct.buffer -> bool = "mc_25519_pub_ok" [@@noalloc]
 
   type pub = Cstruct.t
@@ -902,7 +898,7 @@ module Ed25519 = struct
         let r' = Cstruct.create key_len in
         let success =
           double_scalar_mult r'.Cstruct.buffer k.Cstruct.buffer
-            key.Cstruct.buffer s.Cstruct.buffer
+            key.Cstruct.buffer s.Cstruct.buffer s.Cstruct.off
         in
         success && Cstruct.equal r r'
       end else

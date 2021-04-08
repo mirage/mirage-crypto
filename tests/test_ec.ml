@@ -5,11 +5,6 @@ module Testable = struct
     Alcotest.result Alcotest.unit (Alcotest.testable pp_error ( = ))
 end
 
-let key_pair_of_hex h =
-  P256.Dh.gen_key ~rng:(fun _ -> Hex.to_cstruct h)
-
-let scalar_of_hex h = fst (key_pair_of_hex h)
-
 let pp_hex_le fmt cs =
   let n = Cstruct.len cs in
   for i = n - 1 downto 0 do
@@ -31,18 +26,28 @@ let key_exchange =
         |> Alcotest.check Alcotest.string __LOC__ expected )
   in
   let d_a, p_a =
-    key_pair_of_hex
-      (`Hex "200102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+    let rng _ = Cstruct.of_hex "200102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" in
+    P256.Dh.gen_key ~rng
   in
   let d_b, p_b =
-    key_pair_of_hex
-      (`Hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+    let rng _ = Cstruct.of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" in
+    P256.Dh.gen_key ~rng
+  in
+  let d_b', p_b' =
+    let rng _ = Cstruct.shift (Cstruct.of_hex "00000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f") 1 in
+    P256.Dh.gen_key ~rng
   in
   [
     test ~name:"b*A" d_b p_a
       ~expected:
         "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
     test ~name:"a*B" d_a p_b
+      ~expected:
+        "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
+    test ~name:"b'*A" d_b' p_a
+      ~expected:
+        "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
+    test ~name:"a*B'" d_a p_b'
       ~expected:
         "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
     test ~name:"a*A" d_a p_a
@@ -55,7 +60,8 @@ let key_exchange =
 
 let scalar_mult =
   let test ~n ~scalar ~point ~expected =
-    let scalar = scalar_of_hex scalar in
+    let rng _ = scalar in
+    let scalar = fst (P256.Dh.gen_key ~rng) in
     let point = Hex.to_cstruct point in
     ( Printf.sprintf "Scalar mult (#%d)" n,
       `Quick,
@@ -71,29 +77,29 @@ let scalar_mult =
   [
     test ~n:0
       ~scalar:
-        (`Hex
-          "0000000000000000000000000000000000000000000000000000000000000001")
+        (Cstruct.of_hex
+           "0000000000000000000000000000000000000000000000000000000000000001")
       ~point
       ~expected:
         "96c298d84539a1f4a033eb2d817d0377f240a463e5e6bcf847422ce1f2d1176b";
     test ~n:1
       ~scalar:
-        (`Hex
-          "0000000000000000000000000000000000000000000000000000000000000002")
+        (Cstruct.of_hex
+           "0000000000000000000000000000000000000000000000000000000000000002")
       ~point
       ~expected:
         "78996647fc480ba6351bf277e26989c0c31ab5040338528a7e4f038d187bf27c";
     test ~n:2
       ~scalar:
-        (`Hex
-          "0000000000000000000000000000000000000000000000000000000000000004")
+        (Cstruct.of_hex
+           "0000000000000000000000000000000000000000000000000000000000000004")
       ~point
       ~expected:
         "5208036b44029350ef965578dbe21f03d02be69e65de2da0bb8fd032354a53e2";
     test ~n:3
       ~scalar:
-        (`Hex
-          "0612465c89a023ab17855b0a6bcebfd3febb53aef84138647b5352e02c10c346")
+        (Cstruct.of_hex
+           "0612465c89a023ab17855b0a6bcebfd3febb53aef84138647b5352e02c10c346")
       ~point:
         (`Hex
           "0462d5bd3372af75fe85a040715d0f502428e07046868b0bfdfa61d731afe44f26ac333a93a9e70a81cd5a95b5bf8d13990eb741c8c38872b4a07d275a014e30cf")
@@ -101,8 +107,8 @@ let scalar_mult =
         "854271e19508bc935ab22b95cd2be13a0e78265f528b658b3219028b900d0253";
     test ~n:4
       ~scalar:
-        (`Hex
-          "0a0d622a47e48f6bc1038ace438c6f528aa00ad2bd1da5f13ee46bf5f633d71a")
+        (Cstruct.of_hex
+           "0a0d622a47e48f6bc1038ace438c6f528aa00ad2bd1da5f13ee46bf5f633d71a")
       ~point:
         (`Hex
           "043cbc1b31b43f17dc200dd70c2944c04c6cb1b082820c234a300b05b7763844c74fde0a4ef93887469793270eb2ff148287da9265b0334f9e2609aac16e8ad503")
@@ -110,8 +116,8 @@ let scalar_mult =
         "ffffffffffffffffffffffffffffffff3022cfeeffffffffffffffffffffff7f";
     test ~n:5
       ~scalar:
-        (`Hex
-          "55d55f11bb8da1ea318bca7266f0376662441ea87270aa2077f1b770c4854a48")
+        (Cstruct.of_hex
+           "55d55f11bb8da1ea318bca7266f0376662441ea87270aa2077f1b770c4854a48")
       ~point:
         (`Hex
           "04000000000000000000000000000000000000000000000000000000000000000066485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4")
@@ -124,9 +130,8 @@ let to_ok_or_error = function Ok _ -> Ok () | Error _ as e -> e
 let point_validation =
   let test ~name ~x ~y ~expected =
     let scalar =
-      scalar_of_hex
-        (`Hex
-          "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+      let rng _ = Cstruct.of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" in
+      fst (P256.Dh.gen_key ~rng)
     in
     let point =
       Cstruct.concat [ Cstruct.of_hex "04"; Hex.to_cstruct x; Hex.to_cstruct y ]
@@ -241,6 +246,13 @@ let ecdsa_sign () =
   in
   let key, _pub = P256.Dsa.generate ~rng:(fun _ -> d) in
   let (r', s') = P256.Dsa.sign ~key ~k e in
+  Alcotest.(check bool __LOC__ true (Cstruct.equal r r' && Cstruct.equal s s'));
+  let d' = Cstruct.(shift (append (create 10) d) 10)
+  and k' = Cstruct.(shift (append (create 12) k) 12)
+  and e' = Cstruct.(shift (append (create 16) e) 16)
+  in
+  let key, _pub = P256.Dsa.generate ~rng:(fun _ -> d') in
+  let (r', s') = P256.Dsa.sign ~key ~k:k' e' in
   Alcotest.(check bool __LOC__ true (Cstruct.equal r r' && Cstruct.equal s s'))
 
 let ecdsa_verify () =
@@ -256,7 +268,21 @@ let ecdsa_verify () =
   and r = Cstruct.of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
   and s = Cstruct.of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
   in
-  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r, s) e))
+  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r, s) e));
+  let key =
+    match P256.Dsa.pub_of_cstruct
+            Cstruct.(shift (of_hex {|0000000004
+                        B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
+                        3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|}) 4)
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  in
+  let e' = Cstruct.(shift (append (create 3) e) 3)
+  and r' = Cstruct.(shift (append (create 6) r) 6)
+  and s' = Cstruct.(shift (append (create 9) s) 9)
+  in
+  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r', s') e'))
 
 let ecdsa = [
   (* from https://csrc.nist.rip/groups/ST/toolkit/documents/Examples/ECDSA_Prime.pdf *)
@@ -744,12 +770,21 @@ let x25519 () =
    | Ok shared' ->
      Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
    | Error e ->
-     Alcotest.failf "X25519 key exchange failed %a" pp_error e);
+     Alcotest.failf "X25519 key exchange apriv bpub failed %a" pp_error e);
   (match X25519.key_exchange bpriv apub with
    | Ok shared' ->
      Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
    | Error e ->
-     Alcotest.failf "X25519 key exchange failed %a" pp_error e)
+     Alcotest.failf "X25519 key exchange bpriv apub failed %a" pp_error e);
+  let apub' = Cstruct.(shift (append (create 32) apub) 32)
+  and b' = Cstruct.(shift (append (create 10) b) 10)
+  in
+  let bpriv', _ = X25519.gen_key ~rng:(fun _ -> b') in
+  (match X25519.key_exchange bpriv' apub' with
+   | Ok shared' ->
+     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
+   | Error e ->
+     Alcotest.failf "X25519 key exchange bpriv' apub' failed %a" pp_error e)
 
 let ed25519 =
   let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal in
@@ -922,6 +957,52 @@ let ed25519 =
      |};
   ]
 
+let ed25519_cs_with_offs () =
+  let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal in
+  let test secret public msg signature =
+    Alcotest.(
+      check cs "public key is ok" (Ed25519.pub_to_cstruct public)
+        Ed25519.(pub_to_cstruct (pub_of_priv secret)));
+    Alcotest.(check cs "signature is ok" signature (Ed25519.sign ~key:secret msg));
+    Alcotest.(check bool "verify is ok" true
+                (Ed25519.verify ~key:public signature ~msg))
+  in
+  let case ~secret ~public ~msg ~signature =
+    let s =
+      match Ed25519.priv_of_cstruct Cstruct.(shift (of_hex secret) 1) with
+      | Ok p ->
+        Alcotest.(check cs "private key encoding is good"
+                    Cstruct.(shift (of_hex secret) 1)
+                    (Ed25519.priv_to_cstruct p));
+        p
+      | Error _ -> Alcotest.fail "failed to decode private key"
+    and p =
+      match Ed25519.pub_of_cstruct Cstruct.(shift (of_hex public) 2) with
+      | Ok p ->
+        Alcotest.(check cs "public key encoding is good"
+                    Cstruct.(shift (of_hex public) 2)
+                    (Ed25519.pub_to_cstruct p));
+        p
+      | Error _ -> Alcotest.fail "failed to decode public key"
+    and m = Cstruct.(shift (of_hex msg) 3)
+    and si = Cstruct.(shift (of_hex signature) 4)
+    in
+    test s p m si
+  in
+  case
+    ~secret:
+      "00 9d61b19deffd5a60ba844af492ec2cc4 4449c5697b326919703bac031cae7f60"
+    ~public:
+      "0000 d75a980182b10ab7d54bfed3c964073a 0ee172f3daa62325af021a68f707511a"
+    ~msg:"000000"
+    ~signature:
+      {|00000000
+        e5564300c360ac729086e2cc806e828a
+        84877f1eb8e5d974d873e06522490155
+        5fb8821590a33bacc61e39701cf9b46b
+        d25bf5f0595bbe24655141438e7a100b
+      |}
+
 let p521_regression () =
   let key = Cstruct.of_hex
 "04 01 e4 f8 8a 40 3d fe  2f 65 a0 20 50 01 9b 87
@@ -972,5 +1053,6 @@ let () =
       ("ECDSA RFC 6979 P521", ecdsa_rfc6979_p521);
       ("X25519", [ "RFC 7748", `Quick, x25519 ]);
       ("ED25519", ed25519);
+      ("ED25519 with offsets", [ "one", `Quick, ed25519_cs_with_offs ]);
       ("ECDSA P521 regression", [ "regreesion1", `Quick, p521_regression ]);
     ]
