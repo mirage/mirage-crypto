@@ -783,13 +783,14 @@ end
 
 module X25519 = struct
   (* RFC 7748 *)
-  external x25519_scalar_mult_generic : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
+  external x25519_scalar_mult_generic : Cstruct.buffer -> Cstruct.buffer -> int -> Cstruct.buffer -> int -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
 
   let key_len = 32
 
   let scalar_mult in_ base =
     let out = Cstruct.create key_len in
-    x25519_scalar_mult_generic out.Cstruct.buffer in_.Cstruct.buffer base.Cstruct.buffer;
+    x25519_scalar_mult_generic out.Cstruct.buffer
+      in_.Cstruct.buffer in_.Cstruct.off base.Cstruct.buffer base.Cstruct.off;
     out
 
   type secret = Cstruct.t
@@ -822,7 +823,7 @@ module Ed25519 = struct
   external scalar_mult_base_to_bytes : Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
   external reduce_l : Cstruct.buffer -> unit = "mc_25519_reduce_l" [@@noalloc]
   external muladd : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> unit = "mc_25519_muladd" [@@noalloc]
-  external double_scalar_mult : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
+  external double_scalar_mult : Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> Cstruct.buffer -> int -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
   external pub_ok : Cstruct.buffer -> bool = "mc_25519_pub_ok" [@@noalloc]
 
   type pub = Cstruct.t
@@ -902,7 +903,7 @@ module Ed25519 = struct
         let r' = Cstruct.create key_len in
         let success =
           double_scalar_mult r'.Cstruct.buffer k.Cstruct.buffer
-            key.Cstruct.buffer s.Cstruct.buffer
+            key.Cstruct.buffer s.Cstruct.buffer s.Cstruct.off
         in
         success && Cstruct.equal r r'
       end else
