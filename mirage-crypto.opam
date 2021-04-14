@@ -20,6 +20,7 @@ depends: [
   "ounit" {with-test}
   "cstruct" {>="3.2.0"}
   "eqaf" {>= "0.7"}
+  "bigarray-compat" # required to get eqaf.cstruct
 ]
 depopts: [
   "ocaml-freestanding"
