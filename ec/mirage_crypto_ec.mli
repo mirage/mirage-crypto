@@ -29,25 +29,17 @@ exception Message_too_long
 module type Dh = sig
 
   type secret
-  (** Type for private keys.
+  (** Type for private keys. *)
 
-      In the usual setting, the private key only be generated and used for key
-      exchange. But it can be useful to create values of type [secret] with a
-      known value, for example to check against test vectors.
-      One can use the following pattern to do this:
+  val secret_of_cs : Cstruct.t -> (secret * Cstruct.t, error) result
+  (** [secret_of_cs secret] decodes the provided buffer as {!secret}. May
+      result in an error if the buffer had an invalid length or was not in
+      bounds. *)
 
-      {[ let (secret, _) = gen_key ~rng:(fun _ -> known_data) ]}
-  *)
-
-  val gen_key : rng:(int -> Cstruct.t) -> secret * Cstruct.t
-  (** [gen_key ~rng] generates a private and a public key for Ephemeral
+  val gen_key : ?g:Mirage_crypto_rng.g -> unit -> secret * Cstruct.t
+  (** [gen_key ~g ()] generates a private and a public key for Ephemeral
       Diffie-Hellman. The returned key pair MUST only be used for a single
       key exchange.
-
-      [rng] is the function used to repeteadly generate a private key until a
-      valid candidate is obtained. [rng]'s int parameter is the size of the
-      [Cstruct.t] to generate. If [rng] returns an invalid length buffer,
-      [Failure _] is raised.
 
       The generated private key is checked to be greater than zero and lower
       than the group order meaning the public key cannot be the point at
@@ -99,9 +91,8 @@ module type Dsa = sig
 
   (** {2 Key generation} *)
 
-  val generate : rng:(int -> Cstruct.t) -> priv * pub
-  (** [generate ~rng] generates a key pair using the provided random number
-      generator. *)
+  val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
+  (** [generate ~g ()] generates a key pair. *)
 
   (** {2 Cryptographic operations} *)
 
@@ -187,9 +178,8 @@ module Ed25519 : sig
 
   (** {2 Key generation} *)
 
-  val generate : rng:(int -> Cstruct.t) -> priv * pub
-  (** [generate ~rng] generates a key pair using the provided random number
-      generator. *)
+  val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
+  (** [generate ~g ()] generates a key pair. *)
 
   (** {2 Cryptographic operations} *)
 
