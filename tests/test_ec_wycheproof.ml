@@ -70,17 +70,28 @@ type test = {
 }
 
 let perform_key_exchange curve ~public_key ~raw_private_key =
-  let rng _ = raw_private_key in
   to_string_result ~pp_error
     (match curve with
      | "secp224r1" ->
-       P224.Dh.key_exchange (fst (P224.Dh.gen_key ~rng)) public_key
+       begin match P224.Dh.secret_of_cs raw_private_key with
+         | Ok (p, _) -> P224.Dh.key_exchange p public_key
+         | Error _ -> assert false
+       end
      | "secp256r1" ->
-       P256.Dh.key_exchange (fst (P256.Dh.gen_key ~rng)) public_key
+       begin match P256.Dh.secret_of_cs raw_private_key with
+         | Ok (p, _) -> P256.Dh.key_exchange p public_key
+         | Error _ -> assert false
+       end
      | "secp384r1" ->
-       P384.Dh.key_exchange (fst (P384.Dh.gen_key ~rng)) public_key
+       begin match P384.Dh.secret_of_cs raw_private_key with
+         | Ok (p, _) -> P384.Dh.key_exchange p public_key
+         | Error _ -> assert false
+       end
      | "secp521r1" ->
-       P521.Dh.key_exchange (fst (P521.Dh.gen_key ~rng)) public_key
+       begin match P521.Dh.secret_of_cs raw_private_key with
+         | Ok (p, _) -> P521.Dh.key_exchange p public_key
+         | Error _ -> assert false
+       end
      | _ -> assert false)
 
 let interpret_test ~tcId curve { public_key; raw_private_key; expected } () =
@@ -88,7 +99,8 @@ let interpret_test ~tcId curve { public_key; raw_private_key; expected } () =
   | Ok cs ->
       let got = Cstruct.to_string cs in
       Alcotest.check hex __LOC__ expected got
-  | Error err -> Printf.ksprintf Alcotest.fail "While parsing %d: %s" tcId err
+  | Error err ->
+    Printf.ksprintf (fun s -> Alcotest.fail s) "While parsing %d: %s" tcId err
 
 type invalid_test = { public : string; private_ : string }
 
@@ -202,7 +214,9 @@ let to_ecdsa_tests (x : ecdsa_test_group) =
     | "SHA-224" -> `SHA224
     | _ -> assert false
   in
-  List.map (make_ecdsa_test x.key.curve (Cstruct.of_string x.key.uncompressed) hash) x.tests
+  List.map
+    (make_ecdsa_test x.key.curve (Cstruct.of_string x.key.uncompressed) hash)
+    x.tests
 
 let ecdsa_tests file =
   let data = load_file_exn file in
@@ -215,7 +229,9 @@ let to_x25519_test (x : ecdh_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment in
   let pub = Hex.(to_cstruct (of_string x.public))
   and priv =
-    fst (X25519.gen_key ~rng:(fun _ -> Hex.(to_cstruct (of_string x.private_))))
+    match X25519.secret_of_cs Hex.(to_cstruct (of_string x.private_)) with
+    | Ok (p, _) -> p
+    | Error _ -> assert false
   and shared = Hex.(to_cstruct (of_string x.shared))
   in
   match x.result with
@@ -229,26 +245,21 @@ let to_x25519_test (x : ecdh_test) =
       | Ok r, false ->
         Alcotest.(check bool __LOC__ true (Cstruct.equal r shared))
       | Error _, true -> ()
-      | Error e, false ->
-        Alcotest.failf "acceptable errored %a" pp_error e
+      | Error e, false -> Alcotest.failf "acceptable errored %a" pp_error e
     in
     name, `Quick, f
   | Invalid ->
     let f () =
       match X25519.key_exchange priv pub with
-      | Ok r ->
-        Alcotest.(check bool __LOC__ false (Cstruct.equal r shared))
-      | Error e ->
-        Alcotest.failf "invalid errored %a" pp_error e
+      | Ok r -> Alcotest.(check bool __LOC__ false (Cstruct.equal r shared))
+      | Error e -> Alcotest.failf "invalid errored %a" pp_error e
     in
     name, `Quick, f
   | Valid ->
     let f () =
       match X25519.key_exchange priv pub with
-      | Ok r ->
-        Alcotest.(check bool __LOC__ true (Cstruct.equal r shared))
-      | Error e ->
-        Alcotest.failf "valid errored %a" pp_error e
+      | Ok r -> Alcotest.(check bool __LOC__ true (Cstruct.equal r shared))
+      | Error e -> Alcotest.failf "valid errored %a" pp_error e
     in
     name, `Quick, f
 
@@ -306,17 +317,25 @@ let ed25519_tests =
 let () =
   Alcotest.run "Wycheproof NIST curves" [
     ("ECDH P224 test vectors", ecdh_tests "ecdh_secp224r1_test.json") ;
-    ("ECDSA P224 test vectors (SHA224)", ecdsa_tests "ecdsa_secp224r1_sha224_test.json") ;
-    ("ECDSA P224 test vectors (SHA256)", ecdsa_tests "ecdsa_secp224r1_sha256_test.json") ;
-    ("ECDSA P224 test vectors (SHA512)", ecdsa_tests "ecdsa_secp224r1_sha512_test.json") ;
+    ("ECDSA P224 test vectors (SHA224)",
+     ecdsa_tests "ecdsa_secp224r1_sha224_test.json") ;
+    ("ECDSA P224 test vectors (SHA256)",
+     ecdsa_tests "ecdsa_secp224r1_sha256_test.json") ;
+    ("ECDSA P224 test vectors (SHA512)",
+     ecdsa_tests "ecdsa_secp224r1_sha512_test.json") ;
     ("ECDH P256 test vectors", ecdh_tests "ecdh_secp256r1_test.json") ;
-    ("ECDSA P256 test vectors (SHA256)", ecdsa_tests "ecdsa_secp256r1_sha256_test.json") ;
-    ("ECDSA P256 test vectors (SHA512)", ecdsa_tests "ecdsa_secp256r1_sha512_test.json") ;
+    ("ECDSA P256 test vectors (SHA256)",
+     ecdsa_tests "ecdsa_secp256r1_sha256_test.json") ;
+    ("ECDSA P256 test vectors (SHA512)",
+     ecdsa_tests "ecdsa_secp256r1_sha512_test.json") ;
     ("ECDH P384 test vectors", ecdh_tests "ecdh_secp384r1_test.json") ;
-    ("ECDSA P384 test vectors (SHA384)", ecdsa_tests "ecdsa_secp384r1_sha384_test.json") ;
-    ("ECDSA P384 test vectors (SHA512)", ecdsa_tests "ecdsa_secp384r1_sha512_test.json") ;
+    ("ECDSA P384 test vectors (SHA384)",
+     ecdsa_tests "ecdsa_secp384r1_sha384_test.json") ;
+    ("ECDSA P384 test vectors (SHA512)",
+     ecdsa_tests "ecdsa_secp384r1_sha512_test.json") ;
     ("ECDH P521 test vectors", ecdh_tests "ecdh_secp521r1_test.json") ;
-    ("ECDSA P521 test vectors (SHA512)", ecdsa_tests "ecdsa_secp521r1_sha512_test.json") ;
+    ("ECDSA P521 test vectors (SHA512)",
+     ecdsa_tests "ecdsa_secp521r1_sha512_test.json") ;
     ("X25519 test vectors", x25519_tests) ;
     ("ED25519 test vectors", ed25519_tests) ;
   ]

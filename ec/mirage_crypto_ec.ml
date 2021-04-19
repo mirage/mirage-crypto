@@ -23,7 +23,9 @@ exception Message_too_long
 module type Dh = sig
   type secret
 
-  val gen_key : rng:(int -> Cstruct.t) -> secret * Cstruct.t
+  val secret_of_cs : Cstruct.t -> (secret * Cstruct.t, error) result
+
+  val gen_key : ?g:Mirage_crypto_rng.g -> unit -> secret * Cstruct.t
 
   val key_exchange : secret -> Cstruct.t -> (Cstruct.t, error) result
 end
@@ -43,7 +45,7 @@ module type Dsa = sig
 
   val pub_of_priv : priv -> pub
 
-  val generate : rng:(int -> Cstruct.t) -> priv * pub
+  val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
 
   val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
 
@@ -369,21 +371,24 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
 
   type secret = scalar
 
-  let secret_of_cs = S.of_cstruct
-
-  let rec generate_private_key ~rng () =
-    let candidate = rng Param.byte_length in
-    match secret_of_cs candidate with
-    | Ok secret -> secret
-    | Error `Invalid_length ->
-      failwith "Mirage_crypto_ec.Dh.gen_key: generator returned an invalid length"
-    | Error _ -> generate_private_key ~rng ()
-
-  let gen_key ~rng =
-    let private_key = generate_private_key ~rng () in
+  let share private_key =
     let public_key = S.scalar_mult private_key P.params_g in
-    let to_send = point_to_cs public_key in
-    (private_key, to_send)
+    point_to_cs public_key
+
+  let secret_of_cs s =
+    match S.of_cstruct s with
+    | Ok p -> Ok (p, share p)
+    | Error _ as e -> e
+
+  let rec generate_private_key ?g () =
+    let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
+    match S.of_cstruct candidate with
+    | Ok secret -> secret
+    | Error _ -> generate_private_key ?g ()
+
+  let gen_key ?g () =
+    let private_key = generate_private_key ?g () in
+    (private_key, share private_key)
 
   let key_exchange secret received =
     match point_of_cs received with
@@ -467,14 +472,16 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
 
   let pub_to_cstruct = P.to_cstruct
 
-  let generate ~rng =
+  let generate ?g () =
     (* FIPS 186-4 B 4.2 *)
-    let rec one () =
-      match S.of_cstruct (rng Param.byte_length) with
-      | Ok x -> x
-      | Error _ -> one ()
+    let d =
+      let rec one () =
+        match S.of_cstruct (Mirage_crypto_rng.generate ?g Param.byte_length) with
+        | Ok x -> x
+        | Error _ -> one ()
+      in
+      one ()
     in
-    let d = one () in
     let q = S.scalar_mult d P.params_g in
     (d, q)
 
@@ -797,9 +804,15 @@ module X25519 = struct
 
   let public priv = scalar_mult priv basepoint
 
-  let gen_key ~rng =
-    let secret = rng key_len in
+  let gen_key ?g () =
+    let secret = Mirage_crypto_rng.generate ?g key_len in
     secret, public secret
+
+  let secret_of_cs s =
+    if Cstruct.len s = key_len then
+      Ok (s, public s)
+    else
+      Error `Invalid_length
 
   let is_zero =
     let zero = Cstruct.create key_len in
@@ -861,8 +874,8 @@ module Ed25519 = struct
 
   let pub_to_cstruct pub = pub
 
-  let generate ~rng =
-    let secret = rng key_len in
+  let generate ?g () =
+    let secret = Mirage_crypto_rng.generate ?g key_len in
     secret, pub_of_priv secret
 
   let sign ~key msg =
