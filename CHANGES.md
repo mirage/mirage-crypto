@@ -1,3 +1,13 @@
+## v0.10.0 (2021-04-20)
+
+- mirage-crypto-rng on arm32 only use mrrc if in kernel mode, use mrc in user
+  land mode, and clock_gettime as fallback (reported by @adams-1979 in #113,
+  fix in #120 by @hannesm)
+- mirage-crypto-ec: revise key generation API, and provide Dh.secret_of_cstruct
+  for test vectors (and other scenarios where you need to decode an existing
+  DH secret). Before, this was embedded into the generate function, which
+  could diverged for some input (#119 @hannesm)
+
 ## v0.9.2 (2021-04-08)
 
 - mirage-crypto-ec: fix X25519 and Ed25519 if called with Cstruct.t whose
