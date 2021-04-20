@@ -23,17 +23,61 @@
 #endif /* __i386__ || __x86_64__ */
 
 #if defined (__arm__)
-/* Replace with `read_virtual_count` from MiniOS when that symbol
- * gets exported. */
-static inline uint32_t read_virtual_count () {
+/*
+ * The ideal timing source on ARM are the performance counters, but these are
+ * presently masked by Xen.
+ * It would work like this:
+
+#if defined (__ARM_ARCH_7A__)
+  // Disable counter overflow interrupts.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
+  // Program the PMU control register.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
+  // Enable all counters.
+  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
+
+  // Read:
+  unsigned int res;
+  __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
+*/
+#ifdef __ocaml_freestanding__
+static inline uint32_t read_virtual_count ()
+{
   uint32_t c_lo, c_hi;
   __asm__ __volatile__("mrrc p15, 1, %0, %1, c14":"=r"(c_lo), "=r"(c_hi));
   return c_lo;
 }
+#else
+/* see https://github.com/mirage/mirage-crypto/issues/113 and
+https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclock.h
+   The performance counters are only available in kernel mode (or if enabled via
+   a kernel module also in user mode). Use clock_gettime as fallback.
+ */
+#include <time.h>
+static inline uint32_t read_virtual_count ()
+{
+  uint32_t pmccntr;
+  uint32_t pmuseren;
+  uint32_t pmcntenset;
+  // Read the user mode perf monitor counter access permissions.
+  __asm__ __volatile__ ("mrc p15, 0, %0, c9, c14, 0" : "=r" (pmuseren));
+  if (pmuseren & 1) {  // Allows reading perfmon counters for user mode code.
+    __asm__ __volatile__ ("mrc p15, 0, %0, c9, c12, 1" : "=r" (pmcntenset));
+    if (pmcntenset & 0x80000000ul) {  // Is it counting?
+      __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0" : "=r" (pmccntr));
+      // The counter is set up to count every 64th cycle
+      return pmccntr;
+    }
+  }
+  struct timespec now;
+  clock_gettime (CLOCK_MONOTONIC, &now);
+  return now.tv_nsec;
+}
+#endif /* __ocaml_freestanding__ */
 #endif /* arm */
 
 #if defined (__aarch64__)
-#define	isb()		__asm __volatile("isb" : : : "memory")
+#define	isb() __asm__ __volatile__("isb" : : : "memory")
 static inline uint64_t read_virtual_count(void)
 {
   uint64_t c;
@@ -50,7 +94,7 @@ https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclo
 static inline uint64_t read_cycle_counter(void)
 {
   uint64_t rval;
-  __asm__ volatile ("mfspr %0, 268":"=r" (rval));
+  __asm__ __volatile__ ("mfspr %0, 268":"=r" (rval));
   return rval;
 }
 #endif
@@ -135,22 +179,3 @@ CAMLprim value mc_entropy_detect (value __unused(unit)) {
   detect ();
   return Val_unit;
 }
-
-/*
- * XXX
- * The ideal timing source on ARM are the performance counters, but these are
- * presently masked by Xen.
- * It would work like this:
-
-#if defined (__ARM_ARCH_7A__)
-  // Disable counter overflow interrupts.
-  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c14, 2" :: "r"(0x8000000f));
-  // Program the PMU control register.
-  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 0" :: "r"(1 | 16));
-  // Enable all counters.
-  __asm__ __volatile__ ("mcr p15, 0, %0, c9, c12, 1" :: "r"(0x8000000f));
-
-  // Read:
-  unsigned int res;
-  __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
-*/
