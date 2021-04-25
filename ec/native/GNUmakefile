@@ -6,7 +6,7 @@
 
 WBW_MONT ?= ../../../fiat-crypto/src/ExtractionOCaml/word_by_word_montgomery --static --use-value-barrier
 UNSAT_SOLINAS ?= ../../../fiat-crypto/src/ExtractionOCaml/unsaturated_solinas --static --use-value-barrier
-N_FUNCS=mul add opp from_montgomery to_montgomery one msat divstep_precomp divstep to_bytes from_bytes
+N_FUNCS=mul add opp from_montgomery to_montgomery one msat divstep_precomp divstep to_bytes from_bytes selectznz
 
 # The NIST curve P-224 (AKA SECP224R1)
 P224="2^224 - 2^96 + 1"
