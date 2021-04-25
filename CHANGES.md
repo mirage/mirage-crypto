@@ -1,3 +1,7 @@
+## v0.10.1 (2021-04-25)
+
+- mirage-crypto-ec: make inversion run in constant time (#121 by @dfaranha)
+
 ## v0.10.0 (2021-04-20)
 
 - mirage-crypto-rng on arm32 only use mrrc if in kernel mode, use mrc in user
