@@ -1,3 +1,9 @@
+## unreleased
+
+- mirage-crypto-ec: dune C stubs compilation rules: explicitely declare the 
+  include directory instead of listing it as a flag, so that the dependency
+  is correctly tracked (#122 by @TheLortex)
+
 ## v0.10.1 (2021-04-25)
 
 - mirage-crypto-ec: make inversion run in constant time (#121 by @dfaranha)
