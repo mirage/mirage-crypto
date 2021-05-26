@@ -11,7 +11,6 @@ jobs:
       matrix:
         system: [ubuntu, macos]
         target: [android.arm64, linux.musl.arm64, macos.arm64]
-        ocaml-version: ["~4.10.2000"]
         exclude:
           - system: ubuntu
             target: macos.arm64
@@ -29,7 +28,6 @@ jobs:
           echo '{
             "name": "cross-compile",
             "dependencies": {
-              "ocaml": "${{ matrix.ocaml-version }}",
               "@opam/mirage-crypto": "*",
               "@opam/mirage-crypto-ec": "*",
               "@opam/mirage-crypto-pk": "*",
