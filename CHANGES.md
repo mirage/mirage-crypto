@@ -1,8 +1,12 @@
-## unreleased
+## v0.10.2 (2021-06-07)
 
-- mirage-crypto-ec: dune C stubs compilation rules: explicitely declare the 
+- mirage-crypto-ec: dune C stubs compilation rules: explicitely declare the
   include directory instead of listing it as a flag, so that the dependency
   is correctly tracked (#122 by @TheLortex)
+- mirage-crypto: compatibility with gcc11 (-Warray-parameters warning)
+  (reported in #124 by @TheLortex, fixed in #125 by @hannesm)
+- support for 64 bit RISC-V (#127 by @edwintorok)
+- Fixed esy cross-compile CI (#126 by @EduardoRFS)
 
 ## v0.10.1 (2021-04-25)
 
