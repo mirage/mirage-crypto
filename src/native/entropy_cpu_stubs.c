@@ -108,6 +108,16 @@ static inline uint64_t rdcycle64(void)
 }
 #endif
 
+#if defined (__s390x__)
+static inline uint64_t getticks(void)
+{
+  uint64_t rval;
+  __asm__ __volatile__ ("stck %0" : "=Q" (rval) : : "cc");
+  return rval;
+}
+#endif
+
+
 CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #if defined (__i386__) || defined (__x86_64__)
   return Val_long (__rdtsc ());
@@ -117,6 +127,8 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
   return Val_long (read_cycle_counter ());
 #elif defined(__riscv) && (64 == __riscv_xlen)
   return Val_long (rdcycle64 ());
+#elif defined (__s390x__)
+  return Val_long (getticks ());
 #else
 #error ("No known cycle-counting instruction.")
 #endif
