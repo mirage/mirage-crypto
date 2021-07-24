@@ -1,3 +1,12 @@
+## v0.10.3 (2021-07-24)
+
+- support for s390x (#129 by @edelsohn)
+- mirage-crypto: add Hash.hmac_feed, analogous to Hash.feed (#130 by @reynir)
+- use --std=c11 in C flags, as required by upcoming OCaml multicore (#133 by
+  @hannesm, review by @Engil)
+- update fiat-crypto generated code (now emitting __inline__ attribute)
+  (#132 by @hannesm)
+
 ## v0.10.2 (2021-06-07)
 
 - mirage-crypto-ec: dune C stubs compilation rules: explicitely declare the
