@@ -134,7 +134,7 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
   let copy dst src = Bigarray.Array1.blit src dst
 
   let checked_buffer cs =
-    assert (Cstruct.len cs = P.byte_length);
+    assert (Cstruct.length cs = P.byte_length);
     Cstruct.to_bigarray cs
 
   let from_bytes fe cs =
@@ -234,12 +234,12 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
 
   let of_cstruct cs =
     let len = P.byte_length in
-    if Cstruct.len cs = 0 then
+    if Cstruct.length cs = 0 then
       Error `Invalid_format
     else
       match Cstruct.get_uint8 cs 0 with
-      | 0x00 when Cstruct.len cs = 1 -> Ok (at_infinity ())
-      | 0x04 when Cstruct.len cs = 1 + len + len ->
+      | 0x00 when Cstruct.length cs = 1 -> Ok (at_infinity ())
+      | 0x04 when Cstruct.length cs = 1 + len + len ->
         let x = Cstruct.sub cs 1 len in
         let y = Cstruct.sub cs (1 + len) len in
         validate_finite_point ~x ~y
@@ -417,7 +417,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let priv_to_cstruct = S.to_cstruct
 
   let padded msg =
-    let l = Cstruct.len msg in
+    let l = Cstruct.length msg in
     let bl = Param.byte_length in
     let first_byte_ok () =
       match Param.first_byte_bits with
@@ -809,7 +809,7 @@ module X25519 = struct
     secret, public secret
 
   let secret_of_cs s =
-    if Cstruct.len s = key_len then
+    if Cstruct.length s = key_len then
       Ok (s, public s)
     else
       Error `Invalid_length
@@ -819,7 +819,7 @@ module X25519 = struct
     fun cs -> Cstruct.equal zero cs
 
   let key_exchange secret public =
-    if Cstruct.len public = key_len then
+    if Cstruct.length public = key_len then
       let res = scalar_mult secret public in
       if is_zero res then Error `Low_order else Ok res
     else
@@ -857,12 +857,12 @@ module Ed25519 = struct
   let pub_of_priv secret = fst (public secret)
 
   let priv_of_cstruct cs =
-    if Cstruct.len cs = key_len then Ok cs else Error `Invalid_length
+    if Cstruct.length cs = key_len then Ok cs else Error `Invalid_length
 
   let priv_to_cstruct priv = priv
 
   let pub_of_cstruct cs =
-    if Cstruct.len cs = key_len then
+    if Cstruct.length cs = key_len then
       let cs_copy = Cstruct.create key_len in
       Cstruct.blit cs 0 cs_copy 0 key_len;
       if pub_ok cs_copy.Cstruct.buffer then
@@ -893,7 +893,7 @@ module Ed25519 = struct
 
   let verify ~key signature ~msg =
     (* section 5.1.7 *)
-    if Cstruct.len signature = 2 * key_len then
+    if Cstruct.length signature = 2 * key_len then
       let r, s = Cstruct.split signature key_len in
       let s_smaller_l =
         (* check s within 0 <= s < L *)

@@ -90,7 +90,7 @@ module Hash_of (F : Foreign) (D : Desc) = struct
     buf
 
   let rec norm key =
-    match compare (Cstruct.len key) block_size with
+    match compare (Cstruct.length key) block_size with
     |  1 -> norm (digest key)
     | -1 -> Cs.rpad key block_size 0
     |  _ -> key

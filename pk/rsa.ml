@@ -235,7 +235,7 @@ module PKCS1 = struct
     go Mirage_crypto_rng.(generate ?g k) 0 0
 
   let pad ~mark ~padding k msg =
-    let pad = padding (k - len msg - 3 |> imax min_pad) in
+    let pad = padding (k - length msg - 3 |> imax min_pad) in
     cat [ bx00 ; b mark ; pad ; bx00 ; msg ]
 
   let unpad ~mark ~is_pad cs =
@@ -246,7 +246,7 @@ module PKCS1 = struct
     and c3 = get_uint8 cs i = 0x00
     and c4 = min_pad <= i - 2 in
     if c1 && c2 && c3 && c4 then
-      Some (sub cs (i + 1) (len cs - i - 1))
+      Some (sub cs (i + 1) (length cs - i - 1))
     else None
 
   let pad_01    =
@@ -264,10 +264,10 @@ module PKCS1 = struct
   let padded pad transform keybits msg =
     let n = keybits // 8 in
     let p = pad n msg in
-    if len p = n then transform p else raise Insufficient_key
+    if length p = n then transform p else raise Insufficient_key
 
   let unpadded unpad transform keybits msg =
-    if len msg = keybits // 8 then
+    if length msg = keybits // 8 then
       try unpad (transform msg) with Insufficient_key -> None
     else None
 
@@ -311,7 +311,7 @@ module PKCS1 = struct
       ~default:false
 
   let min_key hash =
-    (len (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1
+    (length (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1
 end
 
 module MGF1 (H : Hash.S) = struct
@@ -329,7 +329,7 @@ module MGF1 (H : Hash.S) = struct
              go (h :: acc) Int32.(succ c) (pred n) in
     go [] 0l (len // H.digest_size)
 
-  let mask ~seed cs = Cs.xor (mgf ~seed (Cstruct.len cs)) cs
+  let mask ~seed cs = Cs.xor (mgf ~seed (Cstruct.length cs)) cs
 end
 
 module OAEP (H : Hash.S) = struct
@@ -344,7 +344,7 @@ module OAEP (H : Hash.S) = struct
 
   let eme_oaep_encode ?g ?(label = Cstruct.empty) k msg =
     let seed  = Mirage_crypto_rng.generate ?g hlen
-    and pad   = Cstruct.create (max_msg_bytes k - len msg) in
+    and pad   = Cstruct.create (max_msg_bytes k - length msg) in
     let db    = cat [ H.digest label ; pad ; bx01 ; msg ] in
     let mdb   = MGF.mask ~seed db in
     let mseed = MGF.mask ~seed:mdb seed in
@@ -361,12 +361,12 @@ module OAEP (H : Hash.S) = struct
 
   let encrypt ?g ?label ~key msg =
     let k = pub_bits key // 8 in
-    if len msg > max_msg_bytes k then raise Insufficient_key
+    if length msg > max_msg_bytes k then raise Insufficient_key
     else encrypt ~key @@ eme_oaep_encode ?g ?label k msg
 
   let decrypt ?(crt_hardening = false) ?mask ?label ~key em =
     let k = priv_bits key // 8 in
-    if len em <> k || max_msg_bytes k < 0 then None else
+    if length em <> k || max_msg_bytes k < 0 then None else
       try eme_oaep_decode ?label @@ decrypt ~crt_hardening ?mask ~key em
       with Insufficient_key -> None
 
@@ -407,7 +407,7 @@ module PSS (H: Hash.S) = struct
     let (mdb, h, bxx) = Cs.split3 em (em.len - hlen - 1) hlen in
     let db   = MGF.mask ~seed:h mdb in
     set_uint8 db 0 (get_uint8 db 0 land b0mask emlen) ;
-    let salt = shift db (len db - slen) in
+    let salt = shift db (length db - slen) in
     let h'   = digest ~salt msg
     and i    = ct_find_uint8 ~default:0 ~f:((<>) 0x00) db in
     let c1 = lnot (b0mask emlen) land get_uint8 mdb 0 = 0x00
@@ -429,7 +429,7 @@ module PSS (H: Hash.S) = struct
 
   let verify ?(slen = hlen) ~key ~signature msg =
     let b = pub_bits key
-    and s = len signature in
+    and s = length signature in
     s = b // 8 && sufficient_key ~slen b && try
       let em = encrypt ~key signature in
       emsa_pss_verify (imax 0 slen) (b - 1) (shift em (s - (b - 1) // 8)) msg

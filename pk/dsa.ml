@@ -160,6 +160,6 @@ let verify ~(key : pub) (r, s) digest =
 
 let massage ~key:({ q; _ }: pub) digest =
   let bits = Z.numbits q in
-  if bits >= Cstruct.len digest * 8 then digest else
+  if bits >= Cstruct.length digest * 8 then digest else
     let cs = Z_extra.(to_cstruct_be Z.(of_cstruct_be digest mod q)) in
     Cs.(cs lsl ((8 - bits mod 8) mod 8))
