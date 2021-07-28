@@ -17,7 +17,7 @@ depends: [
   "dune" {>= "2.6"}
   "dune-configurator" {>= "2.0.0"}
   "duration"
-  "cstruct" {>= "4.0.0"}
+  "cstruct" {>= "6.0.0"}
   "logs"
   "mirage-crypto" {=version}
   "ounit" {with-test}

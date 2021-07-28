@@ -24,7 +24,7 @@ module Null = struct
 
   let reseed ~g cs = g := Cs.(!g <+> cs)
 
-  let seeded ~g = Cstruct.len !g > 0
+  let seeded ~g = Cstruct.length !g > 0
 
   let accumulate ~g _source = `Acc (reseed ~g)
 
@@ -231,7 +231,7 @@ let rsa_pss_cases =
     let module Pss = Rsa.PSS (H) in
     let msg = vx msg and sgn = vx sgn and salt = vx salt in
     let key, public = key () in
-    let slen = Cstruct.len salt in
+    let slen = Cstruct.length salt in
     Pss.sign ~g:(random_is salt) ~slen ~mask:`No ~key (`Message msg)
       |> assert_cs_equal ~msg:"recomputing sig:" sgn ;
     Pss.verify ~key:public ~slen ~signature:sgn (`Message msg)

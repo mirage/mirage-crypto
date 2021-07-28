@@ -6,7 +6,7 @@ module Testable = struct
 end
 
 let pp_hex_le fmt cs =
-  let n = Cstruct.len cs in
+  let n = Cstruct.length cs in
   for i = n - 1 downto 0 do
     let byte = Cstruct.get_uint8 cs i in
     Format.fprintf fmt "%02x" byte
@@ -307,7 +307,7 @@ let ecdsa_rfc6979_p224 =
   let case hash ~message ~k ~r ~s () =
     let msg =
       let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
-      Cstruct.sub h 0 (min (Cstruct.len h) 28)
+      Cstruct.sub h 0 (min (Cstruct.length h) 28)
     and k = Cstruct.of_hex k
     in
     let k' =
@@ -403,7 +403,7 @@ let ecdsa_rfc6979_p256 =
   let case hash ~message ~k ~r ~s () =
     let msg =
       let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
-      Cstruct.sub h 0 (min (Cstruct.len h) 32)
+      Cstruct.sub h 0 (min (Cstruct.length h) 32)
     and k = Cstruct.of_hex k
     in
     let k' =
@@ -488,7 +488,7 @@ let ecdsa_rfc6979_p384 =
   let case hash ~message ~k ~r ~s () =
     let msg =
       let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
-      Cstruct.sub h 0 (min (Cstruct.len h) 48)
+      Cstruct.sub h 0 (min (Cstruct.length h) 48)
     and k = Cstruct.of_hex k
     in
     let k' =

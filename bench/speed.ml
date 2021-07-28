@@ -304,7 +304,7 @@ let benchmarks = [
     let open Mirage_crypto_rng.Fortuna in
     let g = create () in
     reseed ~g (Cstruct.of_string "abcd") ;
-    throughput name (fun cs -> generate ~g (Cstruct.len cs))) ;
+    throughput name (fun cs -> generate ~g (Cstruct.length cs))) ;
 
   bm "md5"    (fun name -> throughput name MD5.digest) ;
   bm "sha1"   (fun name -> throughput name SHA1.digest) ;
