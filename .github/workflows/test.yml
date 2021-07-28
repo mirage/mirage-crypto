@@ -19,20 +19,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
-        uses: avsm/setup-ocaml@v1
+        uses: ocaml/setup-ocaml@v2
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: |
-          opam pin add -n mirage-crypto.dev .
-          opam pin add -n mirage-crypto-rng.dev .
-          opam pin add -n mirage-crypto-rng-mirage.dev .
-          opam pin add -n mirage-crypto-rng-async.dev .
-          opam pin add -n mirage-crypto-pk.dev .
-          opam pin add -n mirage-crypto-ec.dev .
-          opam depext -y mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
-          opam install -t --deps-only .
+        run: opam install -t --deps-only .
 
       - name: Build
         run: opam exec -- dune build
