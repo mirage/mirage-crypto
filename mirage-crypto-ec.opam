@@ -20,7 +20,7 @@ authors: [
   "Massachusetts Institute of Technology"
   "Zoe Paraskevopoulou <zoe.paraskevopoulou@gmail.com>"
 ]
-license: "MIT"
+license: "ISC"
 homepage: "https://github.com/mirage/mirage-crypto"
 doc: "https://mirage.github.io/mirage-crypto/doc"
 bug-reports: "https://github.com/mirage/mirage-crypto/issues"
