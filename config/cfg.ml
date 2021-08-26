@@ -1,14 +1,14 @@
-let std_flags = ["--std=c11"; "-Wall"; "-Wextra"; "-Wpedantic"; "-O3"]
-
 let () =
   let c = Configurator.V1.create "mirage-crypto" in
+  let ccomp_type_opt = Configurator.V1.ocaml_config_var c "ccomp_type" in
   let arch =
     let defines =
       Configurator.V1.C_define.import
         c
         ~includes:[]
         [("__x86_64__", Switch); ("__i386__", Switch); ("__powerpc64__", Switch);
-         ("__s390x__", Switch); ("__aarch64__", Switch)]
+         ("__s390x__", Switch); ("__aarch64__", Switch);
+         ("_WIN64", Switch); ("_WIN32", Switch)]
     in
     match defines with
     | (_, Switch true) :: _ -> `x86_64
@@ -16,6 +16,8 @@ let () =
     | _ :: _ :: (_, Switch true) :: _ -> `ppc64
     | _ :: _ :: _ :: (_, Switch true) :: _ -> `s390x
     | _ :: _ :: _ :: _ :: (_, Switch true) :: _ -> `arm64
+    | _ :: _ :: _ :: _ :: _ :: (_, Switch true) :: _ -> `x86_64
+    | _ :: _ :: _ :: _ :: _ :: _ :: (_, Switch true) :: _ -> `x86
     | _ -> `unknown
   in
   let os =
@@ -30,19 +32,27 @@ let () =
     | _ -> `unknown
   in
   let accelerate_flags =
-    match arch with
-    | `x86_64 -> [ "-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul" ]
+    match arch, ccomp_type_opt with
+    | `x86_64, Some ccomp_type when ccomp_type = "msvc" -> [ "-DACCELERATE" ]
+    | `x86_64, _ -> [ "-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul" ]
     | _ -> []
   in
   let ent_flags =
-    match arch with
-    | `x86_64 | `x86 -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
+    match arch, ccomp_type_opt with
+    | (`x86_64 | `x86), Some ccomp_type when ccomp_type = "msvc" -> [ "-DENTROPY" ]
+    | (`x86_64 | `x86), _ -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
     | _ -> []
+  in
+  let std_flags =
+    match ccomp_type_opt with
+    | Some "msvc" -> ["/Wall"]
+    | _ -> ["-Wall"]
   in
   let warn_flags =
     (* See #178, there may be false positives on ppc&s390 with no-stringop-overflow *)
-    match arch with
-    | `ppc64 | `s390x -> [ "-Wno-stringop-overflow"; "-Werror" ]
+    match arch, ccomp_type_opt with
+    | _, Some ccomp_type when ccomp_type = "msvc" -> [ "/WX" ]
+    | (`ppc64, _) | (`s390x, _) -> [ "-Wno-stringop-overflow"; "-Werror" ]
     | _ -> [ "-Werror" ]
   in
   let no_instcombine_on_macos = match arch, os with

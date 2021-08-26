@@ -16,7 +16,11 @@
  * !LARGE_TABLES -> 8K per key, ~3x slower. */
 #define __MC_GHASH_LARGE_TABLES
 
-#ifdef ARCH_64BIT
+/* 64-bit Windows sets ARCH_64BIT but 128-bit integers are not supported
+ * by the Microsoft compiler. Drop down to 32-bit for MSVC;
+ * ghash_ctmul.c will implement ghash for MSVC.
+ */
+#if defined(ARCH_64BIT) && !defined(_MSC_VER)
 
 #define __set_uint128_t(w1, w0) (((__uint128_t) w1 << 64) | w0)
 
