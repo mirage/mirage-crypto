@@ -20,8 +20,8 @@ jobs:
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: ocaml/setup-ocaml@v2
-        opam-local-packages: |
-          *.opam
-          !mirage-crypto-rng-async.opam
         with:
+          opam-local-packages: |
+            *.opam
+            !mirage-crypto-rng-async.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
