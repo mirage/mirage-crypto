@@ -24,8 +24,7 @@ depends: [
   "sexplib"
   "ppx_sexp_conv"
   "zarith" {>= "1.4"}
-  "eqaf" {>= "0.7"}
-  "rresult" {>= "0.6.0"}
+  "eqaf" {>= "0.8"}
   (("mirage-no-solo5" & "mirage-no-xen") | "zarith-freestanding")
 ]
 conflicts: [

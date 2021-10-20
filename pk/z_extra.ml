@@ -80,7 +80,7 @@ let strip_factor ~f x =
   if Z.(~$2) <= f then
     go 0 x
   else
-    Rresult.R.error_msgf "factor_count: f: %a" Z.pp_print f
+    Error (`Msg ("factor_count: f: " ^ Z.to_string f))
 
 let gen ?g n =
   if n < Z.one then invalid_arg "Rng.gen: non-positive: %a" Z.pp_print n;
