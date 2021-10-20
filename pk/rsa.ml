@@ -1,6 +1,5 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
-open Rresult
 
 open Common
 
@@ -48,9 +47,11 @@ let pub ~e ~n =
      but we validate to ensure our usage of powm_sec does not lead to
      exceptions, and we avoid tiny public keys where PKCS1 / PSS would lead to
      infinite loops or not work due to insufficient space for the header. *)
-  guard Z.(n > zero && is_odd n && numbits n >= minimum_bits)
-    (`Msg "invalid modulus") >>= fun () ->
-  guard Z.(one < e && e < n) (`Msg "invalid exponent") >>= fun () ->
+  let* () =
+    guard Z.(n > zero && is_odd n && numbits n >= minimum_bits)
+      (`Msg "invalid modulus")
+  in
+  let* () = guard Z.(one < e && e < n) (`Msg "invalid exponent") in
   (* NOTE that we could check for e being odd, or a prime, or 2^16+1, but
           these are not requirements, neither for RSA nor for powm_sec *)
   Ok { e ; n }
@@ -68,31 +69,35 @@ type priv = {
 
 let valid_prime name p =
   guard Z.(p > zero && is_odd p && Z_extra.pseudoprime p)
-    (R.msgf "invalid prime %s" name)
+    (`Msg ("invalid prime " ^ name))
 
 let rprime a b = Z.(gcd a b = one)
 
 let valid_e ~e ~p ~q =
-  guard (rprime e (Z.pred p) && rprime e (Z.pred q))
-    (`Msg "e is not coprime of p and q") >>= fun () ->
+  let* () =
+    guard (rprime e (Z.pred p) && rprime e (Z.pred q))
+      (`Msg "e is not coprime of p and q")
+  in
   guard (Z_extra.pseudoprime e) (`Msg "exponent e is not a pseudoprime")
 
 let priv ~e ~d ~n ~p ~q ~dp ~dq ~q' =
-  pub ~e ~n >>= fun _pub ->
-  valid_prime "p" p >>= fun () ->
-  valid_prime "q" q >>= fun () ->
-  guard (p <> q) (`Msg "p and q are the same number") >>= fun () ->
-  valid_e ~e ~p ~q >>= fun () ->
+  let* _ = pub ~e ~n in
+  let* () = valid_prime "p" p in
+  let* () = valid_prime "q" q in
+  let* () = guard (p <> q) (`Msg "p and q are the same number") in
+  let* () = valid_e ~e ~p ~q in
   (* p and q are prime, and not equal -> multiplicative inverse exists *)
-  guard Z.(q' = invert q p) (`Msg "q' <> q ^ -1 mod p") >>= fun () ->
-  guard Z.(n = p * q) (`Msg "modulus is not the product of p and q") >>= fun () ->
-  guard Z.(one < d && d < n) (`Msg "invalid private exponent") >>= fun () ->
-  guard Z.(dp = d mod (pred p)) (`Msg "dp <> d mod (p - 1)") >>= fun () ->
-  guard Z.(dq = d mod (pred q)) (`Msg "dq <> d mod (q - 1)") >>= fun () ->
+  let* () = guard Z.(q' = invert q p) (`Msg "q' <> q ^ -1 mod p") in
+  let* () = guard Z.(n = p * q) (`Msg "modulus is not the product of p and q") in
+  let* () = guard Z.(one < d && d < n) (`Msg "invalid private exponent") in
+  let* () = guard Z.(dp = d mod (pred p)) (`Msg "dp <> d mod (p - 1)") in
+  let* () = guard Z.(dq = d mod (pred q)) (`Msg "dq <> d mod (q - 1)") in
   (* e has been checked (valid_e) to be coprime to p-1 and q-1 ->
      muliplicative inverse exists *)
-  guard Z.(one = d * e mod (lcm (pred p) (pred q)))
-    (`Msg "1 <> d * e mod lcm (p - 1) (q - 1)") >>= fun () ->
+  let* () =
+    guard Z.(one = d * e mod (lcm (pred p) (pred q)))
+      (`Msg "1 <> d * e mod lcm (p - 1) (q - 1)")
+  in
   Ok { e ; d ; n ; p ; q ; dp ; dq ; q' }
 
 let priv_of_sexp s =
@@ -102,12 +107,12 @@ let priv_of_sexp s =
   | Ok p -> p
 
 let priv_of_primes ~e ~p ~q =
-  valid_prime "p" p >>= fun () ->
-  valid_prime "q" q >>= fun () ->
-  guard (p <> q) (`Msg "p and q are the same prime") >>= fun () ->
-  valid_e ~e ~p ~q >>= fun () ->
-  let n  = Z.(p * q) in
-  pub ~e ~n >>= fun _pub ->
+  let* () = valid_prime "p" p in
+  let* () = valid_prime "q" q in
+  let* () = guard (p <> q) (`Msg "p and q are the same prime") in
+  let* () = valid_e ~e ~p ~q in
+  let n = Z.(p * q) in
+  let* _ = pub ~e ~n in
   (* valid_e checks e coprime to p-1 and q-1, a multiplicative inverse exists *)
   let d = Z.(invert e (lcm (pred p) (pred q))) in
   let dp = Z.(d mod (pred p))
@@ -121,8 +126,8 @@ let priv_of_primes ~e ~p ~q =
 
 (* Handbook of applied cryptography, 8.2.2 (i). *)
 let priv_of_exp ?g ?(attempts=100) ~e ~d ~n () =
-  pub ~e ~n >>= fun _ ->
-  guard Z.(one < d && d < n) (`Msg "invalid private exponent") >>= fun () ->
+  let* _ = pub ~e ~n in
+  let* () = guard Z.(one < d && d < n) (`Msg "invalid private exponent") in
   let rec doit ~attempts =
     let factor s t =
       let rec go ax = function
@@ -137,9 +142,10 @@ let priv_of_exp ?g ?(attempts=100) ~e ~d ~n () =
       Option.map Z.(gcd n &. pred) (go Z.(powm (Z_extra.gen ?g n) t n) s)
     in
     if attempts > 0 then
-      Z_extra.strip_factor ~f:two Z.(e * d |> pred) >>= function
-      | (0, _) -> R.error_msgf "invalid factor 0"
-      | (s, t) -> match factor s t with
+      let* s, t = Z_extra.strip_factor ~f:two Z.(e * d |> pred) in
+      match s with
+      | 0 -> Error (`Msg "invalid factor 0")
+      | _ -> match factor s t with
         | None -> doit ~attempts:(attempts - 1)
         | Some p ->
           let q = Z.(div n p) in

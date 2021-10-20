@@ -1,6 +1,5 @@
 open Mirage_crypto.Uncommon
 open Sexplib.Conv
-open Rresult
 
 open Common
 
@@ -8,18 +7,20 @@ type pub = { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; y : Z_sexp.t }
 [@@deriving sexp]
 
 let pub ?(fips = false) ~p ~q ~gg ~y () =
-  guard Z.(one < gg && gg < p) (`Msg "bad generator") >>= fun () ->
-  guard (Z_extra.pseudoprime q) (`Msg "q is not prime") >>= fun () ->
-  guard (Z.is_odd p && Z_extra.pseudoprime p) (`Msg "p is not prime") >>= fun () ->
-  guard Z.(zero < y && y < p) (`Msg "y not in 0..p-1") >>= fun () ->
-  guard (q < p) (`Msg "q is not smaller than p") >>= fun () ->
-  guard Z.(zero = (pred p) mod q) (`Msg "p - 1 mod q <> 0") >>= fun () ->
-  (if fips then
-     match Z.numbits p, Z.numbits q with
-     | 1024, 160 | 2048, 224 | 2048, 256 | 3072, 256 -> Ok ()
-     | _ -> Error (`Msg "bit length of p or q not FIPS specified")
-   else
-     Ok ()) >>= fun () ->
+  let* () = guard Z.(one < gg && gg < p) (`Msg "bad generator") in
+  let* () = guard (Z_extra.pseudoprime q) (`Msg "q is not prime") in
+  let* () = guard (Z.is_odd p && Z_extra.pseudoprime p) (`Msg "p is not prime") in
+  let* () = guard Z.(zero < y && y < p) (`Msg "y not in 0..p-1") in
+  let* () = guard (q < p) (`Msg "q is not smaller than p") in
+  let* () = guard Z.(zero = (pred p) mod q) (`Msg "p - 1 mod q <> 0") in
+  let* () =
+    if fips then
+      match Z.numbits p, Z.numbits q with
+      | 1024, 160 | 2048, 224 | 2048, 256 | 3072, 256 -> Ok ()
+      | _ -> Error (`Msg "bit length of p or q not FIPS specified")
+    else
+      Ok ()
+  in
   Ok { p ; q ; gg ; y }
 
 let pub_of_sexp s =
@@ -33,9 +34,9 @@ type priv =
 [@@deriving sexp]
 
 let priv ?fips ~p ~q ~gg ~x ~y () =
-  pub ?fips ~p ~q ~gg ~y () >>= fun _ ->
-  guard Z.(zero < x && x < q) (`Msg "x not in 1..q-1") >>= fun () ->
-  guard Z.(y = powm gg x p) (`Msg "y <> g ^ x mod p") >>= fun () ->
+  let* _ = pub ?fips ~p ~q ~gg ~y () in
+  let* () = guard Z.(zero < x && x < q) (`Msg "x not in 1..q-1") in
+  let* () = guard Z.(y = powm gg x p) (`Msg "y <> g ^ x mod p") in
   Ok { p ; q ; gg ; x ; y }
 
 let priv_of_sexp s =
