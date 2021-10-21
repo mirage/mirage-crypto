@@ -1,5 +1,5 @@
 open Mirage_crypto.Uncommon
-open Sexplib.Conv
+open Sexplib0.Sexp_conv
 
 open Common
 
@@ -33,7 +33,16 @@ let digest_or ~hash =
 
 exception Insufficient_key
 
-type pub = { e : Z_sexp.t ; n : Z_sexp.t } [@@deriving sexp]
+type pub = { e : Z.t ; n : Z.t }
+
+let sexp_of_pub { e ; n } =
+  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
+    [ "e", e ; "n" , n ]
+
+let pub_of_sexp s =
+  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
+  | [ "e", e ; "n", n ] -> { e ; n }
+  | _ -> raise (Of_sexp_error (Failure "expected e and n", s))
 
 (* due to PKCS1 *)
 let minimum_octets = 12
@@ -63,9 +72,20 @@ let pub_of_sexp s =
   | Error (`Msg m) -> failwith "bad public key: %s" m
 
 type priv = {
-  e : Z_sexp.t ; d : Z_sexp.t ; n  : Z_sexp.t ;
-  p : Z_sexp.t ; q : Z_sexp.t ; dp : Z_sexp.t ; dq : Z_sexp.t ; q' : Z_sexp.t
-} [@@deriving sexp]
+  e : Z.t ; d : Z.t ; n  : Z.t ;
+  p : Z.t ; q : Z.t ; dp : Z.t ; dq : Z.t ; q' : Z.t
+}
+
+let sexp_of_priv { e ; d ; n ; p ; q ; dp ; dq ; q' } =
+  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
+    [ "e", e; "d", d; "n", n; "p", p; "q", q; "dp", dp; "dq", dq; "q'", q' ]
+
+let priv_of_sexp s =
+  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
+  | [ "e", e; "d", d; "n", n; "p", p; "q", q; "dp", dp; "dq", dq; "q'", q' ] ->
+    { e ; d ; n ; p ; q ; dp ; dq ; q' }
+  | _ ->
+    raise (Of_sexp_error (Failure "expected e, d, n, p, q, dp, dq, and q'", s))
 
 let valid_prime name p =
   guard Z.(p > zero && is_odd p && Z_extra.pseudoprime p)

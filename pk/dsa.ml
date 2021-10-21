@@ -1,10 +1,18 @@
 open Mirage_crypto.Uncommon
-open Sexplib.Conv
+open Sexplib0.Sexp_conv
 
 open Common
 
-type pub = { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; y : Z_sexp.t }
-[@@deriving sexp]
+type pub = { p : Z.t ; q : Z.t ; gg : Z.t ; y : Z.t }
+
+let sexp_of_pub { p ; q ; gg ; y } =
+  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
+    [ "p", p; "q", q; "gg", gg; "y", y ]
+
+let pub_of_sexp s =
+  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
+  | [ "p", p; "q", q; "gg", gg; "y", y ] -> { p ; q ; gg ; y }
+  | _ -> raise (Of_sexp_error (Failure "expected p, q, gg, and y'", s))
 
 let pub ?(fips = false) ~p ~q ~gg ~y () =
   let* () = guard Z.(one < gg && gg < p) (`Msg "bad generator") in
@@ -30,8 +38,16 @@ let pub_of_sexp s =
   | Error (`Msg m) -> invalid_arg "bad public %s" m
 
 type priv =
-  { p : Z_sexp.t ; q : Z_sexp.t ; gg : Z_sexp.t ; x : Z_sexp.t ; y : Z_sexp.t }
-[@@deriving sexp]
+  { p : Z.t ; q : Z.t ; gg : Z.t ; x : Z.t ; y : Z.t }
+
+let sexp_of_priv { p ; q ; gg ; x ; y } =
+  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
+    [ "p", p; "q", q; "gg", gg; "x", x; "y", y ]
+
+let priv_of_sexp s =
+  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
+  | [ "p", p; "q", q; "gg", gg; "x", x; "y", y ] -> { p ; q ; gg ; x ; y }
+  | _ -> raise (Of_sexp_error (Failure "expected p, q, gg, x, and y'", s))
 
 let priv ?fips ~p ~q ~gg ~x ~y () =
   let* _ = pub ?fips ~p ~q ~gg ~y () in

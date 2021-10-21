@@ -37,7 +37,7 @@ let random_is seed =
 let gen_rsa ~bits =
   let e     = Z.(if bits < 24 then ~$3 else ~$0x10001) in
   let key   = Rsa.(generate ~e ~bits ()) in
-  let key_s = Sexplib.Sexp.to_string_hum Rsa.(sexp_of_priv key) in
+  let key_s = Sexplib0.Sexp.to_string_hum Rsa.(sexp_of_priv key) in
   assert_equal
     ~msg:Printf.(sprintf "key size not %d bits:\n%s" bits key_s)
     bits Rsa.(priv_bits key);
