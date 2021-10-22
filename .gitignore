@@ -13,3 +13,4 @@ mirage/main.native
 mirage/*opam
 mirage/myocamlbuild.ml
 mirage/.mirage.config
+_opam

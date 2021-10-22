@@ -56,10 +56,19 @@ module type Dsa = sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
 end
+module type Dsa_with_compression = sig
+  include Dsa
+  val pub_to_compressed : pub -> Cstruct.t
+end
 
 module type Dh_dsa = sig
   module Dh : Dh
   module Dsa : Dsa
+end
+
+module type Dh_dsa_with_compression = sig
+  module Dh : Dh
+  module Dsa : Dsa_with_compression
 end
 
 module type Parameters = sig
@@ -172,7 +181,7 @@ module type Point = sig
 
   val of_cstruct : Cstruct.t -> (point, error) result
 
-  val to_cstruct : point -> Cstruct.t
+  val to_cstruct : ?compressed:bool -> point -> Cstruct.t
 
   val to_affine_raw : point -> (field_element * field_element) option
 
@@ -276,7 +285,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       Fe.to_bytes out_y y;
       Some (out_x, out_y)
 
-  let to_cstruct p =
+  let[@warning "-27"] to_cstruct ?(compressed=false) p =
     match to_affine p with
     | None -> Cstruct.create 1
     | Some (x, y) ->
@@ -407,7 +416,7 @@ module type Foreign_n = sig
   val to_montgomery : field_element -> field_element -> unit
 end
 
-module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H : Mirage_crypto.Hash.S) : Dsa = struct
+module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H : Mirage_crypto.Hash.S) = struct
   let create () = Cstruct.to_bigarray (Cstruct.create Param.fe_length)
 
   type priv = scalar
@@ -468,9 +477,9 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
 
   type pub = point
 
-  let pub_of_cstruct = P.of_cstruct
+  let pub_of_cstruct = P.of_cstruct 
 
-  let pub_to_cstruct = P.to_cstruct
+  let pub_to_cstruct pk = P.to_cstruct pk
 
   let generate ?g () =
     (* FIPS 186-4 B 4.2 *)
@@ -584,6 +593,112 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     with
     | Message_too_long -> false
 end
+module type Prime_identity = sig
+  val pident: Cstruct.t
+end
+
+
+
+module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point)(Pident: Prime_identity): Point = struct 
+  module Fe = Make_field_element(P)(F)
+  include Point
+  let compress pk =
+    let buf = to_cstruct pk in
+    let out = Cstruct.create (P.byte_length + 1) in
+    let ident = 2 + (Cstruct.get_uint8 buf ((P.byte_length * 2) - 1)) land 1 in
+    Cstruct.blit buf 1 out 1 P.byte_length;
+    Cstruct.set_uint8 out 0 ident;
+    out
+
+  let bit_at buf i =
+    let byte_num = i / 8 in
+    let bit_num = i mod 8 in
+    let byte = Cstruct.get_uint8 buf byte_num in
+    byte land (1 lsl bit_num) <> 0
+    
+  let pow =
+    let mult a b = 
+      let r = Fe.create () in 
+      Fe.mul r a b;
+      r in
+    let sqr x = 
+      let r = Fe.create () in
+      Fe.sqr r x;
+      r in 
+    fun x exp -> 
+    let r0 = ref (Fe.one ()) in
+    let r1 =  ref x in
+    for i = P.byte_length * 8 - 1 downto 0 do
+      let bit = bit_at exp i in
+      let multiplied = mult !r0 !r1 in
+      let r0_sqr = sqr !r0 in 
+      let r1_sqr = sqr !r1 in
+      r0 := Fe.select bit ~then_:(multiplied) ~else_:(r0_sqr);
+      r1 := Fe.select bit ~then_:(r1_sqr) ~else_:(multiplied);
+    done;
+    !r0
+
+  let decompress = 
+  (*
+  When p = 4*k+3, as is the case of NIST-P256, there is an efficient square root algorithm to recover the y, as follows:
+
+  Given the compact representation of Q as x,
+  y2 = x^3 + a*x + b
+  y' = y2^((p+1)/4)
+  y = min(y',p-y')
+  Q=(x,y) is the canonical representation of the point
+  *)
+    let pident = Pident.pident (* (Params.p + 1) / 4*) in 
+    let a = Fe.from_be_cstruct P.a in 
+    let b = Fe.from_be_cstruct P.b in 
+    let p = Fe.from_be_cstruct P.p in
+    fun pk_cstruct ->   
+    let x = Fe.from_be_cstruct (Cstruct.sub pk_cstruct 1 P.byte_length) in
+    let x3 = Fe.create () in
+    let ax = Fe.create () in
+    let sum = Fe.create () in 
+    Fe.mul x3 x x;
+    Fe.mul x3 x3 x; (* x3 *)
+    Fe.mul ax a x;  (* ax *)
+    Fe.add sum x3 ax;
+    Fe.add sum sum b; (* y^2 *)
+    let y = pow sum pident in (*// https://tools.ietf.org/id/draft-jivsov-ecc-compact-00.xml#sqrt point 4.3*)
+    let y' = Fe.create () in
+    Fe.sub y' p y;
+    let y_struct = Cstruct.create (P.byte_length) in
+    Fe.from_montgomery y;
+    Fe.to_bytes y_struct y; (* number must not be in montgomery domain*)
+    let y_struct = Cstruct.rev y_struct in
+    let y_struct2 = Cstruct.create (P.byte_length) in
+    Fe.from_montgomery y';
+    Fe.to_bytes y_struct2 y';(* number must not be in montgomery domain*)
+    let y_struct2 = Cstruct.rev y_struct2 in
+    let ident = Cstruct.get_uint8 pk_cstruct 0 in
+    let signY = 2 + (Cstruct.get_uint8 y_struct (P.byte_length - 2))  land 1 in
+    let res = 
+      if Int.equal signY ident then y_struct else y_struct2 in
+    let out = Cstruct.create ((P.byte_length * 2) + 1) in 
+    Cstruct.set_uint8 out 0 4;
+    Cstruct.blit pk_cstruct 1 out 1 P.byte_length;
+    Cstruct.blit res 0 out (P.byte_length + 1) P.byte_length;
+    out
+  let of_cstruct cs =
+    let len = P.byte_length in
+    if Cstruct.length cs = 0 then
+      Error `Invalid_format
+    else
+      match Cstruct.get_uint8 cs 0 with
+      | 0x00 when Cstruct.length cs = 1 -> Ok (at_infinity ())
+      | 0x02 | 0x03 -> 
+        let decompressed = decompress cs in 
+        Point.of_cstruct decompressed
+      | 0x04 when Cstruct.length cs = 1 + len + len ->
+        Point.of_cstruct cs
+      | 0x00 | 0x04 -> Error `Invalid_length
+      | _ -> Error `Invalid_format
+  let to_cstruct ?(compressed=false) pk = if compressed then compress pk else Point.to_cstruct pk
+end
+
 
 module P224 : Dh_dsa = struct
   module Params = struct
@@ -630,10 +745,12 @@ module P224 : Dh_dsa = struct
   module P = Make_point(Params)(Foreign)
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
+  module Dsa: Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
 end
 
-module P256 : Dh_dsa = struct
+
+
+module P256 : Dh_dsa_with_compression  = struct
   module Params = struct
     let a = Cstruct.of_hex "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC"
     let b = Cstruct.of_hex "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B"
@@ -646,6 +763,10 @@ module P256 : Dh_dsa = struct
     let byte_length = 32
     let fe_length = 32
     let first_byte_bits = None
+  end
+
+  module Pident = struct 
+    let pident = Cstruct.of_hex "3FFFFFFFC0000000400000000000000000000000400000000000000000000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
   end
 
   module Foreign = struct
@@ -677,13 +798,20 @@ module P256 : Dh_dsa = struct
     external to_montgomery : field_element -> field_element -> unit = "mc_np256_to_montgomery" [@@noalloc]
   end
 
-  module P = Make_point(Params)(Foreign)
+  module P = struct 
+    module Point = Make_point(Params)(Foreign)
+    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+  end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
+  module Dsa: Dsa_with_compression = struct
+   include Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
+   let pub_to_compressed pk =
+    P.to_cstruct ~compressed:true pk
+  end
 end
 
-module P384 : Dh_dsa = struct
+module P384 : Dh_dsa_with_compression = struct
   module Params = struct
     let a = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC"
     let b = Cstruct.of_hex "B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF"
@@ -696,6 +824,10 @@ module P384 : Dh_dsa = struct
     let byte_length = 48
     let fe_length = 48
     let first_byte_bits = None
+  end
+
+  module Pident = struct
+    let pident = Cstruct.of_hex "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBFFFFFFFC00000000000000040000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
   end
 
   module Foreign = struct
@@ -727,13 +859,20 @@ module P384 : Dh_dsa = struct
     external to_montgomery : field_element -> field_element -> unit = "mc_np384_to_montgomery" [@@noalloc]
   end
 
-  module P = Make_point(Params)(Foreign)
+  module P = struct 
+    module Point = Make_point(Params)(Foreign)
+    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+  end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA384)
+  module Dsa: Dsa_with_compression = struct
+    include Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA384)
+    let pub_to_compressed pk =
+     P.to_cstruct ~compressed:true pk
+   end
 end
 
-module P521 : Dh_dsa = struct
+module P521 : Dh_dsa_with_compression = struct
   module Params = struct
     let a = Cstruct.of_hex "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC"
     let b = Cstruct.of_hex "0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00"
@@ -777,10 +916,20 @@ module P521 : Dh_dsa = struct
     external to_montgomery : field_element -> field_element -> unit = "mc_np521_to_montgomery" [@@noalloc]
   end
 
-  module P = Make_point(Params)(Foreign)
+  module Pident = struct
+    let pident = Cstruct.of_hex "017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" |> Cstruct.rev
+  end
+  module P = struct 
+    module Point = Make_point(Params)(Foreign)
+    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+  end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA512)
+  module Dsa: Dsa_with_compression = struct
+    include Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA512)
+    let pub_to_compressed pk =
+     P.to_cstruct ~compressed:true pk
+  end
 end
 
 module X25519 = struct
