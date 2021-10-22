@@ -117,11 +117,19 @@ let interpret_invalid_test curve { public; private_ } () =
 type strategy = Test of test | Invalid_test of invalid_test | Skip
 
 let make_ecdh_test curve (test : ecdh_test) =
-  let ignored_flags = [ "CompressedPoint"; "UnnamedCurve" ] in
+  let ignored_flags = ["UnnamedCurve"] in
+  let curve_compression_test curve =
+    let curves = ["secp256r1"; "secp384r1"; "secp521r1"] in
+    test.tcId = 2 && List.exists (fun x -> String.equal x curve) curves
+  in
   match test.result with
   | _ when has_ignored_flag test ~ignored_flags -> Ok Skip
   | Invalid ->
       Ok (Invalid_test { public = test.public; private_ = test.private_ })
+  | Acceptable when curve_compression_test curve ->
+    parse_point curve test.public >>= fun public_key ->
+    parse_secret curve test.private_ >>= fun raw_private_key ->
+    Ok (Test { public_key; raw_private_key; expected = test.shared })
   | Acceptable -> Ok Skip
   | Valid ->
     parse_point curve test.public >>= fun public_key ->
