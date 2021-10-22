@@ -122,6 +122,16 @@ module type Dsa = sig
   end
 end
 
+
+(** Digital signature algorithm with public key compression and decompression support *)
+module type Dsa_with_compression = sig
+    include Dsa
+
+    val pub_to_compressed : pub -> Cstruct.t
+    (** [pub_to_compressed pk_cstruct] takes the given compressed public key
+      and returns it to uncompressed form. *)
+  end
+
 (** Elliptic curve with Diffie-Hellman and DSA. *)
 module type Dh_dsa = sig
 
@@ -132,17 +142,27 @@ module type Dh_dsa = sig
   module Dsa : Dsa
 end
 
+(** Elliptic curve with Diffie-Hellman and DSA with public key compression and decompression *)
+module type Dh_dsa_with_compression = sig
+
+  (** Diffie-Hellman key exchange. *)
+  module Dh : Dh
+
+  (** Digital signature algorithm. *)
+  module Dsa : Dsa_with_compression
+end
+
 (** The NIST P-224 curve, also known as SECP224R1. *)
 module P224 : Dh_dsa
 
 (** The NIST P-256 curve, also known as SECP256R1. *)
-module P256 : Dh_dsa
+module P256 : Dh_dsa_with_compression
 
 (** The NIST P-384 curve, also known as SECP384R1. *)
-module P384 : Dh_dsa
+module P384 : Dh_dsa_with_compression
 
 (** The NIST P-521 curve, also known as SECP521R1. *)
-module P521 : Dh_dsa
+module P521 : Dh_dsa_with_compression
 
 (** Curve 25519 Diffie-Hellman, also known as X25519. *)
 module X25519 : Dh
