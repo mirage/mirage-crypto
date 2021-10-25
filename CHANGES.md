@@ -1,3 +1,14 @@
+## v0.10.4 (2021-10-25)
+
+- hash: ensure alignment of data, fixes arm32 test cases (#143 @hannesm)
+- drop sexplib and ppx_sexp_conv dependencies (#141 @hannesm)
+- install LICENSE files of different opam packages
+- require eqaf >= 0.8 to avoid bigarray-compat dependency (#139 by @hannesm)
+- update to GH actions 2.1, fix windows action (#135 #139 @avsm @smorimoto)
+- drop rresult dependency (#139 #141 by @hannesm @reynir)
+- avoid deprecated Cstruct.len, use Cstruct.length instead (#134 by @hannesm)
+- mirage-crypto-pk: adapt to mirage 4 (#141 @TheLortex @samoht)
+
 ## v0.10.3 (2021-07-24)
 
 - support for s390x (#129 by @edelsohn)
