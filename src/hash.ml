@@ -33,8 +33,8 @@ module type Foreign = sig
   open Native
 
   val init     : ctx -> unit
-  val update   : ctx -> buffer -> int -> int -> unit
-  val finalize : ctx -> buffer -> int -> unit
+  val update   : ctx -> buffer -> int -> unit
+  val finalize : ctx -> buffer -> unit
   val ctx_size : unit -> int
 end
 
@@ -53,12 +53,23 @@ module Core (F : Foreign) (D : Desc) = struct
 
   let _ = F.init empty
 
-  let update t { Cstruct.buffer ; off ; len } =
-    F.update t buffer off len
+  let update t buf =
+    (* see issue #70 #81 #140 #143 for alignment considerations
+       (allocation below) *)
+    let l = Cstruct.length buf in
+    let b =
+      if buf.Cstruct.off = 0 then
+        buf
+      else
+        let b = Cstruct.create l in
+        Cstruct.blit buf 0 b 0 l;
+        b
+    in
+    F.update t b.Cstruct.buffer l
 
   let finalize t =
     let res = Cstruct.create digest_size in
-    F.finalize t res.Cstruct.buffer res.Cstruct.off ;
+    F.finalize t res.Cstruct.buffer ;
     res
 
   let dup = Bytes.copy
