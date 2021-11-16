@@ -78,6 +78,7 @@ module type Parameters = sig
   val g_y : Cstruct.t
   val p : Cstruct.t
   val n : Cstruct.t
+  val pident: Cstruct.t
   val byte_length : int
   val fe_length : int
   val first_byte_bits : int option
@@ -593,13 +594,8 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     with
     | Message_too_long -> false
 end
-module type Prime_identity = sig
-  val pident: Cstruct.t
-end
 
-
-
-module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point)(Pident: Prime_identity): Point = struct 
+module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point): Point = struct 
   module Fe = Make_field_element(P)(F)
   include Point
   let compress pk =
@@ -620,11 +616,13 @@ module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point)(Pident: P
     let mult a b = 
       let r = Fe.create () in 
       Fe.mul r a b;
-      r in
+      r 
+    in
     let sqr x = 
       let r = Fe.create () in
       Fe.sqr r x;
-      r in 
+      r 
+    in 
     fun x exp -> 
     let r0 = ref (Fe.one ()) in
     let r1 =  ref x in
@@ -648,7 +646,7 @@ module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point)(Pident: P
   y = min(y',p-y')
   Q=(x,y) is the canonical representation of the point
   *)
-    let pident = Pident.pident (* (Params.p + 1) / 4*) in 
+    let pident = P.pident (* (Params.p + 1) / 4*) in 
     let a = Fe.from_be_cstruct P.a in 
     let b = Fe.from_be_cstruct P.b in 
     let p = Fe.from_be_cstruct P.p in
@@ -682,6 +680,7 @@ module Make_compressed_point (P: Parameters)(F: Foreign)(Point: Point)(Pident: P
     Cstruct.blit pk_cstruct 1 out 1 P.byte_length;
     Cstruct.blit res 0 out (P.byte_length + 1) P.byte_length;
     out
+
   let of_cstruct cs =
     let len = P.byte_length in
     if Cstruct.length cs = 0 then
@@ -708,6 +707,7 @@ module P224 : Dh_dsa = struct
     let g_y = Cstruct.of_hex "BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34"
     let p = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001"
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D"
+    let pident = Cstruct.empty 
     let byte_length = 28
     let fe_length = if Sys.word_size == 64 then 32 else 28 (* TODO: is this congruent with C code? *)
     let first_byte_bits = None
@@ -760,13 +760,10 @@ module P256 : Dh_dsa_with_compression  = struct
       Cstruct.of_hex "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5"
     let p = Cstruct.of_hex "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF"
     let n = Cstruct.of_hex "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
+    let pident = Cstruct.of_hex "3FFFFFFFC0000000400000000000000000000000400000000000000000000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
     let byte_length = 32
     let fe_length = 32
     let first_byte_bits = None
-  end
-
-  module Pident = struct 
-    let pident = Cstruct.of_hex "3FFFFFFFC0000000400000000000000000000000400000000000000000000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
   end
 
   module Foreign = struct
@@ -800,7 +797,7 @@ module P256 : Dh_dsa_with_compression  = struct
 
   module P = struct 
     module Point = Make_point(Params)(Foreign)
-    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+    include Make_compressed_point(Params)(Foreign)(Point)
   end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
@@ -821,13 +818,10 @@ module P384 : Dh_dsa_with_compression = struct
       Cstruct.of_hex "3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f"
     let p = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF"
     let n = Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973"
+    let pident = Cstruct.of_hex "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBFFFFFFFC00000000000000040000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
     let byte_length = 48
     let fe_length = 48
     let first_byte_bits = None
-  end
-
-  module Pident = struct
-    let pident = Cstruct.of_hex "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBFFFFFFFC00000000000000040000000" |> Cstruct.rev (* (Params.p + 1) / 4*)
   end
 
   module Foreign = struct
@@ -861,7 +855,7 @@ module P384 : Dh_dsa_with_compression = struct
 
   module P = struct 
     module Point = Make_point(Params)(Foreign)
-    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+    include Make_compressed_point(Params)(Foreign)(Point)
   end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
@@ -882,6 +876,7 @@ module P521 : Dh_dsa_with_compression = struct
       Cstruct.of_hex "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650"
     let p = Cstruct.of_hex "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     let n = Cstruct.of_hex "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409"
+    let pident = Cstruct.of_hex "017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" |> Cstruct.rev
     let byte_length = 66
     let fe_length = if Sys.word_size == 64 then 72 else 68  (* TODO: is this congruent with C code? *)
     let first_byte_bits = Some 0x01
@@ -916,12 +911,9 @@ module P521 : Dh_dsa_with_compression = struct
     external to_montgomery : field_element -> field_element -> unit = "mc_np521_to_montgomery" [@@noalloc]
   end
 
-  module Pident = struct
-    let pident = Cstruct.of_hex "017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" |> Cstruct.rev
-  end
   module P = struct 
     module Point = Make_point(Params)(Foreign)
-    include Make_compressed_point(Params)(Foreign)(Point)(Pident)
+    include Make_compressed_point(Params)(Foreign)(Point)
   end
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
