@@ -254,6 +254,11 @@ let benchmarks = [
           Mirage_crypto_pk.Dh.shared sec share)
         (fun ((g, _), _) -> g) dh_secrets);
 
+  bm "chacha20-poly1305" (fun name ->
+      let key = Mirage_crypto.Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      and nonce = Mirage_crypto_rng.generate 8 in
+      throughput name (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce)) ;
+
   bm "aes-128-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
