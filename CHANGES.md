@@ -1,3 +1,7 @@
+## v0.10.5 (2021-11-22)
+
+- mirage-crypto-ec: support point compression (#142 #147 @Zett98)
+
 ## v0.10.4 (2021-10-25)
 
 - hash: ensure alignment of data, fixes arm32 test cases (#143 @hannesm)
