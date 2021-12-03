@@ -2,6 +2,8 @@
  * Copyright (c) 2015-2016 David Kaloper Meršinjak
  */
 
+#define _POSIX_C_SOURCE 199309L
+
 #include <caml/mlvalues.h>
 
 #include "mirage_crypto.h"
