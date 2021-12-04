@@ -135,6 +135,14 @@ static inline uint64_t getticks(void)
 }
 #endif
 
+#if defined (__mips__)
+static inline unsigned long get_count() {
+  unsigned long count;
+  __asm__ __volatile__ ("rdhwr %[rt], $2" : [rt] "=d" (count));
+  return count;
+}
+#endif
+
 
 CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #if defined (__i386__) || defined (__x86_64__)
@@ -147,6 +155,8 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
   return Val_long (rdcycle64 ());
 #elif defined (__s390x__)
   return Val_long (getticks ());
+#elif defined(__mips__)
+  return Val_long (get_count());
 #else
 #error ("No known cycle-counting instruction.")
 #endif
