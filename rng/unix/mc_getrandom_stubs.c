@@ -26,7 +26,7 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
     off += r;
   }
 }
-#elif (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__))
+#elif (defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__) || defined(__APPLE__))
 // on BSD and macOS, loop (in pieces of 256) getentropy
 #if defined(__APPLE__)
 // on macOS, getentropy is defined in sys/random.h (on BSD in unistd.h)
