@@ -24,6 +24,22 @@
 #endif
 #endif /* __i386__ || __x86_64__ */
 
+/* mc_cycle_counter specification and requirements
+
+   Below the function mc_cycle_counter is defined (with different
+   implementations on different platforms. Its lower 32 bits are used for
+   entropy collection on every entry to the main event loop.
+
+   The requirement for this function is that every call to it (from OCaml)
+   should lead to a different output (in the lower 32 bits), and it should be
+   unpredictable (since the timestamp / cpu cycle counter is fine-grained
+   enough).
+
+   The executable test/test_entropy.ml tests parts of the requirements by
+   calling mc_cycle_counter 10 times and comparing the output to the previous
+   output.
+*/
+
 #if defined (__arm__)
 /*
  * The ideal timing source on ARM are the performance counters, but these are
@@ -135,6 +151,8 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #error ("No known cycle-counting instruction.")
 #endif
 }
+
+/* end of mc_cycle_counter */
 
 enum cpu_rng_t {
   RNG_NONE   = 0,
