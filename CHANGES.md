@@ -1,5 +1,6 @@
 ## unreleased
 
+- support mipsel and mips64el compilation (#148 @glondu)
 - bugfix: define _POSIX_C_SOURCE in entropy_cpu_stubs.c (otherwise clock_gettime
   is not defined - at least on armhf) (#148 @glondu)
 - bugfix: compilation on kfreebsd-* (adding __FreeBSD_kernel__ to ifdef)
