@@ -20,7 +20,7 @@ depends: [
   "cstruct" {>= "6.0.0"}
   "logs"
   "mirage-crypto" {=version}
-  "ounit" {with-test}
+  "ounit2" {with-test}
   "randomconv" {with-test & >= "0.1.3"}
 # lwt sublibrary
   "mtime" {>= "1.0.0"}
