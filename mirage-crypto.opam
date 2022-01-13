@@ -17,7 +17,7 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6"}
   "dune-configurator" {>= "2.0.0"}
-  "ounit" {with-test}
+  "ounit2" {with-test}
   "cstruct" {>="6.0.0"}
   "eqaf" {>= "0.8"}
 ]
