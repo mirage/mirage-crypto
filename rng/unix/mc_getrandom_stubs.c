@@ -41,7 +41,7 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
     if (getentropy(data + i, rlen) < 0) uerror("getentropy", Nothing);
   }
 }
-#elif (defined(__WIN32__))
+#elif (defined(_WIN32))
 /* There is a choice between using RtlGenRandom and BCryptGenRandom
  * here, and Microsoft does not make the choice obvious. It appears
  * that RtlGenRandom is best used when older Windows compatibility
