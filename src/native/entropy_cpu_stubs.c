@@ -58,7 +58,7 @@
   unsigned int res;
   __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
 */
-#ifdef __ocaml_freestanding__
+#if defined(__ocaml_freestanding__) || defined(__ocaml_solo5__)
 static inline uint32_t read_virtual_count ()
 {
   uint32_t c_lo, c_hi;
@@ -91,7 +91,7 @@ static inline uint32_t read_virtual_count ()
   clock_gettime (CLOCK_MONOTONIC, &now);
   return now.tv_nsec;
 }
-#endif /* __ocaml_freestanding__ */
+#endif /* __ocaml_freestanding__ || __ocaml_solo5__ */
 #endif /* arm */
 
 #if defined (__aarch64__)
