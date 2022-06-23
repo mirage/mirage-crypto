@@ -1,0 +1,4 @@
+(tests
+ (names     eio_rng_test)
+ (libraries mirage-crypto-rng-eio eio_main)
+ (package   mirage-crypto-rng-eio))

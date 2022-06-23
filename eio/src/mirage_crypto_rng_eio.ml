@@ -3,7 +3,7 @@ open Mirage_crypto_rng
 type env = <
   clock: Eio.Time.clock;
   secure_random: Eio.Flow.source;
-  >
+>
 
 let src = Logs.Src.create "mirage-crypto-rng-eio" ~doc:"Mirage crypto RNG Eio"
 module Log = (val Logs.src_log src: Logs.LOG)

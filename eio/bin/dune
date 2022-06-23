@@ -1,3 +1,0 @@
-(executable
- (name eio_rng_test)
- (libraries mirage-crypto-rng-eio eio_main))
