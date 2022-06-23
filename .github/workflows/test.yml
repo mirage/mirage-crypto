@@ -21,6 +21,9 @@ jobs:
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: ocaml/setup-ocaml@v2
         with:
+          opam-local-packages: |
+            *.opam
+            !mirage-crypto-rng-eio.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
