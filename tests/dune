@@ -19,14 +19,14 @@
 (test
  (name test_random_runner)
  (libraries test_common test_common_random mirage-crypto mirage-crypto-rng
-   mirage-crypto-rng.unix ounit2)
+   mirage-crypto-rng-unix ounit2)
  (package mirage-crypto-rng)
  (modules test_random_runner))
 
 (test
  (name test_pk_runner)
  (libraries test_common test_common_random mirage-crypto-pk
-   mirage-crypto-rng.unix ounit2)
+   mirage-crypto-rng-unix ounit2)
  (package mirage-crypto-pk)
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
 
@@ -52,7 +52,7 @@
 (test
  (name test_ec)
  (modules test_ec)
- (libraries alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng.unix
+ (libraries alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng-unix
    hex)
  (package mirage-crypto-ec))
 

@@ -10,9 +10,9 @@
 
 (library
  (name mirage_crypto_rng_unix)
- (public_name mirage-crypto-rng.unix)
+ (public_name mirage-crypto-rng-unix)
  (modules mirage_crypto_rng_unix)
- (libraries mirage-crypto-rng unix logs)
+ (libraries mirage-crypto-rng unix logs cstruct)
  (foreign_stubs
   (language c)
   (names mc_getrandom_stubs))
