@@ -1,14 +1,15 @@
-name: Windows
+name: Crypto
 
 on: [push, pull_request]
 
 jobs:
-  build-test-windows:
-    name: Windows
+  tests:
+    name: Tests
+
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: ["4.14.0", "4.13.1", "4.12.0", "4.11.2", "4.10.2", "4.09.1", "4.08.1"]
+        ocaml-compiler: ["4.12.0", "4.11.2", "4.10.2", "4.09.1", "4.08.1"]
         operating-system: [windows-latest]
 
     runs-on: ${{ matrix.operating-system }}
@@ -17,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Use OCaml ${{ matrix.ocaml-version }}
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
           opam-local-packages: |
@@ -30,7 +31,7 @@ jobs:
         run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec --profile release
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
 
       - name: Test
         run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
