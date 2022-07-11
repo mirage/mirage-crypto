@@ -22,7 +22,7 @@ freebsd_task:
     - opam pin add mirage-crypto-ec . -y --with-version=0.10.6 --with-test
     - opam pin add mirage-crypto-rng-async . -y --with-version=0.10.6 --with-test
 
-  test_script: opam exec -- dune runtest tests --profile release
+  test_script: opam exec -- dune runtest tests
   test_mirage_script: eval `opam env` && ./.test-mirage.sh
 
 freebsd_eio_task: 
@@ -39,4 +39,4 @@ freebsd_eio_task:
     - opam pin add mirage-crypto-rng . -y --with-version=dev
     - opam pin add mirage-crypto-rng-eio . -y --with-version=dev --with-test
 
-  test_script: opam exec -- dune runtest eio --profile release
+  test_script: opam exec -- dune runtest eio
