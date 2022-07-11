@@ -15,7 +15,7 @@ build: [ ["dune" "subst"] {dev}
 depends: [
   "base-domains"
   "dune" {>= "3.0"}
-  "eio"
+  "eio" {>= "0.3"}
   "cstruct" {>= "6.0.0"}
   "logs"
   "mirage-crypto-rng" {=version}
