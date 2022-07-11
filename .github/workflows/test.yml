@@ -30,10 +30,10 @@ jobs:
         run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec mirage-crypto-rng-async
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async --profile release
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
       - name: Test
-        run: opam exec -- dune runtest tests --profile release
+        run: opam exec -- dune runtest tests
 
   build-test-unix-eio:
     name : Unix (eio)
@@ -65,7 +65,7 @@ jobs:
         run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-eio
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio --profile release
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio
 
       - name: Test
-        run: opam exec -- dune runtest eio --profile release
+        run: opam exec -- dune runtest eio
