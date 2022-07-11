@@ -19,7 +19,7 @@ type env = <
     [[
       let () =
         Eio_main.run @@ fun env ->
-        Mirage_crypto_rng_eio.run env @@ fun () -> 
+        Mirage_crypto_rng_eio.run (module Mirage_crypto_rng.Fortuna) env @@ fun () -> 
         let random_num = Mirage_crypto_rng.generate 32 in 
         Printf.printf "Random number: %S%!" (Cstruct.to_string random_num)
     ]]
