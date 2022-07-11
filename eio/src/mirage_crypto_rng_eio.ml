@@ -58,21 +58,24 @@ let run
     end
     else begin
       running := true;
-      Fun.protect ~finally:(fun ()-> running := false) @@ fun () ->
-      (try
-        let _ = default_generator () in
-        Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
-                              been set, check that this call is intentional");
-       with 
-        No_default_generator -> ());
-      let seed = 
-        let init = 
-          Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init env ] in
-        List.mapi (fun i f -> f i) init |> Cstruct.concat
-      in 
-      let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns generator in
-      set_default_generator rng;
-      let source = Entropy.register_source "getrandom" in
-      let feed_entropy () = periodically_feed_entropy env (Int64.mul sleep 10L) source in
-      Eio.Fiber.any (rdrand_task env sleep @ [feed_entropy ; fn])
+      Fun.protect 
+        ~finally:( fun () -> running := false ) 
+        (fun () ->
+          (try
+            let _ = default_generator () in
+            Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
+                                  been set, check that this call is intentional");
+           with 
+            No_default_generator -> ());
+          let seed = 
+            let init = 
+              Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init env ] in
+            List.mapi (fun i f -> f i) init |> Cstruct.concat
+          in 
+          let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns generator in
+          set_default_generator rng;
+          let source = Entropy.register_source "getrandom" in
+          let feed_entropy () = periodically_feed_entropy env (Int64.mul sleep 10L) source in
+          Eio.Fiber.any (rdrand_task env sleep @ [feed_entropy ; fn])
+        )
     end 
