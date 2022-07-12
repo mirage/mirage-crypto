@@ -190,7 +190,7 @@ module Fortuna : Generator
 module Hmac_drbg (H : Mirage_crypto.Hash.S) : Generator
 
 val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool ->
-  ?time:(unit -> int64) -> (module Generator with type g = 'a) -> g
+  ?time:(unit -> int64) -> 'a generator -> g
 (** [create ~g ~seed ~strict ~time module] uses a module conforming to the
     {{!Generator}Generator} signature to instantiate the generic generator
     {{!g}g}.
