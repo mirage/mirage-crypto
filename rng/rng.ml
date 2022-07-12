@@ -18,6 +18,8 @@ let setup_rng =
    \n  If you are using Async, execute \
    `Mirage_crypto_eng_async.initialize (module Mirage_crypto_rng.Fortuna)` \
    at startup. \
+   \n  If you are using Eio, the RNG setup, entropy collection and periodic \
+   reseeding are done in one of the fibers by the `run` function.
    \n  Otherwise, there is no periodic reseeding. For an initial seed from \
    getrandom(), execute `Mirage_crypto_rng_unix.initialize ()`. You can use \
    `Mirage_crypto_rng.accumulate` and `Mirage_crypto_rng.reseed` to \
