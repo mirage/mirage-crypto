@@ -20,12 +20,22 @@
     generation suite. For proper operation, they need to be seeded with a
     high-quality entropy source.
 
-    Suitable generators are provided by sub-libraries
+    Suitable entropy feeding of generators are provided by sub-libraries
     {{!Mirage_crypto_rng_lwt}mirage-crypto-rng.lwt} (for Lwt),
-    {{!Mirage_crypto_rng_mirage}mirage-crypto-rng.mirage} (for MirageOS),
+    {{!Mirage_crypto_rng_async}mirage-crypto-rng-async} (for Async),
+    {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
     and {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}.
-    Although this module exposes a more fine-grained interface, allowing manual
-    seeding of generators, this is intended either for implementing
+
+    The intention is that "initialize" in the respective sub-library is called
+    once, which sets the default generator and registers entropy
+    harvesting asynchronous tasks. The semantics is that the entropy is always
+    fed to the {{!default_generator}default generator}, which is not necessarily
+    the one set by "initialize". The reasoning behind this is that the default
+    generator should be used in most setting, and that should be fed a constant
+    stream of entropy.
+
+    Although this module exposes a more fine-grained interface, e.g. allowing
+    manual seeding of generators, this is intended either for implementing
     entropy-harvesting modules, or very specialized purposes. Users of this
     library should almost certainly use one of the above entropy libraries, and
     avoid manually managing the generator seeding.
@@ -33,8 +43,9 @@
     Similarly, although it is possible to swap the default generator and gain
     control over the random stream, this is also intended for specialized
     applications such as testing or similar scenarios where the RNG needs to be
-    fully deterministic, or as a component of deterministic algorithms which
-    internally rely on pseudorandom streams.
+    fully deterministic (RFC 6979, deterministic usage of DSA), or as a
+    component of deterministic algorithms which internally rely on pseudorandom
+    streams.
 
     In the general case, users should not maintain their local instances of
     {{!g}g}. All of the generators in a process have to compete for entropy, and
