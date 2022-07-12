@@ -6,8 +6,8 @@
     with the default RNG. Windows 8 or lower are not supported by this library.
 *)
 
-(** [initialize ()] will bring the RNG into a working state. *)
-val initialize : unit -> unit
+(** [initialize ~g rng] will bring the RNG into a working state. *)
+val initialize : ?g:'a -> 'a Mirage_crypto_rng.generator -> unit
 
 (** [getrandom size] returns a buffer of [size] filled with random bytes. *)
 val getrandom : int -> Cstruct.t

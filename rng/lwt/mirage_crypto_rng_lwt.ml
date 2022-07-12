@@ -36,7 +36,7 @@ let getrandom_init i =
   let data = Mirage_crypto_rng_unix.getrandom 128 in
   Entropy.header i data
 
-let initialize ?(sleep = Duration.of_sec 1) () =
+let initialize (type a) ?g ?(sleep = Duration.of_sec 1) (rng : a generator) =
   if !running then
     Log.debug
       (fun m -> m "Mirage_crypto_rng_lwt.initialize has already been called, \
@@ -57,7 +57,7 @@ let initialize ?(sleep = Duration.of_sec 1) () =
       in
       List.mapi (fun i f -> f i) init |> Cstruct.concat
     in
-    let rng = create ~seed ~time:Mtime_clock.elapsed_ns (module Fortuna) in
+    let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns rng in
     set_default_generator rng;
     rdrand_task sleep;
     let source = Entropy.register_source "getrandom" in

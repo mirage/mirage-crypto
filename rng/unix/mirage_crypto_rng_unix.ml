@@ -18,7 +18,7 @@ let getrandom_init i =
 
 let running = ref false
 
-let initialize () =
+let initialize (type a) ?g (rng : a generator) =
   if !running then
     Log.debug
       (fun m -> m "Mirage_crypto_rng_unix.initialize has already been called, \
@@ -38,5 +38,5 @@ let initialize () =
       List.mapi (fun i f -> f i) init |> Cstruct.concat
     in
     let _ = Entropy.register_source "getrandom" in
-    set_default_generator (create ~seed (module Fortuna))
+    set_default_generator (create ?g ~seed rng)
   end
