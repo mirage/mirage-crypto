@@ -33,10 +33,11 @@ jobs:
         run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
       - name: Test
-        run: opam exec -- dune runtest tests
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
   build-test-unix-eio:
     name : Unix (eio)
+
     strategy:
       fail-fast: false
       matrix:
@@ -68,4 +69,4 @@ jobs:
         run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio
 
       - name: Test
-        run: opam exec -- dune runtest eio
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio

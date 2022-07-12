@@ -1,4 +1,0 @@
-(tests
- (names     test_eio_rng test_entropy_collection)
- (libraries mirage-crypto-rng-eio duration eio_main)
- (package   mirage-crypto-rng-eio))
