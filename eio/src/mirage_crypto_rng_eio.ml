@@ -1,3 +1,4 @@
+
 open Mirage_crypto_rng
 
 type env = <
@@ -59,7 +60,9 @@ let run
     else begin
       running := true;
       Fun.protect
-        ~finally:( fun () -> running := false )
+        ~finally:(fun () ->
+            running := false;
+            unset_default_generator ())
         (fun () ->
           (try
             let _ = default_generator () in
@@ -76,6 +79,5 @@ let run
           set_default_generator rng;
           let source = Entropy.register_source "getrandom" in
           let feed_entropy () = periodically_feed_entropy env (Int64.mul sleep 10L) source in
-          Eio.Fiber.any (rdrand_task env sleep @ [feed_entropy ; fn])
-        )
+          Eio.Fiber.any (rdrand_task env sleep @ [feed_entropy ; fn]))
     end

@@ -204,6 +204,13 @@ val set_default_generator : g -> unit
 (** [set_default_generator g] sets the default generator to [g]. This function
     must be called once. *)
 
+(**/**)
+(* This function is only used by eio to set the default generator to None when
+   the entropy harvesting tasks are finished. *)
+val unset_default_generator : unit -> unit
+(** [unset_default_generator ()] sets the default generator to [None]. *)
+(**/**)
+
 val generate : ?g:g -> int -> Cstruct.t
 (** Invoke {{!Generator.generate}generate} on [g] or
     {{!generator}default generator}. *)

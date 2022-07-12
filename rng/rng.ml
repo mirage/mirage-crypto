@@ -53,6 +53,8 @@ let _default_generator = ref None
 
 let set_default_generator g = _default_generator := Some g
 
+let unset_default_generator () = _default_generator := None
+
 let default_generator () =
   match !_default_generator with
   | None -> raise No_default_generator
