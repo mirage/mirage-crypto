@@ -24,7 +24,8 @@
     {{!Mirage_crypto_rng_lwt}mirage-crypto-rng.lwt} (for Lwt),
     {{!Mirage_crypto_rng_async}mirage-crypto-rng-async} (for Async),
     {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
-    and {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix}.
+    {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix},
+    and {{!Mirage_crypto_rng_eio}mirage-crypto-rng-eio} (for Eio).
 
     The intention is that "initialize" in the respective sub-library is called
     once, which sets the default generator and registers entropy
@@ -33,6 +34,10 @@
     the one set by "initialize". The reasoning behind this is that the default
     generator should be used in most setting, and that should be fed a constant
     stream of entropy.
+
+    [mirage-crypto-rng-eio] package differs slightly from other rng packages.
+    Instead of the [initilize] function a [run] function is provided with
+    similar behaviour, i.e. RNG setup, entropy collection and periodic reseeding.
 
     Although this module exposes a more fine-grained interface, e.g. allowing
     manual seeding of generators, this is intended either for implementing
@@ -214,6 +219,13 @@ val default_generator : unit -> g
 val set_default_generator : g -> unit
 (** [set_default_generator g] sets the default generator to [g]. This function
     must be called once. *)
+
+(**/**)
+(* This function is only used by eio to set the default generator to None when
+   the entropy harvesting tasks are finished. *)
+val unset_default_generator : unit -> unit
+(** [unset_default_generator ()] sets the default generator to [None]. *)
+(**/**)
 
 val generate : ?g:g -> int -> Cstruct.t
 (** Invoke {{!Generator.generate}generate} on [g] or

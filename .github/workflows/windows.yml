@@ -18,12 +18,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Use OCaml ${{ matrix.ocaml-version }}
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
           opam-local-packages: |
             *.opam
             !mirage-crypto-rng-async.opam
+            !mirage-crypto-rng-eio.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
