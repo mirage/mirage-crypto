@@ -15,19 +15,14 @@ freebsd_task:
 
   pin_packages_script:
     - opam install -y solo5-bindings-hvt zarith-freestanding opam-depext
-    - opam pin add mirage-crypto . -y --with-version=0.10.6  --with-test
-    - opam pin add mirage-crypto-rng . -y --with-version=0.10.6 --with-test
-    - opam pin add mirage-crypto-rng-mirage . -y --with-version=0.10.6 --with-test
-    - opam pin add mirage-crypto-pk . -y  --with-version=0.10.6 --with-test
-    - opam pin add mirage-crypto-ec . -y --with-version=0.10.6 --with-test
-    - opam pin add mirage-crypto-rng-async . -y --with-version=0.10.6 --with-test
+    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-rng-async.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
 
   test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
   test_mirage_script: eval `opam env` && ./.test-mirage.sh
 
 freebsd_eio_task:
-  pkg_install_script: pkg install -y ocaml-opam gmp gmake pkgconf bash
+  pkg_install_script: pkg install -y ocaml-opam gmake pkgconf bash
 
   ocaml_script:
     - opam init -a --bare
@@ -36,8 +31,6 @@ freebsd_eio_task:
     - opam env
 
   pin_packages_script:
-    - opam pin add mirage-crypto . -y --with-version=dev
-    - opam pin add mirage-crypto-rng . -y --with-version=dev
-    - opam pin add mirage-crypto-rng-eio . -y --with-version=dev --with-test
+    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-eio.opam
 
-  test_script: opam exec -- dune runtest -p mirage-crypto-rng-eio
+  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio
