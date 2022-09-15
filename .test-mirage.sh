@@ -3,7 +3,13 @@
 set -ex
 
 opam install --confirm-level=unsafe-yes "mirage>4"
-dune subst
+# to satisfy hardcoded version constraints in mirage, we need to be < 0.11.0
+# and "dune subst" doesn't work on these PR checkouts
+version='version: "0.10.99~dev"'
+echo $version >> mirage-crypto-rng-mirage.opam
+echo $version >> mirage-crypto-rng.opam
+echo $version >> mirage-crypto.opam
+echo $version >> mirage-crypto-pk.opam
 (mirage configure -t unix -f mirage/config.ml && gmake depend && mirage build -f mirage/config.ml && mirage/dist/crypto-test) || exit 1
 (mirage configure -t hvt -f mirage/config.ml && gmake depend && mirage build -f mirage/config.ml) || exit 1
 if [ $(uname -m) = "amd64" ] || [ $(uname -m) = "x86_64" ]; then
