@@ -26,7 +26,7 @@ doc: "https://mirage.github.io/mirage-crypto/doc"
 bug-reports: "https://github.com/mirage/mirage-crypto/issues"
 depends: [
   "conf-pkg-config" {build}
-  "dune" {>= "2.6"}
+  "dune" {>= "2.7"}
   "ocaml" {>= "4.08.0"}
   "cstruct" {>= "6.0.0"}
   "dune-configurator"

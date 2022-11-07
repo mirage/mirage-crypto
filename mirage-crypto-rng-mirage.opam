@@ -14,7 +14,7 @@ build: [ ["dune" "subst"] {dev}
 
 depends: [
   "ocaml" {>= "4.08.0"}
-  "dune" {>= "2.6"}
+  "dune" {>= "2.7"}
   "mirage-crypto-rng" {=version}
   "duration"
   "cstruct" {>= "4.0.0"}
