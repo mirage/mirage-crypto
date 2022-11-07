@@ -26,7 +26,7 @@ freebsd_eio_task:
   ocaml_script:
     - opam init -a --bare
     - opam update
-    - opam switch create 5.0.0~alpha0 --repositories=default,alpha=git+https://github.com/kit-ty-kate/opam-alpha-repository.git
+    - opam switch create 5.0.0~beta1 --repositories=default,alpha=git+https://github.com/kit-ty-kate/opam-alpha-repository.git
     - opam env
 
   pin_packages_script:
