@@ -4,8 +4,8 @@ freebsd_instance:
 freebsd_task:
   env:
     matrix:
-      - OCAML_VERSION: 4.11.1
-      - OCAML_VERSION: 4.12.0
+      - OCAML_VERSION: 4.13.1
+      - OCAML_VERSION: 4.14.0
 
   pkg_install_script: pkg install -y ocaml-opam gmp gmake pkgconf bash
 
@@ -14,7 +14,6 @@ freebsd_task:
     - opam env
 
   pin_packages_script:
-    - opam install -y solo5-bindings-hvt zarith-freestanding opam-depext
     - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-rng-async.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
 
   test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
@@ -27,7 +26,7 @@ freebsd_eio_task:
   ocaml_script:
     - opam init -a --bare
     - opam update
-    - opam switch create 5.0.0~alpha0 --repositories=default,alpha=git+https://github.com/kit-ty-kate/opam-alpha-repository.git
+    - opam switch create 5.0.0~beta1 --repositories=default,alpha=git+https://github.com/kit-ty-kate/opam-alpha-repository.git
     - opam env
 
   pin_packages_script:
