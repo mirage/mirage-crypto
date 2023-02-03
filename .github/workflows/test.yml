@@ -27,13 +27,13 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec mirage-crypto-rng-async
+        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-lwt mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec mirage-crypto-rng-async
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
       - name: Test
-        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
   build-test-unix-eio:
     name : Unix (eio)

@@ -14,9 +14,9 @@ freebsd_task:
     - opam env
 
   pin_packages_script:
-    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-rng-async.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
+    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-lwt.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-rng-async.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
 
-  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
+  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
   test_mirage_script: eval `opam env` && ./.test-mirage.sh
 
