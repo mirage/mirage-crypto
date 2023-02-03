@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: ["4.12.0", "4.11.2", "4.10.2", "4.09.1", "4.08.1"]
+        ocaml-version: ["4.14.1", "4.13.1", "4.12.1", "4.11.2", "4.10.2", "4.09.1", "4.08.1"]
         operating-system: [macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.operating-system }}
@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: [ocaml-variants.5.0.0+trunk]
+        ocaml-version: ["5.0.0"]
         operating-system: [macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.operating-system }}
@@ -58,9 +58,6 @@ jobs:
             mirage-crypto-rng.opam
             mirage-crypto-rng-eio.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
-          opam-repositories: |
-            default: https://github.com/ocaml/opam-repository.git
-            alpha: https://github.com/kit-ty-kate/opam-alpha-repository.git
 
       - name: Install dependencies
         run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-eio

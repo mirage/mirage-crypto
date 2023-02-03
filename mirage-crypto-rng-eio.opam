@@ -13,8 +13,8 @@ build: [ ["dune" "subst"] {dev}
          ["dune" "runtest" "-p" name "-j" jobs] {with-test} ]
 
 depends: [
-  "base-domains"
-  "dune" {>= "3.0"}
+  "ocaml" {>= "5.0.0"}
+  "dune" {>= "2.7"}
   "eio" {>= "0.3"}
   "cstruct" {>= "6.0.0"}
   "logs"
