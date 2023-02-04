@@ -263,11 +263,28 @@ module type AEAD = sig
       @raise Invalid_argument if the length of [secret] is not a valid key size.
   *)
 
+  val authenticate_encrypt_tag : key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  (** [authenticate_encrypt_tag ~key ~nonce ~adata msg] encrypts [msg] with [key]
+      and [nonce]. The computed authentication tag is returned separately as
+      second part of the tuple.
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+
   val authenticate_encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
     Cstruct.t -> Cstruct.t
   (** [authenticate_encrypt ~key ~nonce ~adata msg] encrypts [msg] with [key]
       and [nonce], and appends an authentication tag computed over the encrypted
       [msg], using [key], [nonce], and [adata].
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  val authenticate_decrypt_tag : key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> tag:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  (** [authenticate_decrypt ~key ~nonce ~adata ~tag msg] computes the
+      authentication tag using [key], [nonce], and [adata], and decrypts the
+      encrypted data. If the authentication tags match, the decrypted data is
+      returned.
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
 

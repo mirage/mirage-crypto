@@ -279,23 +279,30 @@ module Modes = struct
         GHASH.digesti ~key:hkey @@
           iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
 
-    let authenticate_encrypt ~key:{ key; hkey } ~nonce ?adata data =
+    let authenticate_encrypt_tag ~key:{ key; hkey } ~nonce ?adata data =
       let ctr   = counter ~hkey nonce in
       let cdata = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) data) in
       let ctag  = tag ~key ~hkey ~ctr ?adata cdata in
+      cdata, ctag
+
+    let authenticate_encrypt ~key ~nonce ?adata data =
+      let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata data in
       Cstruct.append cdata ctag
 
-    let authenticate_decrypt ~key:{ key; hkey } ~nonce ?adata cdata =
+    let authenticate_decrypt_tag ~key:{ key; hkey } ~nonce ?adata ~tag:tag_data cipher =
       let ctr  = counter ~hkey nonce in
+      let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cipher) in
+      let ctag = tag ~key ~hkey ~ctr ?adata cipher in
+      if Eqaf_cstruct.equal tag_data ctag then Some data else None
+
+    let authenticate_decrypt ~key ~nonce ?adata cdata =
       if Cstruct.length cdata < tag_size then
         None
       else
-        let cipher, tag_data =
+        let cipher, tag =
           Cstruct.split cdata (Cstruct.length cdata - tag_size)
         in
-        let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cipher) in
-        let ctag = tag ~key ~hkey ~ctr ?adata cipher in
-        if Eqaf_cstruct.equal tag_data ctag then Some data else None
+        authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
   end
 
   module CCM16_of (C : S.Core) : S.CCM16 = struct
@@ -315,11 +322,22 @@ module Modes = struct
         invalid_arg "src len %d, dst len %d" src.len dst.len;
       C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
 
-    let authenticate_encrypt ~key ~nonce ?(adata = Cstruct.empty) cs =
+    let authenticate_encrypt_tag ~key ~nonce ?(adata = Cstruct.empty) cs =
       Ccm.generation_encryption ~cipher ~key ~nonce ~maclen:tag_size ~adata cs
 
-    let authenticate_decrypt ~key ~nonce ?(adata = Cstruct.empty) cs =
-      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen:tag_size ~adata cs
+    let authenticate_encrypt ~key ~nonce ?adata cs =
+      let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata cs in
+      Cstruct.append cdata ctag
+
+    let authenticate_decrypt_tag ~key ~nonce ?(adata = Cstruct.empty) ~tag cs =
+      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen:tag_size ~adata ~tag cs
+
+    let authenticate_decrypt ~key ~nonce ?adata data =
+      if Cstruct.length data < tag_size then
+        None
+      else
+        let data, tag = Cstruct.split data (Cstruct.length data - tag_size) in
+        authenticate_decrypt_tag ~key ~nonce ?adata ~tag data
   end
 end
 

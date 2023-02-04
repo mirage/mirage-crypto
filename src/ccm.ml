@@ -150,17 +150,12 @@ let generation_encryption ~cipher ~key ~nonce ~maclen ~adata data =
   valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Encrypt ~key ~nonce ~maclen ~adata data in
   crypto_t t nonce cipher key ;
-  cdata <+> t
+  cdata, t
 
-let decryption_verification ~cipher ~key ~nonce ~maclen ~adata data =
+let decryption_verification ~cipher ~key ~nonce ~maclen ~adata ~tag data =
   valid_nonce nonce;
-  if Cstruct.length data < maclen then
-    None
-  else
-    let pclen = Cstruct.length data - maclen in
-    let cdata, t = crypto_core ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata (Cstruct.sub data 0 pclen) in
-    let t' = Cs.clone (Cstruct.sub data pclen maclen) in
-    crypto_t t' nonce cipher key ;
-    match Eqaf_cstruct.equal t' t with
-    | true  -> Some cdata
-    | false -> None
+  let cdata, t = crypto_core ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata data in
+  crypto_t tag nonce cipher key ;
+  match Eqaf_cstruct.equal tag t with
+  | true  -> Some cdata
+  | false -> None
