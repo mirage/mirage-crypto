@@ -64,20 +64,16 @@ module S = struct
 
   module type GCM = sig
     include Aead.AEAD
-    val of_secret : Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
-    val tag_size   : int
   end
 
-  module type CCM = sig
+  module type CCM16 = sig
     include Aead.AEAD
-    val of_secret : maclen:int -> Cstruct.t -> key
 
     val key_sizes  : int array
     val block_size : int
-    val mac_sizes  : int array
   end
 end
 
@@ -302,18 +298,15 @@ module Modes = struct
         if Eqaf_cstruct.equal tag_data ctag then Some data else None
   end
 
-  module CCM_of (C : S.Core) : S.CCM = struct
+  module CCM16_of (C : S.Core) : S.CCM16 = struct
 
     let _ = assert (C.block = 16)
 
-    type key = { key : C.ekey ; maclen : int }
+    let tag_size = 16
 
-    let mac_sizes = [| 4; 6; 8; 10; 12; 14; 16 |]
+    type key = C.ekey
 
-    let of_secret ~maclen sec =
-      if Array.mem maclen mac_sizes then
-        { key = C.e_of_secret sec ; maclen }
-      else invalid_arg "CCM: MAC length %d" maclen
+    let of_secret sec = C.e_of_secret sec
 
     let (key_sizes, block_size) = C.(key, block)
 
@@ -322,11 +315,11 @@ module Modes = struct
         invalid_arg "src len %d, dst len %d" src.len dst.len;
       C.encrypt ~key ~blocks:1 src.buffer src.off dst.buffer dst.off
 
-    let authenticate_encrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
-      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen ~adata cs
+    let authenticate_encrypt ~key ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen:tag_size ~adata cs
 
-    let authenticate_decrypt ~key:{key; maclen} ~nonce ?(adata = Cstruct.empty) cs =
-      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen ~adata cs
+    let authenticate_decrypt ~key ~nonce ?(adata = Cstruct.empty) cs =
+      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen:tag_size ~adata cs
   end
 end
 
@@ -373,7 +366,7 @@ module AES = struct
   module CBC = Modes.CBC_of (Core)
   module CTR = Modes.CTR_of (Core) (Counters.C128be)
   module GCM = Modes.GCM_of (Core)
-  module CCM = Modes.CCM_of (Core)
+  module CCM16 = Modes.CCM16_of (Core)
 
 end
 
