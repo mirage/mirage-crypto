@@ -289,9 +289,9 @@ let benchmarks = [
     throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce ~adata:cs Cstruct.empty));
 
   bm "aes-128-ccm" (fun name ->
-    let key   = AES.CCM.of_secret ~maclen:16 (Mirage_crypto_rng.generate 16)
+    let key   = AES.CCM16.of_secret (Mirage_crypto_rng.generate 16)
     and nonce = Mirage_crypto_rng.generate 10 in
-    throughput name (fun cs -> AES.CCM.authenticate_encrypt ~key ~nonce cs));
+    throughput name (fun cs -> AES.CCM16.authenticate_encrypt ~key ~nonce cs));
 
   bm "aes-192-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in

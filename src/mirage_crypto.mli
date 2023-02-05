@@ -250,8 +250,20 @@ end
 *)
 module type AEAD = sig
 
+  val tag_size : int
+  (** The size of the authentication tag. *)
+
   type key
   (** The abstract type for the key. *)
+
+  val of_secret : Cstruct.t -> key
+  (** [of_secret secret] constructs the encryption key corresponding to
+      [secret].
+
+      @raise Invalid_argument if the length of [secret] is not a valid key size.
+  *)
+
+  (** {1 Authenticated encryption and decryption with inline tag} *)
 
   val authenticate_encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
     Cstruct.t -> Cstruct.t
@@ -267,6 +279,25 @@ module type AEAD = sig
       data and authentication tag, computes the authentication tag using [key],
       [nonce], and [adata], and decrypts the encrypted data. If the
       authentication tags match, the decrypted data is returned.
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  (** {1 Authenticated encryption and decryption with tag provided separately} *)
+
+  val authenticate_encrypt_tag : key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  (** [authenticate_encrypt_tag ~key ~nonce ~adata msg] encrypts [msg] with [key]
+      and [nonce]. The computed authentication tag is returned separately as
+      second part of the tuple.
+
+      @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  val authenticate_decrypt_tag : key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> tag:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  (** [authenticate_decrypt ~key ~nonce ~adata ~tag msg] computes the
+      authentication tag using [key], [nonce], and [adata], and decrypts the
+      encrypted data. If the authentication tags match, the decrypted data is
+      returned.
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
 end
@@ -430,42 +461,23 @@ module Cipher_block : sig
 
       include AEAD
 
-      val of_secret : Cstruct.t -> key
-      (** Construct the encryption key corresponding to [secret].
-
-          @raise Invalid_argument if the length of [secret] is not in
-          {{!key_sizes}[key_sizes]}. *)
-
       val key_sizes  : int array
       (** Key sizes allowed with this cipher. *)
 
       val block_size : int
       (** The size of a single block. *)
-
-       val tag_size : int
-      (** The size of the authentication tag. *)
     end
 
     (** {e Counter with CBC-MAC} mode. *)
-    module type CCM = sig
+    module type CCM16 = sig
 
       include AEAD
-
-      val of_secret : maclen:int -> Cstruct.t -> key
-      (** Construct the encryption key corresponding to [secret], that will
-          produce authentication codes with the length [maclen].
-
-          @raise Invalid_argument if the length of [secret] is not in
-          {{!key_sizes}[key_sizes]} or [maclen] is not in [mac_sizes] *)
 
       val key_sizes  : int array
       (** Key sizes allowed with this cipher. *)
 
       val block_size : int
       (** The size of a single block. *)
-
-      val mac_sizes  : int array
-      (** [MAC] lengths allowed with this cipher. *)
     end
   end
 
@@ -475,7 +487,7 @@ module Cipher_block : sig
     module CBC  : S.CBC
     module CTR  : S.CTR with type ctr = int64 * int64
     module GCM  : S.GCM
-    module CCM  : S.CCM
+    module CCM16  : S.CCM16
   end
 
   module DES : sig
@@ -493,8 +505,6 @@ end
 (** The ChaCha20 cipher proposed by D.J. Bernstein. *)
 module Chacha20 : sig
   include AEAD
-
-  val of_secret : Cstruct.t -> key
 
   val crypt : key:key -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
   (** [crypt ~key ~nonce ~ctr data] generates a ChaCha20 key stream using
