@@ -1082,7 +1082,7 @@ df f8 a0 4f d3 dd 1d f0  07 78 3a 2f 29 d6 61 61
   | Error _ -> Alcotest.fail "regression failed"
 
 let () =
-  Mirage_crypto_rng_unix.initialize ();
+  Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
   Alcotest.run "EC"
     [
       ("P256 Key exchange", key_exchange);
