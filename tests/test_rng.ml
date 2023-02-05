@@ -9,7 +9,7 @@ let all0 cs =
 
 let () =
   Printf.printf "foo\n%!";
-  Mirage_crypto_rng_unix.initialize ();
+  Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
   let rec one z n = function
     | 0 -> z
     | c ->

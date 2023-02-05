@@ -17,14 +17,15 @@ let setup_rng =
    `Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortune)` \
    at startup. \
    \n  If you are using Async, execute \
-   `Mirage_crypto_eng_async.initialize (module Mirage_crypto_rng.Fortuna)` \
+   `Mirage_crypto_rng_async.initialize (module Mirage_crypto_rng.Fortuna)` \
    at startup. \
    \n  If you are using Eio, execute in one of the fibers \
    `Mirage_crypto_rng_eio.run (module Fortuna) env` (`env` from `Eio_main.run`).
    \n  Otherwise, there is no periodic reseeding. For an initial seed from \
-   getrandom(), execute `Mirage_crypto_rng_unix.initialize ()`. You can use \
-   `Mirage_crypto_rng.accumulate` and `Mirage_crypto_rng.reseed` to \
-   reseed the RNG manually."
+   getrandom(), execute \
+   `Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna)`. \
+   You can use `Mirage_crypto_rng.accumulate` and `Mirage_crypto_rng.reseed` \
+   to reseed the RNG manually."
 
 let () = Printexc.register_printer (function
     | Unseeded_generator ->

@@ -40,10 +40,10 @@ seed it.
 
 Lwt:
 ```OCaml
-let () = Mirage_crypto_rng_lwt.initialize ()
+let () = Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)
 ```
 
 Unix:
 ```OCaml
-let () = Mirage_crypto_rng_unix.initialize ()
+let () = Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna)
 ```
