@@ -1,6 +1,6 @@
 open Mirage_crypto_rng
 
-let src = Logs.Src.create "mirage-crypto-rng.lwt" ~doc:"Mirage crypto RNG Lwt"
+let src = Logs.Src.create "mirage-crypto-rng-lwt" ~doc:"Mirage crypto RNG Lwt"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 let periodic f delta =
