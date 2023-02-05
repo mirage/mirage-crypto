@@ -28,10 +28,10 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
+        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-lwt mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
 
       - name: Test
-        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
