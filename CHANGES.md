@@ -1,3 +1,19 @@
+## v0.11.0 (2023-02-05)
+
+- BREAKING split mirage-crypto-rng-lwt away from mirage-crypto-rng (#168
+  @hannesm, reported by @bikallem #158)
+- AEAD API improvements: provide tag_size, of_secret, and functions that deal
+  with the tag separately (#171 @hannesm, fixes #74 #144 @orbitz @anmonteiro)
+  Only CCM16 (with tag size 16) is now exposed, the former API does not exist
+  anymore (passing `~maclen` to `of_secret`), according to sherlocode the only
+  usage was CCM16 anyways
+- BREAKING unify RNG initialization (reported by @talex5 in #155, fixes #160,
+  PR #162 @hannesm)
+- remove mirage 3 cross-compilation runes (#163 @hannesm)
+- CI: mirage-crypto-rng-eio requires ocaml 5 and dune 2.7 (#170 @hannesm, fixes
+  #169 thanks to @bikallem @talex5)
+- CI: use miage 4 (#166 @hannesm)
+
 ## v0.10.7 (2022-09-13)
 
 - mirage-crypto-rng-eio: new package for seeding and feeding entropy to the
