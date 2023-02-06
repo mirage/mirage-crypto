@@ -2,13 +2,24 @@
 
 - BREAKING split mirage-crypto-rng-lwt away from mirage-crypto-rng (#168
   @hannesm, reported by @bikallem #158)
+  This means, a "mirage-crypto-rng.lwt" should now be "mirage-crypto-rng-lwt"
+  in your dune file (or in META requires, or in _tags).
 - AEAD API improvements: provide tag_size, of_secret, and functions that deal
   with the tag separately (#171 @hannesm, fixes #74 #144 @orbitz @anmonteiro)
   Only CCM16 (with tag size 16) is now exposed, the former API does not exist
   anymore (passing `~maclen` to `of_secret`), according to sherlocode the only
   usage was CCM16 anyways
+  This means any "Mirage_crypto.AES.CCM" should now be "Mirage_crypto.AES.CCM16"
+  and any "CCM.of_secret ~maclen:16 key" should now be "CCM16.of_secret key"
+  Any occurrence of "Mirage_crypto.Cipher_block.S.CCM" should now be
+  "Mirage_crypto.Cipher_block.S.CCM16"
 - BREAKING unify RNG initialization (reported by @talex5 in #155, fixes #160,
   PR #162 @hannesm)
+  This means:
+  - "Mirage_crypto_rng_lwt.initialize ()" should now be
+    "Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)"
+  - "Mirage_crypto_rng_unix.initialize ()" should now be
+    "Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna)"
 - remove mirage 3 cross-compilation runes (#163 @hannesm)
 - CI: mirage-crypto-rng-eio requires ocaml 5 and dune 2.7 (#170 @hannesm, fixes
   #169 thanks to @bikallem @talex5)
