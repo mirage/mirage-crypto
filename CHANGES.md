@@ -1,4 +1,4 @@
-## v0.11.0 (2023-02-05)
+## v0.11.0 (2023-02-09)
 
 - BREAKING split mirage-crypto-rng-lwt away from mirage-crypto-rng (#168
   @hannesm, reported by @bikallem #158)
