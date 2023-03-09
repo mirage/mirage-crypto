@@ -53,6 +53,7 @@ let crypt ~key ~nonce ?(ctr = 0L) data =
   in
   let key_stream = Cstruct.create_unsafe len in
   let rec loop i = function
+    | 0 -> ()
     | 1 ->
       chacha20_block state i key_stream ;
       Native.xor_into data.buffer (data.off + i) key_stream.buffer i last_len
