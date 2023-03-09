@@ -1,3 +1,9 @@
+## v0.11.1 (2023-03-09)
+
+* BUGFIX Chacha20 decrypt and encrypt with empty data (previously lead to
+  segmentation fault, reported by @smondet in #172, fix in #173 by @reynir
+  @hannesm), added tests with empty data for all symmetric ciphers
+
 ## v0.11.0 (2023-02-09)
 
 - BREAKING split mirage-crypto-rng-lwt away from mirage-crypto-rng (#168
