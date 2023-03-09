@@ -73,7 +73,7 @@ exception Unseeded_generator
 (** Thrown when using an uninitialized {{!g}generator}. *)
 
 exception No_default_generator
-(** Thrown when {!set_generator} has not been called. *)
+(** Thrown when {!set_default_generator} has not been called. *)
 
 (** Entropy sources and collection *)
 module Entropy : sig
@@ -214,7 +214,7 @@ val default_generator : unit -> g
 (** [default_generator ()] is the default generator. Functions in this module
     use this generator when not explicitly supplied one.
 
-    @raise No_default_generator if {!set_generator} has not been called. *)
+    @raise No_default_generator if {!set_default_generator} has not been called. *)
 
 val set_default_generator : g -> unit
 (** [set_default_generator g] sets the default generator to [g]. This function

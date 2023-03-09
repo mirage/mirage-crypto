@@ -62,7 +62,7 @@ module Rsa : sig
   val priv : e:Z.t -> d:Z.t -> n:Z.t -> p:Z.t -> q:Z.t -> dp:Z.t -> dq:Z.t ->
     q':Z.t -> (priv, [> `Msg of string ]) result
   (** [priv ~e ~d ~n ~p ~q ~dp ~dq ~q'] validates the private key: [e, n] must
-      be a valid {!pub}, [p] and [q] valid prime numbers [> 0], [odd],
+      be a valid {!type-pub}, [p] and [q] valid prime numbers [> 0], [odd],
       probabilistically prime, [p <> q], [n = p * q], [e] probabilistically
       prime and coprime to both [p] and [q], [q' = q ^ -1 mod p], [1 < d < n],
       [dp = d mod (p - 1)], [dq = d mod (q - 1)],
@@ -76,12 +76,12 @@ module Rsa : sig
 
   val priv_of_primes : e:Z.t -> p:Z.t -> q:Z.t ->
     (priv, [> `Msg of string ]) result
-  (** [priv_of_primes ~e ~p ~q] is the {{!priv}private key} derived from the
+  (** [priv_of_primes ~e ~p ~q] is the {{!type-priv}private key} derived from the
       minimal description [(e, p, q)]. *)
 
   val priv_of_exp : ?g:Mirage_crypto_rng.g -> ?attempts:int -> e:Z.t -> d:Z.t ->
     n:Z.t -> unit -> (priv, [> `Msg of string ]) result
-  (** [priv_of_exp ?g ?attempts ~e ~d n] is the unique {{!priv}private key}
+  (** [priv_of_exp ?g ?attempts ~e ~d n] is the unique {{!type-priv}private key}
       characterized by the public ([e]) and private ([d]) exponents, and modulus
       [n]. This operation uses a probabilistic process that can fail to recover
       the key.
@@ -139,8 +139,8 @@ module Rsa : sig
   (** {1 Key generation} *)
 
   val generate : ?g:Mirage_crypto_rng.g -> ?e:Z.t -> bits:bits -> unit -> priv
-  (** [generate ~g ~e ~bits ()] is a new {{!priv}private key}. The new key is
-      guaranteed to be well formed, see {!priv}.
+  (** [generate ~g ~e ~bits ()] is a new {{!type-priv}private key}. The new key is
+      guaranteed to be well formed, see {!val-priv}.
 
       [e] defaults to [2^16+1].
 
@@ -156,7 +156,7 @@ module Rsa : sig
   (** {b PKCS v1.5} operations, as defined by {b PKCS #1 v1.5}.
 
       For the operations that only add the raw padding, the key size must be at
-      least 11 bytes larger than the message. For full {{!sign}signing}, the
+      least 11 bytes larger than the message. For full {{!PKCS1.sign}signing}, the
       minimal key size varies according to the hash algorithm. In this case, the
       key size is [priv_bits key / 8], rounded up. *)
   module PKCS1 : sig
@@ -261,7 +261,7 @@ module Rsa : sig
 
     val sign : ?g:Mirage_crypto_rng.g -> ?crt_hardening:bool ->
       ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
-    (** [sign ~g ~crt_hardening ~mask ~slen ~key message] the {!p PSS}-padded
+    (** [sign ~g ~crt_hardening ~mask ~slen ~key message] the [PSS]-padded
         digest of [message], signed with the [key]. [crt_hardening] defaults
         to [false].
 
@@ -314,7 +314,7 @@ module Dsa : sig
     (priv, [> `Msg of string ]) result
   (** [priv ~fips ~p ~q ~gg ~x ~y ()] constructs a private DSA key from the given
       numbers. Will result in an error if parameters are ill-formed: same as
-      {!pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
+      {!val-pub}, and additionally [0 < x < q] and [y = g ^ x mod p]. Note that no
       time masking is done on the modular exponentiation. *)
 
   type pub = private {
@@ -323,7 +323,7 @@ module Dsa : sig
     gg : Z.t ;
     y  : Z.t ;
   }
-  (** Public key, a subset of {{!priv}private key}.
+  (** Public key, a subset of {{!type-priv}private key}.
 
       {e [Sexplib] convertible}. *)
 
@@ -348,7 +348,7 @@ module Dsa : sig
   (** Extract the public component from a private key. *)
 
   val generate : ?g:Mirage_crypto_rng.g -> keysize -> priv
-  (** [generate g size] is a fresh {{!priv}private} key. The domain parameters
+  (** [generate g size] is a fresh {{!type-priv}private} key. The domain parameters
       are derived using a modified FIPS.186-4 probabilistic process, but the
       derivation can not be validated. Note that no time masking is done for the
       modular exponentiations.
@@ -451,7 +451,7 @@ module Dh : sig
   val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:bits -> group -> secret * Cstruct.t
   (** Generate a random {!secret} and the corresponding public key.
       [bits] is the exact bit-size of {!secret} and defaults to a value
-      dependent on the {!group}'s [p].
+      dependent on the {!type-group}'s [p].
 
       {b Note} The process might diverge when [bits] is extremely small. *)
 
@@ -464,7 +464,7 @@ module Dh : sig
       [1 < public < p-1] && [public <> gg]. *)
 
   val gen_group : ?g:Mirage_crypto_rng.g -> bits:bits -> unit -> group
-  (** [gen_group ~g ~bits ()] generates a random {!group} with modulus size
+  (** [gen_group ~g ~bits ()] generates a random {!type-group} with modulus size
       [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
       and [2] for the generator, such that [2^q = 1 mod p].
       Runtime is on the order of a minute for 1024 bits.
@@ -473,7 +473,7 @@ module Dh : sig
       {b Note} The process might diverge if there are no suitable groups. This
       happens with extremely small [bits] values. *)
 
-  (** A small catalog of standardized {!group}s. *)
+  (** A small catalog of standardized {!type-group}s. *)
   module Group : sig
 
     (** From RFC 2409: *)
@@ -522,7 +522,7 @@ module Z_extra : sig
 
   val of_cstruct_be : ?bits:bits -> Cstruct.t -> Z.t
   (** [of_cstruct_be ~bits cs] interprets the bit pattern of [cs] as a
-      {{!t}[t]} in big-endian.
+      {{!Z.t}[t]} in big-endian.
 
       If [~bits] is not given, the operation considers the entire [cs],
       otherwise the initial [min ~bits (bit-length cs)] bits of [cs].

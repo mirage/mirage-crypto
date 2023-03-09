@@ -29,7 +29,7 @@ module Uncommon : sig
 
       @raise Division_by_zero when [y < 1]. *)
 
-  (** Addons to {!Cstruct}. *)
+  (** Addons to the {!Cstruct} interface. *)
   module Cs : sig
 
     val (<+>) : Cstruct.t -> Cstruct.t -> Cstruct.t
@@ -70,9 +70,9 @@ end
 
 (** Hashes.
 
-    Each algorithm is contained in its own {{!hashing_modules}module}, with
-    high-level operations accessible through {{!hashing_funs}functions} that
-    dispatch on {{!hash}code} value. *)
+    Each algorithm is contained in its own {{!Hash.S}module}, with
+    high-level operations accessible through functions that
+    dispatch on {{!Hash.hash}code} value. *)
 module Hash : sig
 
   type digest = Cstruct.t
@@ -88,7 +88,7 @@ module Hash : sig
       {- [let iter_pair : 'a * 'a -> 'a iter = fun (x, y) f = f x; f y]}
       {- [let iter_list : 'a list -> 'a iter = fun xs f -> List.iter f xs]}} *)
 
-  (** {1:hashing_modules Hashing algorithms} *)
+  (** {1 Hashing algorithms} *)
 
   (** A single hash algorithm. *)
   module type S = sig
@@ -158,7 +158,7 @@ module Hash : sig
     (** [digesti iter = feedi empty iter |> get] *)
 
     val hmaci : key:Cstruct.t -> Cstruct.t iter -> digest
-    (** See {{!hmac}[hmac]}. *)
+    (** See {{!val-hmac}[hmac]}. *)
   end
 
   module MD5     : S
@@ -182,7 +182,7 @@ module Hash : sig
 
       This is the most convenient way to go from a code to a module. *)
 
-  (** {1:hashing_funs Hash functions} *)
+  (** {1 Hash functions} *)
 
   val digest      : [< hash ] -> Cstruct.t -> digest
   (** [digest algorithm bytes] is [algorithm] applied to [bytes]. *)
