@@ -689,6 +689,86 @@ let poly1305_rfc8439_2_5_2 _ =
   assert_cs_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
     (Poly1305.mac ~key data) output
 
+let empty_cases _ =
+  let open Cipher_block in
+  let plain = Cstruct.empty
+  and cipher = Cstruct.empty
+  in
+  (* 3DES ECB CBC CTR *)
+  Array.iter (fun key_size ->
+      let key = DES.ECB.of_secret (Cstruct.create key_size) in
+      assert_cs_equal ~msg:"DES ECB encrypt" cipher (DES.ECB.encrypt ~key plain) ;
+      assert_cs_equal ~msg:"DES ECB decrypt" plain (DES.ECB.decrypt ~key cipher))
+    DES.ECB.key_sizes ;
+  Array.iter (fun key_size ->
+      let key = DES.CBC.of_secret (Cstruct.create key_size)
+      and iv = Cstruct.create DES.CBC.block_size
+      in
+      assert_cs_equal ~msg:"DES CBC encrypt" cipher (DES.CBC.encrypt ~key ~iv plain) ;
+      assert_cs_equal ~msg:"DES CBC decrypt" plain (DES.CBC.decrypt ~key ~iv cipher))
+    DES.CBC.key_sizes ;
+  Array.iter (fun key_size ->
+      let key = DES.CTR.of_secret (Cstruct.create key_size)
+      and ctr = DES.CTR.ctr_of_cstruct (Cstruct.create DES.CTR.block_size)
+      in
+      assert_cs_equal ~msg:"DES CTR encrypt" cipher (DES.CTR.encrypt ~key ~ctr plain) ;
+      assert_cs_equal ~msg:"DES CTR decrypt" plain (DES.CTR.decrypt ~key ~ctr cipher))
+    DES.CTR.key_sizes ;
+
+  (* AES ECB CBC CTR GCM CCM16 *)
+  Array.iter (fun key_size ->
+      let key = AES.ECB.of_secret (Cstruct.create key_size) in
+      assert_cs_equal ~msg:"AES ECB encrypt" cipher (AES.ECB.encrypt ~key plain) ;
+      assert_cs_equal ~msg:"AES ECB decrypt" plain (AES.ECB.decrypt ~key cipher))
+    AES.ECB.key_sizes ;
+  Array.iter (fun key_size ->
+      let key = AES.CBC.of_secret (Cstruct.create key_size)
+      and iv = Cstruct.create AES.CBC.block_size
+      in
+      assert_cs_equal ~msg:"AES CBC encrypt" cipher (AES.CBC.encrypt ~key ~iv plain) ;
+      assert_cs_equal ~msg:"AES CBC decrypt" plain (AES.CBC.decrypt ~key ~iv cipher))
+    AES.CBC.key_sizes ;
+  Array.iter (fun key_size ->
+      let key = AES.CTR.of_secret (Cstruct.create key_size)
+      and ctr = AES.CTR.ctr_of_cstruct (Cstruct.create AES.CTR.block_size)
+      in
+      assert_cs_equal ~msg:"AES CTR encrypt" cipher (AES.CTR.encrypt ~key ~ctr plain) ;
+      assert_cs_equal ~msg:"AES CTR decrypt" plain (AES.CTR.decrypt ~key ~ctr cipher))
+    AES.CTR.key_sizes ;
+  Array.iter (fun key_size ->
+      let key = AES.CCM16.of_secret (Cstruct.create key_size) in
+      let test_one nonce =
+        let c, tag = AES.CCM16.authenticate_encrypt_tag ~key ~nonce plain in
+        assert_cs_equal ~msg:"AES CCM16 encrypt" cipher c ;
+        match AES.CCM16.authenticate_decrypt_tag ~key ~nonce ~tag cipher with
+        | None -> assert false
+        | Some p -> assert_cs_equal ~msg:"AES CCM16 decrypt" plain p
+      in
+      test_one (Cstruct.create 7);
+      test_one (Cstruct.create 8);
+      test_one (Cstruct.create 13))
+    AES.CCM16.key_sizes ;
+
+  (* ChaCha20 *)
+  Array.iter (fun key_size ->
+      let key = Chacha20.of_secret (Cstruct.create key_size) in
+      let test_one nonce =
+        let c, tag = Chacha20.authenticate_encrypt_tag ~key ~nonce plain in
+        assert_cs_equal ~msg:"Chacha20 encrypt" cipher c ;
+        match Chacha20.authenticate_decrypt_tag ~key ~nonce ~tag cipher with
+        | None -> assert false
+        | Some p -> assert_cs_equal ~msg:"Chacha20 decrypt" plain p
+      in
+      test_one (Cstruct.create 8);
+      if key_size = 32 then
+        test_one (Cstruct.create 12))
+    [| 16 ; 32 |] ;
+
+  (* ARC4 *)
+  let key = Cipher_stream.ARC4.of_secret (Cstruct.create 16) in
+  assert_cs_equal ~msg:"ARC4 encrypt" cipher (Cipher_stream.ARC4.(encrypt ~key plain).message) ;
+  assert_cs_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
+
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
@@ -699,4 +779,5 @@ let suite = [
   "AES-GCM-REGRESSION" >::: gcm_regressions ;
   "Chacha20" >::: chacha20_cases ;
   "poly1305" >:: poly1305_rfc8439_2_5_2 ;
+  "empty" >:: empty_cases ;
 ]
