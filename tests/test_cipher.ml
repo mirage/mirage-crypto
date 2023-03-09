@@ -762,7 +762,12 @@ let empty_cases _ =
       test_one (Cstruct.create 8);
       if key_size = 32 then
         test_one (Cstruct.create 12))
-    [| 16 ; 32 |]
+    [| 16 ; 32 |] ;
+
+  (* ARC4 *)
+  let key = Cipher_stream.ARC4.of_secret (Cstruct.create 16) in
+  assert_cs_equal ~msg:"ARC4 encrypt" cipher (Cipher_stream.ARC4.(encrypt ~key plain).message) ;
+  assert_cs_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
 
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
