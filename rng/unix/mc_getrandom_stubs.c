@@ -5,9 +5,9 @@
 #include <caml/unixsupport.h>
 #include <caml/bigarray.h>
 
-#if defined(__linux)
+#if defined(__linux) || defined(__GNU__)
 # include <errno.h>
-// on Linux, we use getrandom and loop
+// on Linux and GNU/Hurd, we use getrandom and loop
 
 # if __GLIBC__ && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 25
 # include <sys/syscall.h>
