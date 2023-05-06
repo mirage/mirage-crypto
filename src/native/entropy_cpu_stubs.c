@@ -59,7 +59,7 @@
   __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0": "=r" (res));
 */
 #if defined(__ocaml_freestanding__) || defined(__ocaml_solo5__)
-static inline uint32_t read_virtual_count ()
+static inline uint32_t read_virtual_count (void)
 {
   uint32_t c_lo, c_hi;
   __asm__ __volatile__("mrrc p15, 1, %0, %1, c14":"=r"(c_lo), "=r"(c_hi));
@@ -72,7 +72,7 @@ https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclo
    a kernel module also in user mode). Use clock_gettime as fallback.
  */
 #include <time.h>
-static inline uint32_t read_virtual_count ()
+static inline uint32_t read_virtual_count (void)
 {
   uint32_t pmccntr;
   uint32_t pmuseren;
@@ -136,7 +136,7 @@ static inline uint64_t getticks(void)
 #endif
 
 #if defined (__mips__)
-static inline unsigned long get_count() {
+static inline unsigned long get_count(void) {
   unsigned long count;
   __asm__ __volatile__ ("rdhwr %[rt], $2" : [rt] "=d" (count));
   return count;
@@ -174,7 +174,7 @@ static int __cpu_rng = RNG_NONE;
 
 #define RETRIES 10
 
-static void detect () {
+static void detect (void) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
 

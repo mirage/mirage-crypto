@@ -59,7 +59,7 @@ static unsigned char pc2[48] = {
 	40, 51, 30, 36, 46, 54,	29, 39, 50, 44, 32, 47,
 	43, 48, 38, 55, 33, 52,	45, 41, 49, 35, 28, 31 };
 
-void mc_deskey(unsigned char *key, short edf) /* Thanks to James Gillogly & Phil Karn! */
+void mc_deskey(unsigned char key[8], short edf) /* Thanks to James Gillogly & Phil Karn! */
 {
 	int i, j, l, m, n;
 	unsigned char pc1m[56], pcr[56];
@@ -94,8 +94,7 @@ void mc_deskey(unsigned char *key, short edf) /* Thanks to James Gillogly & Phil
 	return;
 	}
 
-static void cookey(raw1)
-unsigned long *raw1;
+static void cookey(unsigned long *raw1)
 {
 	unsigned long *cook, *raw0;
 	unsigned long dough[32];
@@ -117,8 +116,7 @@ unsigned long *raw1;
 	return;
 	}
 
-void mc_cpkey(into)
-unsigned long *into;
+void mc_cpkey(unsigned long into[32])
 {
 	unsigned long *from, *endp;
 
@@ -127,8 +125,7 @@ unsigned long *into;
 	return;
 	}
 
-void mc_usekey(from)
-unsigned long *from;
+void mc_usekey(unsigned long from[32])
 {
 	unsigned long *to, *endp;
 
@@ -137,8 +134,7 @@ unsigned long *from;
 	return;
 	}
 
-void mc_des(inblock, outblock)
-unsigned char *inblock, *outblock;
+void mc_des(unsigned char inblock[8], unsigned char outblock[8])
 {
 	unsigned long work[2];
 
@@ -149,9 +145,7 @@ unsigned char *inblock, *outblock;
 	}
 
 
-static void scrunch(outof, into)
-unsigned char *outof;
-unsigned long *into;
+static void scrunch(unsigned char *outof, unsigned long *into)
 {
 	*into 	 = (*outof++ & 0xffL) << 24;
 	*into 	|= (*outof++ & 0xffL) << 16;
@@ -165,9 +159,7 @@ unsigned long *into;
 	}
 
 
-static void unscrun(outof, into)
-unsigned long *outof;
-unsigned char *into;
+static void unscrun(unsigned long *outof, unsigned char *into)
 {
 	*into++ = (*outof >> 24) & 0xffL;
 	*into++ = (*outof >> 16) & 0xffL;
@@ -324,8 +316,7 @@ static unsigned long SP8[64] = {
 	0x10041040L, 0x00041000L, 0x00041000L, 0x00001040L,
 	0x00001040L, 0x00040040L, 0x10000000L, 0x10041000L };
 
-static void desfunc(block, keys)
-unsigned long *block, *keys;
+static void desfunc(unsigned long *block, unsigned long *keys)
 {
 	unsigned long fval, work, right, leftt;
 	int round;
@@ -413,8 +404,7 @@ void mc_des2key(unsigned char hexkey[16], short mode) /* stomps on Kn3 too */
 	return;
 	}
 
-void mc_Ddes(from, into)
-unsigned char *from, *into;		/* unsigned char[8] */
+void mc_Ddes(unsigned char from[8], unsigned char into[8])
 {
 	unsigned long work[2];
 
@@ -426,9 +416,7 @@ unsigned char *from, *into;		/* unsigned char[8] */
 	return;
 	}
 
-void mc_D2des(from, into)
-unsigned char *from;			/* unsigned char[16] */
-unsigned char *into;			/* unsigned char[16] */
+void mc_D2des(unsigned char from[16], unsigned char into[16])
 {
 	unsigned long *right, *l1, swap;
 	unsigned long leftt[2], bufR[2];
@@ -454,9 +442,7 @@ unsigned char *into;			/* unsigned char[16] */
 	return;
 	}
 
-void mc_makekey(aptr, kptr)
-char *aptr;				/* NULL-terminated  */
-unsigned char *kptr;		/* unsigned char[8] */
+void mc_makekey(char *aptr /* NULL-terminated */, unsigned char kptr[8])
 {
 	unsigned char *store;
 	int first, i;
@@ -479,9 +465,7 @@ unsigned char *kptr;		/* unsigned char[8] */
 	return;
 	}
 
-void mc_make2key(aptr, kptr)
-char *aptr;				/* NULL-terminated   */
-unsigned char *kptr;		/* unsigned char[16] */
+void mc_make2key(char *aptr /* NULL-terminated */, unsigned char kptr[16])
 {
 	unsigned char *store;
 	int first, i;
@@ -506,8 +490,7 @@ unsigned char *kptr;		/* unsigned char[16] */
 
 #ifndef D3_DES	/* D2_DES only */
 
-void mc_cp2key(into)
-unsigned long *into;	/* unsigned long[64] */
+void mc_cp2key(unsigned long into[64])
 {
 	unsigned long *from, *endp;
 
@@ -518,8 +501,7 @@ unsigned long *into;	/* unsigned long[64] */
 	return;
 	}
 
-void mc_use2key(from)				/* stomps on Kn3 too */
-unsigned long *from;	/* unsigned long[64] */
+void mc_use2key(unsigned long from[64])	/* stomps on Kn3 too */
 {
 	unsigned long *to, *endp;
 
@@ -556,8 +538,7 @@ void mc_des3key(unsigned char hexkey[24], short mode)
 	return;
 	}
 
-void mc_cp3key(into)
-unsigned long *into;	/* unsigned long[96] */
+void mc_cp3key(unsigned long into[96])
 {
 	unsigned long *from, *endp;
 
@@ -570,8 +551,7 @@ unsigned long *into;	/* unsigned long[96] */
 	return;
 	}
 
-void mc_use3key(from)
-unsigned long *from;	/* unsigned long[96] */
+void mc_use3key(unsigned long from[96])
 {
 	unsigned long *to, *endp;
 
@@ -584,11 +564,7 @@ unsigned long *from;	/* unsigned long[96] */
 	return;
 	}
 
-static void D3des(unsigned char *, unsigned char *);
-
-static void D3des(from, into)	/* amateur theatrics */
-unsigned char *from;			/* unsigned char[24] */
-unsigned char *into;			/* unsigned char[24] */
+static void D3des(unsigned char from[24], unsigned char into[24])	/* amateur theatrics */
 {
 	unsigned long swap, leftt[2], middl[2], right[2];
 
@@ -622,9 +598,7 @@ unsigned char *into;			/* unsigned char[24] */
 	return;
 	}
 
-void mc_make3key(aptr, kptr)
-char *aptr;				/* NULL-terminated   */
-unsigned char *kptr;		/* unsigned char[24] */
+void mc_make3key(char *aptr /* NULL-terminated   */, unsigned char kptr[24])
 {
 	unsigned char *store;
 	int first, i;
