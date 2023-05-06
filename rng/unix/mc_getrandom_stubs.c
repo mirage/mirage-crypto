@@ -22,9 +22,11 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
   ssize_t r = 0;
   while (off < len) {
     r = getrandom(data + off, len - off, 0);
-    if (r < 0 && errno == EINTR) continue;
-    else if (r < 0) uerror("getrandom", Nothing);
-    off += r;
+    if (r == -1) {
+      if (errno == EINTR) continue;
+      else uerror("getrandom", Nothing);
+    }
+    off += (size_t)r;
   }
 }
 #elif (defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__) || defined(__APPLE__))
@@ -39,7 +41,7 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
   size_t rlen = 0;
   for (uint32_t i = 0; i <= len; i += 256) {
     rlen = MIN(256, len - i);
-    if (getentropy(data + i, rlen) < 0) uerror("getentropy", Nothing);
+    if (getentropy(data + i, rlen) == -1) uerror("getentropy", Nothing);
   }
 }
 #elif (defined(_WIN32))
