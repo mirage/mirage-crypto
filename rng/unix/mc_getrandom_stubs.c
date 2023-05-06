@@ -18,7 +18,8 @@
 # endif
 
 void raw_getrandom (uint8_t *data, uint32_t len) {
-  int r, off = 0;
+  size_t off = 0;
+  ssize_t r = 0;
   while (off < len) {
     r = getrandom(data + off, len - off, 0);
     if (r < 0 && errno == EINTR) continue;
