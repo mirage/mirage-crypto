@@ -6,7 +6,7 @@
 
 type env = <
   clock: Eio.Time.clock;
-  mono: Eio.Time.Mono.t;
+  mono_clock: Eio.Time.Mono.t;
   secure_random: Eio.Flow.source;
   >
 
