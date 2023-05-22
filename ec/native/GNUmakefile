@@ -3,11 +3,11 @@
 # needs to be cloned and "make standalone-ocaml" invoked
 # The lowest bound of fiat-crypto is git commit
 # dabaf4b3132e8bb4a3f5fcd8366eec6ac9bb4232 (July 16th 2021)
-# Generated on FreeBSD 12.2p2 with coq 8.13.1 (OCaml 4.12.0)
-# with fiat-crypto 2a07751f37af74edeac47b19bd51810bc99b91a1 (May 29th 2022)
+# Generated on FreeBSD 12.2p2 with coq 8.17.0 (OCaml 4.14.1)
+# with fiat-crypto 1dc6b3a05dcfcb1e94b2a26c3fd6af0bd6788837 (May 18 2023)
 
-WBW_MONT ?= ../../../fiat-crypto/src/ExtractionOCaml/word_by_word_montgomery --static --use-value-barrier --inline-internal
-UNSAT_SOLINAS ?= ../../../fiat-crypto/src/ExtractionOCaml/unsaturated_solinas --static --use-value-barrier --inline-internal
+WBW_MONT ?= ../../../fiat-crypto/src/ExtractionOCaml/word_by_word_montgomery --static --use-value-barrier --inline
+UNSAT_SOLINAS ?= ../../../fiat-crypto/src/ExtractionOCaml/unsaturated_solinas --static --use-value-barrier --inline
 N_FUNCS=mul add opp from_montgomery to_montgomery one msat divstep_precomp divstep to_bytes from_bytes selectznz
 
 # The NIST curve P-224 (AKA SECP224R1)
