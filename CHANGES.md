@@ -1,3 +1,7 @@
+## dev
+
+* Build fix on PowerPC64 due to spurious gcc warnings for stringop overflow.
+
 ## v0.11.1 (2023-03-09)
 
 * BUGFIX Chacha20 decrypt and encrypt with empty data (previously lead to
