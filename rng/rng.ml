@@ -14,7 +14,7 @@ let setup_rng =
    `let main = Mirage.foreign \"Unikernel.Main\" (random @-> job)`, \
    and `let () = register \"my_unikernel\" [main $ default_random]`. \
    \n  If you are using Lwt, execute \
-   `Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortune)` \
+   `Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)` \
    at startup. \
    \n  If you are using Async, execute \
    `Mirage_crypto_rng_async.initialize (module Mirage_crypto_rng.Fortuna)` \
