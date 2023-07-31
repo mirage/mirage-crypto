@@ -3,6 +3,7 @@ open Mirage_crypto_rng
 
 type env = <
   clock: Eio.Time.clock;
+  mono_clock: Eio.Time.Mono.t;
   secure_random: Eio.Flow.source;
 >
 
@@ -75,7 +76,10 @@ let run
               Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init env ] in
             List.mapi (fun i f -> f i) init |> Cstruct.concat
           in
-          let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns generator in
+          let time () =
+            Eio.Stdenv.mono_clock env |> Eio.Time.Mono.now |> Mtime.to_uint64_ns
+          in
+          let rng = create ?g ~seed ~time generator in
           set_default_generator rng;
           let source = Entropy.register_source "getrandom" in
           let feed_entropy () = periodically_feed_entropy env (Int64.mul sleep 10L) source in

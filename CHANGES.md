@@ -1,3 +1,8 @@
+## dev
+
+* mirage-crypto-rng-eio: improve portability by using eio 0.7's monotonic clock
+  interface instead of mtime.clock.os. (@TheLortex)
+
 ## v0.11.1 (2023-03-09)
 
 * BUGFIX Chacha20 decrypt and encrypt with empty data (previously lead to
