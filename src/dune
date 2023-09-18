@@ -21,11 +21,11 @@
 
 (env
  (dev
-  (c_flags (-Werror))))
+  (c_flags (:include cflags_warn.sexp))))
 
 (include_subdirs unqualified)
 
 (rule
- (targets cflags.sexp cflags_optimized.sexp)
+ (targets cflags.sexp cflags_optimized.sexp cflags_warn.sexp)
  (action
   (run ../config/cfg.exe)))
