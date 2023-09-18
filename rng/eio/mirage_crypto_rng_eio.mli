@@ -4,11 +4,12 @@
     [Eio.Stdenv.secure_random] is used as the [getrandom()] implementation.
 *)
 
-type env = <
-  clock: Eio.Time.clock;
-  mono_clock: Eio.Time.Mono.t;
-  secure_random: Eio.Flow.source;
-  >
+type 'a env = <
+  clock: [> ]Eio.Time.clock;
+  mono_clock: [> ]Eio.Time.Mono.t;
+  secure_random: [> ] Eio.Flow.source;
+  ..
+> as 'a
 
 (** [run ~g ~sleep gen env fn] will bring the RNG into a working state. The argument
     [sleep] is measured in ns (default 1s), and is used to sleep between collection
@@ -36,5 +37,5 @@ val run
   :  ?g:'a
   -> ?sleep:int64
   -> 'a Mirage_crypto_rng.generator
-  -> <env; ..>
+  -> _ env
   -> (unit -> 'b) -> 'b
