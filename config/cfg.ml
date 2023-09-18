@@ -1,4 +1,4 @@
-let std_flags = ["--std=c11"; "-Wall"; "-Wextra"; "-Wpedantic"]
+let std_flags = ["--std=c11"; "-Wall"; "-Wextra"; "-Wpedantic"; "-O3"]
 
 let () =
   let c = Configurator.V1.create "mirage-crypto" in
@@ -45,16 +45,17 @@ let () =
     | `ppc64 | `s390x -> [ "-Wno-stringop-overflow"; "-Werror" ]
     | _ -> [ "-Werror" ]
   in
-  let optimization = match arch, os with
+  let no_instcombine_on_macos = match arch, os with
     | `arm64, `macos ->
       let res = Configurator.V1.Process.run c "cc" ["-dumpversion"] in
       if String.trim res.stdout = "14.0.3" then
-        "-O0" (* macOS instcombine miscompilation with clang 14.0.3 *)
+        ["-mllvm"; "--instcombine-max-iterations=0"]
+        (* macOS instcombine miscompilation with clang 14.0.3 *)
       else
-        "-O3"
-    | _ -> "-O3"
+        []
+    | _ -> []
   in
-  let flags = optimization :: std_flags @ ent_flags in
+  let flags = std_flags @ no_instcombine_on_macos @ ent_flags in
   let opt_flags = flags @ accelerate_flags in
   Configurator.V1.Flags.write_sexp "cflags_optimized.sexp" opt_flags;
   Configurator.V1.Flags.write_sexp "cflags.sexp" flags;
