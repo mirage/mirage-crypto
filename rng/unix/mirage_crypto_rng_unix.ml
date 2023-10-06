@@ -16,10 +16,10 @@ let getrandom_init i =
   let data = getrandom 128 in
   Entropy.header i data
 
-let running = ref false
+let running = Atomic.make false
 
 let initialize (type a) ?g (rng : a generator) =
-  if !running then
+  if Atomic.get running then
     Log.debug
       (fun m -> m "Mirage_crypto_rng_unix.initialize has already been called, \
                    ignoring this call.")
@@ -30,7 +30,7 @@ let initialize (type a) ?g (rng : a generator) =
                              been set, check that this call is intentional");
      with
        No_default_generator -> ());
-    running := true ;
+    Atomic.set running true ;
     let seed =
       let init =
         Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ]

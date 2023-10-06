@@ -43,19 +43,19 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-let _sources = ref []
+let _sources = Atomic.make []
 
 type source = Rng.source
 
 let register_source name =
-  let n = List.length !_sources in
+  let n = List.length (Atomic.get _sources) in
   let source = (n, name) in
-  _sources := source :: !_sources;
+  Atomic.set _sources (source :: (Atomic.get _sources));
   source
 
 let id (idx, _) = idx
 
-let sources () = !_sources
+let sources () = Atomic.get _sources
 
 let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
