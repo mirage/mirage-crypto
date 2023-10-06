@@ -50,19 +50,19 @@ module S = Set.Make(struct
       String.compare an bn
   end)
 
-let _sources = ref S.empty
+let _sources = Atomic.make S.empty
 
 type source = Rng.source
 
 let register_source name =
-  let n = S.cardinal !_sources in
+  let n = S.cardinal (Atomic.get _sources) in
   let source = (n, name) in
-  _sources := S.add source !_sources;
+  Atomic.set _sources (S.add source (Atomic.get _sources));
   source
 
 let id (idx, _) = idx
 
-let sources () = S.elements !_sources
+let sources () = S.elements (Atomic.get _sources)
 
 let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
