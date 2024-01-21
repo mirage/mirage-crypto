@@ -23,49 +23,49 @@
 CAMLprim value mc_p384_sub(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_sub(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b));
+	fiat_p384_sub((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_add(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_add(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b));
+	fiat_p384_add((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_mul(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_mul(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b));
+	fiat_p384_mul((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_from_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_from_bytes(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_p384_from_bytes((WORD*)Bytes_val(out), Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_to_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_to_bytes(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_p384_to_bytes(Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_sqr(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_square(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_p384_square((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_from_montgomery(value x)
 {
 	CAMLparam1(x);
-	WORD *l = Caml_ba_data_val(x);
+	WORD *l = (WORD*)Bytes_val(x);
 	fiat_p384_from_montgomery(l, l);
 	CAMLreturn(Val_unit);
 }
@@ -73,7 +73,7 @@ CAMLprim value mc_p384_from_montgomery(value x)
 CAMLprim value mc_p384_to_montgomery(value x)
 {
 	CAMLparam1(x);
-	WORD *l = Caml_ba_data_val(x);
+	WORD *l = (WORD*)Bytes_val(x);
 	fiat_p384_to_montgomery(l, l);
 	CAMLreturn(Val_unit);
 }
@@ -81,20 +81,20 @@ CAMLprim value mc_p384_to_montgomery(value x)
 CAMLprim value mc_p384_nz(value x)
 {
 	CAMLparam1(x);
-	CAMLreturn(Val_bool(fe_nz(Caml_ba_data_val(x))));
+	CAMLreturn(Val_bool(fe_nz((WORD*)Bytes_val(x))));
 }
 
 CAMLprim value mc_p384_set_one(value x)
 {
 	CAMLparam1(x);
-        fiat_p384_set_one(Caml_ba_data_val(x));
+        fiat_p384_set_one((WORD*)Bytes_val(x));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_inv(value out, value in)
 {
 	CAMLparam2(out, in);
-	inversion(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	inversion((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
@@ -102,12 +102,12 @@ CAMLprim value mc_p384_point_double(value out, value in)
 {
 	CAMLparam2(out, in);
 	point_double(
-		Caml_ba_data_val(Field(out, 0)),
-		Caml_ba_data_val(Field(out, 1)),
-		Caml_ba_data_val(Field(out, 2)),
-		Caml_ba_data_val(Field(in, 0)),
-		Caml_ba_data_val(Field(in, 1)),
-		Caml_ba_data_val(Field(in, 2))
+		(WORD*)Bytes_val(Field(out, 0)),
+		(WORD*)Bytes_val(Field(out, 1)),
+		(WORD*)Bytes_val(Field(out, 2)),
+		(WORD*)Bytes_val(Field(in, 0)),
+		(WORD*)Bytes_val(Field(in, 1)),
+		(WORD*)Bytes_val(Field(in, 2))
 	);
 	CAMLreturn(Val_unit);
 }
@@ -116,16 +116,16 @@ CAMLprim value mc_p384_point_add(value out, value p, value q)
 {
 	CAMLparam3(out, p, q);
 	point_add(
-		Caml_ba_data_val(Field(out, 0)),
-		Caml_ba_data_val(Field(out, 1)),
-		Caml_ba_data_val(Field(out, 2)),
-		Caml_ba_data_val(Field(p, 0)),
-		Caml_ba_data_val(Field(p, 1)),
-		Caml_ba_data_val(Field(p, 2)),
+		(WORD*)Bytes_val(Field(out, 0)),
+		(WORD*)Bytes_val(Field(out, 1)),
+		(WORD*)Bytes_val(Field(out, 2)),
+		(WORD*)Bytes_val(Field(p, 0)),
+		(WORD*)Bytes_val(Field(p, 1)),
+		(WORD*)Bytes_val(Field(p, 2)),
 		0,
-		Caml_ba_data_val(Field(q, 0)),
-		Caml_ba_data_val(Field(q, 1)),
-		Caml_ba_data_val(Field(q, 2))
+		(WORD*)Bytes_val(Field(q, 0)),
+		(WORD*)Bytes_val(Field(q, 1)),
+		(WORD*)Bytes_val(Field(q, 2))
 	);
 	CAMLreturn(Val_unit);
 }
@@ -134,10 +134,10 @@ CAMLprim value mc_p384_select(value out, value bit, value t, value f)
 {
 	CAMLparam4(out, bit, t, f);
 	fe_cmovznz(
-		Caml_ba_data_val(out),
+		(WORD*)Bytes_val(out),
 		Bool_val(bit),
-		Caml_ba_data_val(f),
-		Caml_ba_data_val(t)
+		(WORD*)Bytes_val(f),
+		(WORD*)Bytes_val(t)
 	);
 	CAMLreturn(Val_unit);
 }

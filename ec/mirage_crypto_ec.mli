@@ -61,6 +61,10 @@ module type Dh = sig
 
       The public key encoding is described
       {{:http://www.secg.org/sec1-v2.pdf}in SEC 1} from SECG. *)
+
+  val secret_of_bytes : ?compress:bool -> bytes -> (secret * bytes, error) result
+  val gen_bytes_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit -> secret * bytes
+  val key_bytes_exchange : secret -> bytes -> (bytes, error) result
 end
 
 (** Digital signature algorithm. *)
@@ -128,7 +132,16 @@ module type Dsa = sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
     (** [generate ~key digest] deterministically takes the given private key
         and message digest to a [k] suitable for seeding the signing process. *)
+
+    val generate_bytes : key:priv -> bytes -> bytes
   end
+
+  val priv_of_bytes : bytes -> (priv, error) result
+  val priv_to_bytes : priv -> bytes
+  val pub_of_bytes : bytes -> (pub, error) result
+  val pub_to_bytes : ?compress:bool -> pub -> bytes
+  val sign_bytes : key:priv -> ?k:bytes -> bytes -> bytes * bytes
+  val verify_bytes : key:pub -> bytes * bytes -> bytes -> bool
 end
 
 (** Elliptic curve with Diffie-Hellman and DSA. *)

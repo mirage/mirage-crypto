@@ -22,55 +22,55 @@
 CAMLprim value mc_np256_inv(value out, value in)
 {
 	CAMLparam2(out, in);
-	inversion(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	inversion((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_mul(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_np256_mul(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b));
+	fiat_np256_mul((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_add(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_np256_add(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b));
+	fiat_np256_add((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_one(value out)
 {
 	CAMLparam1(out);
-	fiat_np256_set_one(Caml_ba_data_val(out));
+	fiat_np256_set_one((WORD*)Bytes_val(out));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_from_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np256_from_bytes(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_np256_from_bytes((WORD*)Bytes_val(out), Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_to_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np256_to_bytes(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_np256_to_bytes(Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_from_montgomery(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np256_from_montgomery(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_np256_from_montgomery((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np256_to_montgomery(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np256_to_montgomery(Caml_ba_data_val(out), Caml_ba_data_val(in));
+	fiat_np256_to_montgomery((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
 	CAMLreturn(Val_unit);
 }
