@@ -19,6 +19,9 @@
    (:standard)
    (:include cflags.sexp))))
 
+(rule
+ (copy %{read:../config/domain_shims} domain_shims.ml))
+
 (env
  (dev
   (c_flags (:include cflags_warn.sexp))))

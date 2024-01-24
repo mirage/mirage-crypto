@@ -1,3 +1,13 @@
-(executables
- (names cfg)
+(executable
+ (name cfg)
+ (modules cfg)
  (libraries dune-configurator))
+
+(executable
+ (name cfg_domain)
+ (modules cfg_domain))
+
+(rule
+ (with-stdout-to
+  domain_shims
+  (run ./cfg_domain.exe)))

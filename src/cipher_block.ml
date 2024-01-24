@@ -89,13 +89,15 @@ module Counters = struct
     val unsafe_count_into : ctr -> Native.buffer -> int -> blocks:int -> unit
   end
 
+  let _tmp = Domain_shims.DLS.new_key (Fun.const (Bytes.make 16 '\000'))
+
   module C64be = struct
     type ctr = int64
     let size = 8
     let of_cstruct cs = BE.get_uint64 cs 0
     let add = Int64.add
     let unsafe_count_into t buf off ~blocks =
-      let _tmp = Bytes.make 16 '\x00' in
+      let _tmp = Domain_shims.DLS.get _tmp in
       Bytes.set_int64_be _tmp 0 t;
       Native.count8be _tmp buf off ~blocks
   end
@@ -109,7 +111,7 @@ module Counters = struct
       let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
       ((if flip then Int64.succ w1 else w1), w0')
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      let _tmp = Bytes.make 16 '\x00' in
+      let _tmp = Domain_shims.DLS.get _tmp in
       Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
       Native.count16be _tmp buf off ~blocks
   end
@@ -120,7 +122,7 @@ module Counters = struct
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      let _tmp = Bytes.make 16 '\x00' in
+      let _tmp = Domain_shims.DLS.get _tmp in
       Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
       Native.count16be4 _tmp buf off ~blocks
   end
@@ -240,11 +242,12 @@ module Modes = struct
       assert (cs.len >= tagsize);
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs.buffer cs.off k; k
+    let _cs = Domain_shims.DLS.new_key (Fun.const (create_unsafe tagsize))
     let hash0 = Bytes.make tagsize '\x00'
     let digesti ~key i = (* Clobbers `_cs`! *)
-      let _cs = create_unsafe tagsize in
       let res = Bytes.copy hash0 in
       i (fun cs -> Native.GHASH.ghash key res cs.buffer cs.off cs.len);
+      let _cs = Domain_shims.DLS.get _cs in
       blit_from_bytes res 0 _cs 0 tagsize; _cs
   end
 
@@ -257,17 +260,19 @@ module Modes = struct
 
     let tag_size = GHASH.tagsize
     let key_sizes, block_size = C.(key, block)
+    let z128 = Domain_shims.DLS.new_key (Fun.const (create block_size))
+    let h = Domain_shims.DLS.new_key (Fun.const (create block_size))
 
     let of_secret cs =
       let key = C.e_of_secret cs in
-      let z128 = create block_size in
-      let h = create block_size in
+      let z128 = Domain_shims.DLS.get z128 in
+      let h = Domain_shims.DLS.get h in
       C.encrypt ~key ~blocks:1 z128.buffer z128.off h.buffer h.off;
       { key ; hkey = GHASH.derive h }
 
     let bits64 cs = Int64.of_int (length cs * 8)
-    let pack64s = fun a b ->
-      let _cs = create_unsafe 16 in
+    let _cs = Domain_shims.DLS.new_key (Fun.const (create_unsafe 16))
+    let pack64s = let _cs = Domain_shims.DLS.get _cs in fun a b ->
                     BE.set_uint64 _cs 0 a; BE.set_uint64 _cs 8 b; _cs
 
     let counter ~hkey nonce = match length nonce with
