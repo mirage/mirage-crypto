@@ -179,6 +179,38 @@ let dh_secrets =
          "60057457975706301816395663645420233759377744187465730049174048360108513636349450241008234412972340882517684187851" ;
        ])
 
+let ecdsa_p224 =
+  Result.get_ok
+    (Mirage_crypto_ec.P224.Dsa.priv_of_cstruct
+       (Cstruct.of_hex "f254645834cfff245599be937a00535f6a2c8b00dc34bdf50df68903"))
+
+let ecdsa_p224_sig () =
+  Mirage_crypto_ec.P224.Dsa.sign ~key:ecdsa_p224 (Cstruct.sub msg 0 28)
+
+let ecdsa_p256 =
+  Result.get_ok
+    (Mirage_crypto_ec.P256.Dsa.priv_of_cstruct
+       (Cstruct.of_hex "089f4ffcccf9ba13fedd0942ef08cf2d909f32e2934ab5c93b6c99be5a9ff527"))
+
+let ecdsa_p256_sig () =
+  Mirage_crypto_ec.P256.Dsa.sign ~key:ecdsa_p256 (Cstruct.sub msg 0 32)
+
+let ecdsa_p384 =
+  Result.get_ok
+    (Mirage_crypto_ec.P384.Dsa.priv_of_cstruct
+       (Cstruct.of_hex "f5c0c9fb95178641af76f3831f41e2d37cfaafffc7e60172cfb089fe604b56a61c7c31a6904b3b5d08207a4b81e25ea5"))
+
+let ecdsa_p384_sig () =
+  Mirage_crypto_ec.P384.Dsa.sign ~key:ecdsa_p384 (Cstruct.sub msg 0 48)
+
+let ecdsa_p521 =
+  Result.get_ok
+    (Mirage_crypto_ec.P521.Dsa.priv_of_cstruct
+       (Cstruct.of_hex "00b18f60c0352ad8e3ef982f1ddfcf6eec7fa6caf0e6f368354a8b02b2d8ac1e059e309891e2bfa85791a5e71b40bdecbf902bf243dc3b0080495cf4d91c78728bd5"))
+
+let ecdsa_p521_sig () =
+  Mirage_crypto_ec.P521.Dsa.sign ~key:ecdsa_p521 (Cstruct.sub msg 0 65)
+
 let bm name f = (name, fun () -> f name)
 
 let benchmarks = [
@@ -244,6 +276,41 @@ let benchmarks = [
           Mirage_crypto_pk.Dsa.(verify ~key:(pub_of_priv key) signature msg))
         (fun (k, _) -> string_of_int (Z.numbits k.p))
         [dsa_1024,dsa_sig_1024 () ; dsa_2048,dsa_sig_2048 () ; dsa_3072,dsa_sig_3072 ()]);
+
+  bm "ecdsa-sign" (fun name ->
+      count name (function
+          | `P224 key -> Mirage_crypto_ec.P224.Dsa.sign ~key (Cstruct.sub msg 0 28)
+          | `P256 key -> Mirage_crypto_ec.P256.Dsa.sign ~key (Cstruct.sub msg 0 32)
+          | `P384 key -> Mirage_crypto_ec.P384.Dsa.sign ~key (Cstruct.sub msg 0 48)
+          | `P521 key -> Mirage_crypto_ec.P521.Dsa.sign ~key (Cstruct.sub msg 0 65)
+        )
+        (function
+          | `P224 _ -> "P224"
+          | `P256 _ -> "P256"
+          | `P384 _ -> "P384"
+          | `P521 _ -> "P521"
+        )
+        [`P224 ecdsa_p224; `P256 ecdsa_p256; `P384 ecdsa_p384; `P521 ecdsa_p521 ]);
+
+  bm "ecdsa-verify" (fun name ->
+      count name (function
+          | `P224 (key, signature) -> Mirage_crypto_ec.P224.Dsa.(verify ~key:(pub_of_priv key) signature (Cstruct.sub msg 0 28))
+          | `P256 (key, signature) -> Mirage_crypto_ec.P256.Dsa.(verify ~key:(pub_of_priv key) signature (Cstruct.sub msg 0 32))
+          | `P384 (key, signature) -> Mirage_crypto_ec.P384.Dsa.(verify ~key:(pub_of_priv key) signature (Cstruct.sub msg 0 48))
+          | `P521 (key, signature) -> Mirage_crypto_ec.P521.Dsa.(verify ~key:(pub_of_priv key) signature (Cstruct.sub msg 0 65))
+        )
+        (function
+          | `P224 _ -> "P224"
+          | `P256 _ -> "P256"
+          | `P384 _ -> "P384"
+          | `P521 _ -> "P521"
+        )
+        [
+          `P224 (ecdsa_p224, ecdsa_p224_sig ());
+          `P256 (ecdsa_p256, ecdsa_p256_sig ());
+          `P384 (ecdsa_p384, ecdsa_p384_sig ());
+          `P521 (ecdsa_p521, ecdsa_p521_sig ());
+        ]);
 
   bm "dh-secret" (fun name ->
       count name (fun (_, group) -> Mirage_crypto_pk.Dh.gen_key group)
@@ -333,6 +400,7 @@ let runv fs =
 
 
 let () =
+  Printexc.record_backtrace true;
   let seed = Cstruct.of_string "abcd" in
   let g = Mirage_crypto_rng.(create ~seed (module Fortuna)) in
   Mirage_crypto_rng.set_default_generator g;
