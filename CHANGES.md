@@ -1,3 +1,9 @@
+## unreleased
+
+* mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
+* mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
+  reported by @palainp)
+
 ## v0.11.2 (2023-09-18)
 
 * mirage-crypto-rng-eio: improve portability by using eio 0.7's monotonic clock
