@@ -102,12 +102,15 @@ let generate ~g bytes =
            chunk (generate_rekey ~g n' :: acc) (n - n') in
   Cstruct.concat @@ chunk [] bytes
 
+let _buf = Cstruct.create_unsafe 2
+
 let add ~g (source, _) ~pool data =
-  let pool   = pool land (pools - 1)
-  and source = source land 0xff in
-  let header = Cs.of_bytes [ source ; Cstruct.length data ] in
-  g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 header data);
-  if pool = 0 then g.pool0_size <- g.pool0_size + Cstruct.length data
+    let pool   = pool land (pools - 1)
+    and source = source land 0xff in
+    Cstruct.set_uint8 _buf 0 source;
+    Cstruct.set_uint8 _buf 1 (Cstruct.length data);
+    g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 _buf data);
+    if pool = 0 then g.pool0_size <- g.pool0_size + Cstruct.length data
 
 (* XXX
  * Schneier recommends against using generator-imposed pool-seeding schedule
