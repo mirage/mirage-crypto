@@ -53,7 +53,7 @@
 - remove mirage 3 cross-compilation runes (#163 @hannesm)
 - CI: mirage-crypto-rng-eio requires ocaml 5 and dune 2.7 (#170 @hannesm, fixes
   #169 thanks to @bikallem @talex5)
-- CI: use miage 4 (#166 @hannesm)
+- CI: use mirage 4 (#166 @hannesm)
 
 ## v0.10.7 (2022-09-13)
 
