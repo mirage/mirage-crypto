@@ -1,5 +1,6 @@
 ## unreleased
 
+* mirage-crypto-rng: support Loongarch (#190 @fangyaling, review @loongson-zn)
 * mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
 * mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
   reported by @palainp)
