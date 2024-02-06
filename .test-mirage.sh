@@ -3,9 +3,9 @@
 set -ex
 
 opam install --confirm-level=unsafe-yes "mirage>4"
-# to satisfy hardcoded version constraints in mirage, we need to be < 0.11.0
+# to satisfy hardcoded version constraints in mirage, we need to be < 0.12.0
 # and "dune subst" doesn't work on these PR checkouts
-version='version: "0.10.99~dev"'
+version='version: "0.11.99~dev"'
 echo $version >> mirage-crypto-rng-mirage.opam
 echo $version >> mirage-crypto-rng.opam
 echo $version >> mirage-crypto.opam
