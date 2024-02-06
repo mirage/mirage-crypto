@@ -129,6 +129,8 @@ module type Dsa = sig
     (** [generate ~key digest] deterministically takes the given private key
         and message digest to a [k] suitable for seeding the signing process. *)
   end
+
+  val force_precomputation : unit -> unit
 end
 
 (** Elliptic curve with Diffie-Hellman and DSA. *)

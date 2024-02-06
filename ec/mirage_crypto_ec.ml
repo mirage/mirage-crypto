@@ -62,6 +62,7 @@ module type Dsa = sig
   module K_gen (H : Mirage_crypto.Hash.S) : sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
+  val force_precomputation : unit -> unit
 end
 
 module type Dh_dsa = sig
@@ -108,6 +109,8 @@ module type Foreign = sig
 
   val double_c : out_point -> point -> unit
   val add_c : out_point -> point -> point -> unit
+  val scalar_mult_base_c : out_point -> string -> unit
+  val force_precomputation_c : unit -> unit
 end
 
 module type Field_element = sig
@@ -125,6 +128,7 @@ module type Field_element = sig
   val to_octets : field_element -> string
   val double_point : point -> point
   val add_point : point -> point -> point
+  val scalar_mult_base_point : scalar -> point
 end
 
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
@@ -213,6 +217,11 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     let tmp = out_point () in
     F.add_c tmp a b;
     out_p_to_p tmp
+
+  let scalar_mult_base_point (Scalar d) =
+    let tmp = out_point () in
+    F.scalar_mult_base_c tmp d;
+    out_p_to_p tmp
 end
 
 module type Point = sig
@@ -226,6 +235,8 @@ module type Point = sig
   val x_of_finite_point : point -> string
   val params_g : point
   val select : bool -> then_:point -> else_:point -> point
+  val scalar_mult_base : scalar -> point
+  val force_precomputation : unit -> unit
 end
 
 module Make_point (P : Parameters) (F : Foreign) : Point = struct
@@ -406,6 +417,9 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         of_octets buf
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
+
+  let scalar_mult_base = Fe.scalar_mult_base_point
+  let force_precomputation = F.force_precomputation_c
 end
 
 module type Scalar = sig
@@ -414,8 +428,8 @@ module type Scalar = sig
   val of_octets : string -> (scalar, error) result
   val to_octets : scalar -> string
   val scalar_mult : scalar -> point -> point
-
   val scalar_mult_base : scalar -> point
+  val force_precomputation : unit -> unit
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
@@ -435,62 +449,6 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
 
   let to_octets (Scalar buf) = rev_string buf
 
-  (* Use a sliding window optimization method for scalar multiplication
-     Hard-coded window size = 4
-     Implementation inspired from Go's crypto library
-        https://github.com/golang/go/blob/a5cd894318677359f6d07ee74f9004d28b4d164c/src/crypto/internal/nistec/p256.go#L317
-  *)
-  module Precomputed = struct
-    (* Pre-compute multiples of the generator point *)
-    let pre_compute_multiples () =
-      let len = Param.fe_length * 2 in
-      let one_table _ = Array.init 15 (fun _ -> P.at_infinity ()) in
-      let table = Array.init len one_table in
-      let base = ref P.params_g in
-      for i = 0 to len - 1 do
-        table.(i).(0) <- !base;
-        for j = 1 to 14 do
-          table.(i).(j) <- P.add !base table.(i).(j - 1)
-        done;
-        base := P.double !base;
-        base := P.double !base;
-        base := P.double !base;
-        base := P.double !base
-      done;
-      table
-
-    (* Select the n-th element of the table
-       without leaking information about [n] *)
-    let table_select table n =
-      let p = ref (P.at_infinity ()) in
-      for i = 1 to 15 do
-        let cond = not (Eqaf.bool_of_int (n - i)) in
-        p := P.select cond ~then_:table.(i - 1) ~else_:!p
-      done;
-      !p
-
-    (* Returns [kG] by decomposing [k] in binary form, and adding
-       [2^0G * k_0 + 2^1G * k_1 + ...] in constant time using
-       pre-computed values of 2^iG *)
-    let scalar_mult_base (Scalar k) tables =
-      let p = ref (P.at_infinity ()) in
-      let index = ref 0 in (* Index increases since k is big-endian *)
-      for i = 0 to String.length k - 1 do
-          let byte = String.get_uint8 k i in
-          let winValue = byte land 0b1111 in
-          p := P.add !p (table_select tables.(!index) winValue);
-          incr index;
-          let winValue = byte lsr 4 in
-          p := P.add !p (table_select tables.(!index) winValue);
-          incr index
-      done;
-      !p
-
-    let scalar_mult_base =
-      let tables = pre_compute_multiples () in
-      fun d -> scalar_mult_base d tables
-  end
-
   (* Branchless Montgomery ladder method *)
   let scalar_mult (Scalar s) p =
     let r0 = ref (P.at_infinity ()) in
@@ -506,7 +464,9 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
     !r0
 
   (* Specialization of [scalar_mult d p] when [p] is the generator *)
-  let scalar_mult_base = Precomputed.scalar_mult_base
+  let scalar_mult_base = P.scalar_mult_base
+
+  let force_precomputation = P.force_precomputation
 end
 
 module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
@@ -818,6 +778,8 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   let verify ~key (r, s) digest =
     verify_octets ~key (Cstruct.to_string r, Cstruct.to_string s) (Cstruct.to_string digest)
+
+  let force_precomputation = S.force_precomputation
 end
 
 module P224 : Dh_dsa = struct
@@ -849,6 +811,8 @@ module P224 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p224_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p224_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p224_scalar_mult_base" [@@noalloc]
+    external force_precomputation_c : unit -> unit = "mc_p224_force_precomputation" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -898,6 +862,8 @@ module P256 : Dh_dsa  = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p256_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p256_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p256_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p256_scalar_mult_base" [@@noalloc]
+    external force_precomputation_c : unit -> unit = "mc_p256_force_precomputation" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -948,6 +914,8 @@ module P384 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p384_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p384_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p384_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p384_scalar_mult_base" [@@noalloc]
+    external force_precomputation_c : unit -> unit = "mc_p384_force_precomputation" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -999,6 +967,8 @@ module P521 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p521_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p521_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p521_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p521_scalar_mult_base" [@@noalloc]
+    external force_precomputation_c : unit -> unit = "mc_p521_force_precomputation" [@@noalloc]
   end
 
   module Foreign_n = struct

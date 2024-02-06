@@ -15,6 +15,12 @@
 #define LEN_PRIME 224
 #define CURVE_DESCRIPTION fiat_p224
 
+#define FE_LENGTH 28
+
+// Generator point, see https://neuromancer.sk/std/nist/P-224
+static uint8_t gb_x[FE_LENGTH] = {0xb7, 0xe, 0xc, 0xbd, 0x6b, 0xb4, 0xbf, 0x7f, 0x32, 0x13, 0x90, 0xb9, 0x4a, 0x3, 0xc1, 0xd3, 0x56, 0xc2, 0x11, 0x22, 0x34, 0x32, 0x80, 0xd6, 0x11, 0x5c, 0x1d, 0x21};
+static uint8_t gb_y[FE_LENGTH] = {0xbd, 0x37, 0x63, 0x88, 0xb5, 0xf7, 0x23, 0xfb, 0x4c, 0x22, 0xdf, 0xe6, 0xcd, 0x43, 0x75, 0xa0, 0x5a, 0x7, 0x47, 0x64, 0x44, 0xd5, 0x81, 0x99, 0x85, 0x0, 0x7e, 0x34};
+
 #include "inversion_template.h"
 #include "point_operations.h"
 
@@ -138,4 +144,21 @@ CAMLprim value mc_p224_select(value out, value bit, value t, value f)
 		(const WORD*)String_val(t)
 	);
 	CAMLreturn(Val_unit);
+}
+
+CAMLprim value mc_p224_scalar_mult_base(value out, value s)
+{
+    CAMLparam2(out, s);
+    scalar_mult_base(
+		(WORD *) Bytes_val(Field(out, 0)),
+		(WORD *) Bytes_val(Field(out, 1)),
+		(WORD *) Bytes_val(Field(out, 2)),
+        (uint8_t *) String_val(s),
+        caml_string_length(s)
+    );
+    CAMLreturn(Val_unit);
+}
+
+CAMLprim void mc_p224_force_precomputation(void) {
+    compute_generator_table();
 }
