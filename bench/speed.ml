@@ -277,6 +277,20 @@ let benchmarks = [
         (fun (k, _) -> string_of_int (Z.numbits k.p))
         [dsa_1024,dsa_sig_1024 () ; dsa_2048,dsa_sig_2048 () ; dsa_3072,dsa_sig_3072 ()]);
 
+  bm "ecdsa-generate" (fun name ->
+      count name
+        (function
+          | `P224 -> Mirage_crypto_ec.P224.Dsa.generate () |> ignore
+          | `P256 -> Mirage_crypto_ec.P256.Dsa.generate () |> ignore
+          | `P384 -> Mirage_crypto_ec.P384.Dsa.generate () |> ignore
+          | `P521 -> Mirage_crypto_ec.P521.Dsa.generate () |> ignore
+        )
+        (function
+          | `P224 -> "P224" | `P256 -> "P256" | `P384 -> "P384" | `P521 -> "P521"
+        )
+
+        [`P224;`P256;`P384;`P521]);
+
   bm "ecdsa-sign" (fun name ->
       count name (function
           | `P224 key -> Mirage_crypto_ec.P224.Dsa.sign ~key (Cstruct.sub msg 0 28)
@@ -285,10 +299,7 @@ let benchmarks = [
           | `P521 key -> Mirage_crypto_ec.P521.Dsa.sign ~key (Cstruct.sub msg 0 65)
         )
         (function
-          | `P224 _ -> "P224"
-          | `P256 _ -> "P256"
-          | `P384 _ -> "P384"
-          | `P521 _ -> "P521"
+          | `P224 _ -> "P224" | `P256 _ -> "P256" | `P384 _ -> "P384" | `P521 _ -> "P521"
         )
         [`P224 ecdsa_p224; `P256 ecdsa_p256; `P384 ecdsa_p384; `P521 ecdsa_p521 ]);
 
@@ -300,10 +311,7 @@ let benchmarks = [
           | `P521 (key, signature) -> Mirage_crypto_ec.P521.Dsa.(verify ~key:(pub_of_priv key) signature (Cstruct.sub msg 0 65))
         )
         (function
-          | `P224 _ -> "P224"
-          | `P256 _ -> "P256"
-          | `P384 _ -> "P384"
-          | `P521 _ -> "P521"
+          | `P224 _ -> "P224" | `P256 _ -> "P256" | `P384 _ -> "P384" | `P521 _ -> "P521"
         )
         [
           `P224 (ecdsa_p224, ecdsa_p224_sig ());
