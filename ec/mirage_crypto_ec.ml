@@ -229,7 +229,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       not (Fe.nz sum)
 
   let check_coordinate buf =
-    (* ensure cs < p: *)
+    (* ensure buf < p: *)
     match Eqaf.compare_be_with_len ~len:P.byte_length (Bytes.unsafe_to_string buf) (Bytes.unsafe_to_string P.p) >= 0 with
     | true -> None
     | exception Invalid_argument _ -> None
