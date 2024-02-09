@@ -30,7 +30,7 @@ exception Message_too_long
 let bit_at buf i =
   let byte_num = i / 8 in
   let bit_num = i mod 8 in
-  let byte = Char.code (Bytes.get buf byte_num) in
+  let byte = Bytes.get_uint8 buf byte_num in
   byte land (1 lsl bit_num) <> 0
 
 module type Dh = sig
@@ -43,10 +43,6 @@ module type Dh = sig
     secret * Cstruct.t
 
   val key_exchange : secret -> Cstruct.t -> (Cstruct.t, error) result
-
-  val secret_of_bytes : ?compress:bool -> bytes -> (secret * bytes, error) result
-  val gen_bytes_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit -> secret * bytes
-  val key_bytes_exchange : secret -> bytes -> (bytes, error) result
 end
 
 module type Dsa = sig
@@ -75,21 +71,7 @@ module type Dsa = sig
   module K_gen (H : Mirage_crypto.Hash.S) : sig
 
     val generate : key:priv -> Cstruct.t -> Cstruct.t
-
-    val generate_bytes : key:priv -> bytes -> bytes
   end
-
-  val priv_of_bytes : bytes -> (priv, error) result
-
-  val priv_to_bytes : priv -> bytes
-
-  val pub_of_bytes : bytes -> (pub, error) result
-
-  val pub_to_bytes : ?compress:bool -> pub -> bytes
-
-  val sign_bytes : key:priv -> ?k:bytes -> bytes -> bytes * bytes
-
-  val verify_bytes : key:pub -> bytes * bytes -> bytes -> bool
 end
 module type Dh_dsa = sig
   module Dh : Dh
@@ -501,9 +483,8 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Error _ as e -> e
 
   let secret_of_cs ?compress s =
-    match S.of_bytes (Cstruct.to_bytes s) with
-    | Ok p -> Ok (p, Cstruct.of_bytes (share ?compress p))
-    | Error _ as e -> e
+    Result.map (fun (p, share) -> p, Cstruct.of_bytes share)
+      (secret_of_bytes ?compress (Cstruct.to_bytes s))
 
   let rec generate_private_key ?g () =
     let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
@@ -606,8 +587,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let generate_bytes ~key buf = gen (g ~key (Cstruct.of_bytes (padded buf)))
 
     let generate ~key buf =
-      let generated = gen (g ~key (Cstruct.of_bytes (padded (Cstruct.to_bytes buf)))) in
-      Cstruct.of_bytes generated
+      Cstruct.of_bytes (generate_bytes ~key (Cstruct.to_bytes buf))
   end
 
   module K_gen_default = K_gen(H)
@@ -619,7 +599,8 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let pub_to_bytes ?(compress = false) pk = P.to_bytes ~compress pk
 
   let pub_of_cstruct cs = pub_of_bytes (Cstruct.to_bytes cs)
-  let pub_to_cstruct = fun ?(compress = false) p -> Cstruct.of_bytes (pub_to_bytes ~compress p)
+  let pub_to_cstruct ?compress p =
+    Cstruct.of_bytes (pub_to_bytes ?compress p)
 
   let generate ?g () =
     (* FIPS 186-4 B 4.2 *)
