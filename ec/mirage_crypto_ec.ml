@@ -553,6 +553,21 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         Bytes.blit msg 0 res (bl - l) (Bytes.length msg) ;
         res )
 
+  let padded_cs msg =
+    let l = Cstruct.length msg in
+    let bl = Param.byte_length in
+    let first_byte_ok () =
+      match Param.first_byte_bits with
+      | None -> true
+      | Some m -> (Cstruct.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
+    in
+    if l > bl || (l = bl && not (first_byte_ok ())) then
+      raise Message_too_long
+    else if l = bl then
+      msg
+    else
+      Cstruct.append (Cstruct.create (bl - l)) msg
+
   let from_be_bytes v =
     let v' = create () in
     F.from_bytes v' (rev_bytes v);
@@ -584,10 +599,10 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
       in
       go ()
 
-    let generate_bytes ~key buf = gen (g ~key (Cstruct.of_bytes (padded buf)))
+    (* let generate_bytes ~key buf = gen (g ~key (Cstruct.of_bytes (padded buf))) *)
 
     let generate ~key buf =
-      Cstruct.of_bytes (generate_bytes ~key (Cstruct.to_bytes buf))
+      Cstruct.of_bytes (gen (g ~key (padded_cs buf)))
   end
 
   module K_gen_default = K_gen(H)
