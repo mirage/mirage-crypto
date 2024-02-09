@@ -534,7 +534,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
   let priv_to_bytes = S.to_bytes
 
   let priv_of_cstruct cs = priv_of_bytes (Cstruct.to_bytes cs)
-  let priv_to_cstruct = fun p -> Cstruct.of_bytes (priv_to_bytes p)
+  let priv_to_cstruct p = Cstruct.of_bytes (priv_to_bytes p)
 
   let padded msg =
     let l = Bytes.length msg in
@@ -1013,11 +1013,11 @@ module Ed25519 = struct
   let priv_of_bytes buf =
     if Bytes.length buf = key_len then Ok buf else Error `Invalid_length
 
-  let priv_of_cstruct = fun p -> priv_of_bytes (Cstruct.to_bytes p)
+  let priv_of_cstruct p = priv_of_bytes (Cstruct.to_bytes p)
 
   let priv_to_bytes priv = priv
 
-  let priv_to_cstruct = fun p -> Cstruct.of_bytes (priv_to_bytes p)
+  let priv_to_cstruct p = Cstruct.of_bytes (priv_to_bytes p)
 
   let pub_of_bytes buf =
     if Bytes.length buf = key_len then
@@ -1029,11 +1029,11 @@ module Ed25519 = struct
     else
       Error `Invalid_length
 
-  let pub_of_cstruct = fun p -> pub_of_bytes (Cstruct.to_bytes p)
+  let pub_of_cstruct p = pub_of_bytes (Cstruct.to_bytes p)
 
   let pub_to_bytes pub = pub
 
-  let pub_to_cstruct = fun p -> Cstruct.of_bytes (pub_to_bytes p)
+  let pub_to_cstruct p = Cstruct.of_bytes (pub_to_bytes p)
 
   let generate ?g () =
     let secret = Mirage_crypto_rng.generate ?g key_len in
