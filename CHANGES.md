@@ -1,3 +1,10 @@
+## unreleased
+
+* mirage-crypto-rng: support Loongarch (#190 @fangyaling, review @loongson-zn)
+* mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
+* mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
+  reported by @palainp)
+
 ## v0.11.2 (2023-09-18)
 
 * mirage-crypto-rng-eio: improve portability by using eio 0.7's monotonic clock
@@ -46,7 +53,7 @@
 - remove mirage 3 cross-compilation runes (#163 @hannesm)
 - CI: mirage-crypto-rng-eio requires ocaml 5 and dune 2.7 (#170 @hannesm, fixes
   #169 thanks to @bikallem @talex5)
-- CI: use miage 4 (#166 @hannesm)
+- CI: use mirage 4 (#166 @hannesm)
 
 ## v0.10.7 (2022-09-13)
 

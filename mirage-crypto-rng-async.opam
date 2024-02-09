@@ -25,6 +25,6 @@ available: os != "win32"
 description: """
 
 Mirage-crypto-rng-async feeds the entropy source for Mirage_crypto_rng-based
-random number genreator implementations, in an Async-friendly way.
+random number generator implementations, in an Async-friendly way.
 """
 

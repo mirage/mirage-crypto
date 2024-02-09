@@ -22,6 +22,7 @@ depends: [
 ]
 conflicts: [
   "ocaml-freestanding"
+  "result" {< "1.5"}
 ]
 description: """
 Mirage-crypto provides symmetric ciphers (DES, AES, RC4, ChaCha20/Poly1305), and

@@ -51,7 +51,7 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 
 #endif /* __mc_ACCELERATE__ */
 
-#if defined (__x86_64__) || defined (__aarch64__) || defined (__powerpc64__) || (64 == __riscv_xlen) || defined (__s390x__) || (defined (__mips__) && _MIPS_SIM==_ABI64) || (1 == _WIN64)
+#if defined (__x86_64__) || defined (__aarch64__) || defined (__powerpc64__) || (64 == __riscv_xlen) || defined (__s390x__) || (defined (__mips__) && _MIPS_SIM==_ABI64) || defined (__loongarch_lp64) || (1 == _WIN64)
 #define ARCH_64BIT
 #elif defined (__i386__) || defined (__arm__) || (32 == __riscv_xlen) || (defined (__mips__) && _MIPS_SIM==_ABIO32) || (1 == _WIN32)
 #define ARCH_32BIT

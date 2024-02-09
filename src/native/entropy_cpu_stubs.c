@@ -159,6 +159,14 @@ static inline unsigned long get_count(void) {
 }
 #endif
 
+#if defined (__loongarch_lp64)
+static inline unsigned long get_count(void) {
+  unsigned long count;
+  __asm__ __volatile__ ("rdtime.d %0, $zero\n" : "=r" (count));
+
+  return count;
+}
+#endif
 
 CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #if defined (__i386__) || defined (__x86_64__) || defined (_MSC_VER)
@@ -172,6 +180,8 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #elif defined (__s390x__)
   return Val_long (getticks ());
 #elif defined(__mips__)
+  return Val_long (get_count());
+#elif defined(__loongarch_lp64)
   return Val_long (get_count());
 #else
 #error ("No known cycle-counting instruction.")
