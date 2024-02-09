@@ -295,10 +295,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     if compress then
       let out = Bytes.make (P.byte_length + 1) '\000' in
       let ident =
-        2 + Char.code ((Bytes.get buf ((P.byte_length * 2) - 1))) land 1
+        2 + (Bytes.get_uint8 buf ((P.byte_length * 2) - 1)) land 1
       in
       Bytes.blit buf 1 out 1 P.byte_length;
-      Bytes.set out 0 (Char.chr ident);
+      Bytes.set_uint8 out 0 ident;
       out
     else
       buf
@@ -387,9 +387,9 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       Fe.from_montgomery y';
       Fe.to_bytes y_struct2 y';(* number must not be in montgomery domain*)
       let y_struct2 = rev_bytes y_struct2 in
-      let ident = Char.code (Bytes.get pk 0) in
+      let ident = Bytes.get_uint8 pk 0 in
       let signY =
-        2 + (Char.code (Bytes.get y_struct (P.byte_length - 2))) land 1
+        2 + (Bytes.get_uint8 y_struct (P.byte_length - 2)) land 1
       in
       let res = if Int.equal signY ident then y_struct else y_struct2 in
       let out = Bytes.make ((P.byte_length * 2) + 1) '\000' in
@@ -408,7 +408,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         let y = Bytes.sub buf (1 + len) len in
         validate_finite_point ~x ~y
       in
-      match Char.code (Bytes.get buf 0) with
+      match Bytes.get_uint8 buf 0 with
       | 0x00 when Bytes.length buf = 1 -> Ok (at_infinity ())
       | 0x02 | 0x03 when Bytes.length P.pident > 0 ->
         let decompressed = decompress buf in
@@ -542,7 +542,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let first_byte_ok () =
       match Param.first_byte_bits with
       | None -> true
-      | Some m -> (Char.code (Bytes.get msg 0)) land (0xFF land (lnot m)) = 0
+      | Some m -> (Bytes.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
     in
     if l > bl || (l = bl && not (first_byte_ok ())) then
       raise Message_too_long
@@ -940,7 +940,7 @@ module X25519 = struct
 
   let basepoint =
     let data = Bytes.make key_len '\000' in
-    Bytes.set data 0 (Char.chr 9);
+    Bytes.set_uint8 data 0 9;
     data
 
   let public priv = scalar_mult priv basepoint
@@ -1002,8 +1002,8 @@ module Ed25519 = struct
     (* step 2 *)
     let s, rest = Cstruct.split h key_len in
     let s, rest = Cstruct.to_bytes s, Cstruct.to_bytes rest in
-    Bytes.set s 0 (Char.unsafe_chr (Char.code (Bytes.get s 0) land 248));
-    Bytes.set s 31 (Char.unsafe_chr ((Char.code (Bytes.get s 31) land 127) lor 64));
+    Bytes.set_uint8 s 0 ((Bytes.get_uint8 s 0) land 248);
+    Bytes.set_uint8 s 31 (((Bytes.get_uint8 s 31) land 127) lor 64);
     (* step 3 and 4 *)
     let public = Bytes.make key_len '\000' in
     scalar_mult_base_to_bytes public s;
