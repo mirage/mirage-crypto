@@ -926,14 +926,13 @@ end
 
 module X25519 = struct
   (* RFC 7748 *)
-  external x25519_scalar_mult_generic : bytes -> bytes -> int -> bytes -> int -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
+  external x25519_scalar_mult_generic : bytes -> bytes -> bytes -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
 
   let key_len = 32
 
   let scalar_mult in_ base =
     let out = Bytes.make key_len '\000' in
-    x25519_scalar_mult_generic out
-      in_ 0 base 0;
+    x25519_scalar_mult_generic out in_ base;
     out
 
   type secret = bytes
@@ -985,7 +984,7 @@ module Ed25519 = struct
   external scalar_mult_base_to_bytes : bytes -> bytes -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
   external reduce_l : bytes -> unit = "mc_25519_reduce_l" [@@noalloc]
   external muladd : bytes -> bytes -> bytes -> bytes -> unit = "mc_25519_muladd" [@@noalloc]
-  external double_scalar_mult : bytes -> bytes -> bytes -> bytes -> int -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
+  external double_scalar_mult : bytes -> bytes -> bytes -> bytes -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
   external pub_ok : bytes -> bool = "mc_25519_pub_ok" [@@noalloc]
 
   type pub = bytes
@@ -1081,7 +1080,7 @@ module Ed25519 = struct
         let k = Cstruct.to_bytes k in
         reduce_l k;
         let r' = Bytes.make key_len '\000' in
-        let success = double_scalar_mult r' k key s 0 in
+        let success = double_scalar_mult r' k key s in
         success && Bytes.equal r r'
       end else
         false

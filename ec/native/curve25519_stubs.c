@@ -1803,12 +1803,11 @@ static void sc_muladd(uint8_t *s, const uint8_t *a, const uint8_t *b,
 }
 
 #include <caml/memory.h>
-#define _st_uint8_off(st, off) ((uint8_t*) String_val (st) + Long_val (off))
 
-CAMLprim value mc_x25519_scalar_mult_generic(value out, value scalar, value soff, value point, value poff)
+CAMLprim value mc_x25519_scalar_mult_generic(value out, value scalar, value point)
 {
-  CAMLparam5(out, scalar, soff, point, poff);
-  x25519_scalar_mult_generic(Bytes_val(out), _st_uint8_off(scalar, soff), _st_uint8_off(point, poff));
+  CAMLparam3(out, scalar, point);
+  x25519_scalar_mult_generic(Bytes_val(out), Bytes_val(scalar), Bytes_val(point));
   CAMLreturn(Val_unit);
 }
 
@@ -1836,9 +1835,9 @@ CAMLprim value mc_25519_muladd(value out, value a, value b, value c)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value c, value coff)
+CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value c)
 {
-  CAMLparam5(out, k, key, c, coff);
+  CAMLparam4(out, k, key, c);
   ge_p2 R;
   ge_p3 B;
   fe_loose t;
@@ -1848,7 +1847,7 @@ CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value 
   fe_carry(&B.X, &t);
   fe_neg(&t, &B.T);
   fe_carry(&B.T, &t);
-  ge_double_scalarmult_vartime(&R, Bytes_val(k), &B, _st_uint8_off(c, coff));
+  ge_double_scalarmult_vartime(&R, Bytes_val(k), &B, Bytes_val(c));
   x25519_ge_tobytes(Bytes_val(out), &R);
   CAMLreturn(Val_bool(success));
 }
