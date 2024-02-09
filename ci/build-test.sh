@@ -78,7 +78,23 @@ opamrun exec -- ocamlc -config
 # Update
 opamrun update
 
-# Make your own build logic!
-opamrun install --yes --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-lwt mirage-crypto-rng-mirage mirage-crypto-pk mirage-crypto-ec
-opamrun exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
-opamrun exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
+# Build logic
+#   2024-02-09: Remove mirage-crypto-pk on Windows since no portable GMP library (used by Zarith).
+#       mirage-crypto-ec has a test dependency on mirage-crypto-pk.
+packages_INSTALL="mirage-crypto mirage-crypto-rng mirage-crypto-rng-lwt mirage-crypto-rng-mirage"
+packages_BUILD_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
+packages_TEST_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
+case "$dkml_host_abi" in
+    windows_*)
+        packages_INSTALL="$packages_INSTALL mirage-crypto-ec"
+        packages_BUILD_TOPOLOGICALSORT="$packages_BUILD_TOPOLOGICALSORT,mirage-crypto-ec"
+        ;;
+    *)
+        packages_INSTALL="$packages_INSTALL mirage-crypto-pk mirage-crypto-ec"
+        packages_BUILD_TOPOLOGICALSORT="$packages_BUILD_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
+        packages_TEST_TOPOLOGICALSORT="$packages_TEST_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
+esac
+#   shellcheck disable=SC2086
+opamrun install --yes --deps-only --with-test $packages_INSTALL
+opamrun exec -- dune build -p "$packages_BUILD_TOPOLOGICALSORT"
+opamrun exec -- dune runtest -p "$packages_TEST_TOPOLOGICALSORT"
