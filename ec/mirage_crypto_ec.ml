@@ -745,7 +745,7 @@ module P224 : Dh_dsa = struct
     let g_y = Cstruct.to_bytes (Cstruct.of_hex "BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34")
     let p = Cstruct.to_bytes (Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001")
     let n = Cstruct.to_bytes (Cstruct.of_hex "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D")
-    let pident = Cstruct.to_bytes (Cstruct.empty)
+    let pident = Bytes.empty
     let byte_length = 28
     let fe_length = if Sys.word_size == 64 then 32 else 28 (* TODO: is this congruent with C code? *)
     let first_byte_bits = None
