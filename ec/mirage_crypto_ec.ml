@@ -941,70 +941,67 @@ end
 
 module X25519 = struct
   (* RFC 7748 *)
-  external x25519_scalar_mult_generic : bytes -> bytes -> bytes -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
+  external x25519_scalar_mult_generic : bytes -> string -> string -> unit = "mc_x25519_scalar_mult_generic" [@@noalloc]
 
   let key_len = 32
 
   let scalar_mult in_ base =
     let out = Bytes.make key_len '\000' in
     x25519_scalar_mult_generic out in_ base;
-    out
+    Bytes.unsafe_to_string out
 
-  type secret = bytes
+  type secret = string
 
   let basepoint =
-    let data = Bytes.make key_len '\000' in
-    Bytes.set_uint8 data 0 9;
-    data
+    String.init key_len (function 0 -> '\009' | _ -> '\000')
 
   let public priv = scalar_mult priv basepoint
 
-  let gen_bytes_key ?compress:_ ?g () =
+  let gen_octets_key ?compress:_ ?g () =
     let secret = Mirage_crypto_rng.generate ?g key_len in
-    Cstruct.to_bytes secret, public (Cstruct.to_bytes secret)
+    Cstruct.to_string secret, public (Cstruct.to_string secret)
 
   let gen_key ?compress ?g () =
-    let secret, public = gen_bytes_key ~compress ?g () in
-    secret, Cstruct.of_bytes public
+    let secret, public = gen_octets_key ~compress ?g () in
+    secret, Cstruct.of_string public
 
-  let secret_of_bytes ?compress:_ s =
-    if Bytes.length s = key_len then
+  let secret_of_octets ?compress:_ s =
+    if String.length s = key_len then
       Ok (s, public s)
     else
       Error `Invalid_length
 
-  let secret_of_cs ?compress cs = match secret_of_bytes ~compress (Cstruct.to_bytes cs) with
-    | Ok (secret, public) -> Ok (secret, Cstruct.of_bytes public)
-    | Error _ as e -> e
+  let secret_of_cs ?compress cs =
+    Result.map (fun (secret, public) -> secret, Cstruct.of_string public)
+      (secret_of_octets ~compress (Cstruct.to_string cs))
 
   let is_zero =
-    let zero = Bytes.make key_len '\000' in
-    fun cs -> Bytes.equal zero cs
+    let zero = String.make key_len '\000' in
+    fun buf -> String.equal zero buf
 
-  let key_bytes_exchange secret public =
-    if Bytes.length public = key_len then
+  let key_octets_exchange secret public =
+    if String.length public = key_len then
       let res = scalar_mult secret public in
       if is_zero res then Error `Low_order else Ok res
     else
       Error `Invalid_length
 
   let key_exchange secret public =
-    match key_bytes_exchange secret (Cstruct.to_bytes public) with
-    | Ok shared -> Ok (Cstruct.of_bytes shared)
-    | Error _ as e -> e
+    Result.map Cstruct.of_string
+      (key_octets_exchange secret (Cstruct.to_string public))
 end
 
 module Ed25519 = struct
 
-  external scalar_mult_base_to_bytes : bytes -> bytes -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
+  external scalar_mult_base_to_bytes : bytes -> string -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
   external reduce_l : bytes -> unit = "mc_25519_reduce_l" [@@noalloc]
-  external muladd : bytes -> bytes -> bytes -> bytes -> unit = "mc_25519_muladd" [@@noalloc]
-  external double_scalar_mult : bytes -> bytes -> bytes -> bytes -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
-  external pub_ok : bytes -> bool = "mc_25519_pub_ok" [@@noalloc]
+  external muladd : bytes -> string -> string -> string -> unit = "mc_25519_muladd" [@@noalloc]
+  external double_scalar_mult : bytes -> string -> string -> string -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
+  external pub_ok : string -> bool = "mc_25519_pub_ok" [@@noalloc]
 
-  type pub = bytes
+  type pub = string
 
-  type priv = bytes
+  type priv = string
 
   (* RFC 8032 *)
   let key_len = 32
@@ -1012,96 +1009,106 @@ module Ed25519 = struct
   let public secret =
     (* section 5.1.5 *)
     (* step 1 *)
-    let h = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_bytes secret) in
+    let h = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string secret) in
     (* step 2 *)
     let s, rest = Cstruct.split h key_len in
-    let s, rest = Cstruct.to_bytes s, Cstruct.to_bytes rest in
+    let s, rest = Cstruct.to_bytes s, Cstruct.to_string rest in
     Bytes.set_uint8 s 0 ((Bytes.get_uint8 s 0) land 248);
     Bytes.set_uint8 s 31 (((Bytes.get_uint8 s 31) land 127) lor 64);
+    let s = Bytes.unsafe_to_string s in
     (* step 3 and 4 *)
     let public = Bytes.make key_len '\000' in
     scalar_mult_base_to_bytes public s;
+    let public = Bytes.unsafe_to_string public in
     public, (s, rest)
 
   let pub_of_priv secret = fst (public secret)
 
-  let priv_of_bytes buf =
-    if Bytes.length buf = key_len then Ok buf else Error `Invalid_length
+  let priv_of_octets buf =
+    if String.length buf = key_len then Ok buf else Error `Invalid_length
 
-  let priv_of_cstruct p = priv_of_bytes (Cstruct.to_bytes p)
+  let priv_of_cstruct p = priv_of_octets (Cstruct.to_string p)
 
-  let priv_to_bytes priv = priv
+  let priv_to_octets priv = priv
 
-  let priv_to_cstruct p = Cstruct.of_bytes (priv_to_bytes p)
+  let priv_to_cstruct p = Cstruct.of_string (priv_to_octets p)
 
-  let pub_of_bytes buf =
-    if Bytes.length buf = key_len then
-      let buf_copy = Bytes.copy buf in
-      if pub_ok buf_copy then
-        Ok buf_copy
+  let pub_of_octets buf =
+    if String.length buf = key_len then
+      if pub_ok buf then
+        Ok buf
       else
         Error `Not_on_curve
     else
       Error `Invalid_length
 
-  let pub_of_cstruct p = pub_of_bytes (Cstruct.to_bytes p)
+  let pub_of_cstruct p = pub_of_octets (Cstruct.to_string p)
 
-  let pub_to_bytes pub = pub
+  let pub_to_octets pub = pub
 
-  let pub_to_cstruct p = Cstruct.of_bytes (pub_to_bytes p)
+  let pub_to_cstruct p = Cstruct.of_string (pub_to_octets p)
 
   let generate ?g () =
     let secret = Mirage_crypto_rng.generate ?g key_len in
-    let secret = Cstruct.to_bytes secret in
+    let secret = Cstruct.to_string secret in
     secret, pub_of_priv secret
 
-  let sign_bytes ~key msg =
+  let sign ~key msg =
     (* section 5.1.6 *)
     let pub, (s, prefix) = public key in
-    let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_bytes (Bytes.concat Bytes.empty [ prefix; msg ])) in
+    let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ prefix; msg ])) in
     let r = Cstruct.to_bytes r in
     reduce_l r;
+    let r = Bytes.unsafe_to_string r in
     let r_big = Bytes.make key_len '\000' in
     scalar_mult_base_to_bytes r_big r;
-    let k = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_bytes (Bytes.concat Bytes.empty [ r_big; pub; msg])) in
+    let r_big = Bytes.unsafe_to_string r_big in
+    let k = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ r_big; pub; msg])) in
     let k = Cstruct.to_bytes k in
     reduce_l k;
+    let k = Bytes.unsafe_to_string k in
     let s_out = Bytes.make key_len '\000' in
     muladd s_out k s r;
     let res = Bytes.make (key_len + key_len) '\000' in
-    Bytes.blit r_big 0 res 0 key_len ;
+    Bytes.blit_string r_big 0 res 0 key_len ;
     Bytes.blit s_out 0 res key_len key_len ;
-    res
+    Bytes.unsafe_to_string res
 
-  let sign ~key msg = Cstruct.of_bytes (sign_bytes ~key (Cstruct.to_bytes msg))
+  let sign ~key msg = Cstruct.of_string (sign ~key (Cstruct.to_string msg))
 
-  let verify_bytes ~key signature ~msg =
+  let verify ~key signature ~msg =
     (* section 5.1.7 *)
-    if Bytes.length signature = 2 * key_len then
-      let r, s = Cstruct.split (Cstruct.of_bytes signature) key_len in
-      let r, s = Cstruct.to_bytes r, Cstruct.to_bytes s in
+    if String.length signature = 2 * key_len then
+      let r, s =
+        String.sub signature 0 key_len,
+        String.sub signature key_len key_len
+      in
       let s_smaller_l =
         (* check s within 0 <= s < L *)
         let s' = Bytes.make (key_len * 2) '\000' in
-        Bytes.blit s 0 s' 0 key_len;
+        Bytes.blit_string s 0 s' 0 key_len;
         reduce_l s';
-        let s'' = Bytes.concat Bytes.empty [ s; Bytes.make key_len '\000' ] in
-        Bytes.equal s'' s'
+        let s' = Bytes.unsafe_to_string s' in
+        let s'' = String.concat "" [ s; String.make key_len '\000' ] in
+        String.equal s'' s'
       in
       if s_smaller_l then begin
         let k =
-          Mirage_crypto.Hash.SHA512.digest (Cstruct.of_bytes (Bytes.concat Bytes.empty [ r ; key ; msg ]))
+          let data_to_hash = String.concat "" [ r ; key ; msg ] in
+          Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string data_to_hash)
         in
         let k = Cstruct.to_bytes k in
         reduce_l k;
+        let k = Bytes.unsafe_to_string k in
         let r' = Bytes.make key_len '\000' in
         let success = double_scalar_mult r' k key s in
-        success && Bytes.equal r r'
+        let r' = Bytes.unsafe_to_string r' in
+        success && String.equal r r'
       end else
         false
     else
       false
 
   let verify ~key signature ~msg =
-    verify_bytes ~key (Cstruct.to_bytes signature) ~msg:(Cstruct.to_bytes msg)
+    verify ~key (Cstruct.to_string signature) ~msg:(Cstruct.to_string msg)
 end
