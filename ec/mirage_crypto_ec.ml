@@ -208,7 +208,7 @@ end
 module type Point = sig
   module Fe : Field_element
 
-  val at_infinity : unit -> out_point
+  val at_infinity : unit -> point
 
   val is_infinity : point -> bool
 
@@ -233,10 +233,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
   module Fe = Make_field_element(P)(F)
 
   let at_infinity () =
-    let m_f_x = Fe.one () in
-    let m_f_y = Fe.one () in
-    let m_f_z = Fe.create () in
-    { m_f_x; m_f_y; m_f_z }
+    let f_x = out_fe_to_fe (Fe.one ()) in
+    let f_y = out_fe_to_fe (Fe.one ()) in
+    let f_z = out_fe_to_fe (Fe.create ()) in
+    { f_x; f_y; f_z }
 
   let is_infinity (p : point) = not (Fe.nz p.f_z)
 
@@ -444,7 +444,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       in
       match string_get_uint8 buf 0 with
       | 0x00 when String.length buf = 1 ->
-        Ok (out_p_to_p (at_infinity ()))
+        Ok (at_infinity ())
       | 0x02 | 0x03 when String.length P.pident > 0 ->
         let decompressed = decompress buf in
         of_bytes decompressed
@@ -484,7 +484,7 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
   let to_bytes (Scalar buf) = rev_string buf
 
   let scalar_mult (Scalar s) p =
-    let r0 = ref (out_p_to_p (P.at_infinity ())) in
+    let r0 = ref (P.at_infinity ()) in
     let r1 = ref p in
     for i = Param.byte_length * 8 - 1 downto 0 do
       let bit = bit_at s i in
