@@ -22,21 +22,21 @@
 CAMLprim value mc_np521_inv(value out, value in)
 {
 	CAMLparam2(out, in);
-	inversion((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
+	inversion((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np521_mul(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_np521_mul((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
+	fiat_np521_mul((WORD*)Bytes_val(out), (const WORD*)String_val(a), (const WORD*)String_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np521_add(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_np521_add((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
+	fiat_np521_add((WORD*)Bytes_val(out), (const WORD*)String_val(a), (const WORD*)String_val(b));
 	CAMLreturn(Val_unit);
 }
 
@@ -50,28 +50,28 @@ CAMLprim value mc_np521_one(value out)
 CAMLprim value mc_np521_from_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np521_from_bytes((WORD*)Bytes_val(out), Bytes_val(in));
+	fiat_np521_from_bytes((WORD*)Bytes_val(out), _st_uint8(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np521_to_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np521_to_bytes(Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_np521_to_bytes(Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np521_from_montgomery(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np521_from_montgomery((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_np521_from_montgomery((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_np521_to_montgomery(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np521_to_montgomery((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_np521_to_montgomery((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 

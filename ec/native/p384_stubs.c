@@ -23,42 +23,42 @@
 CAMLprim value mc_p384_sub(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_sub((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
+	fiat_p384_sub((WORD*)Bytes_val(out), (const WORD*)String_val(a), (const WORD*)String_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_add(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_add((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
+	fiat_p384_add((WORD*)Bytes_val(out), (const WORD*)String_val(a), (const WORD*)String_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_mul(value out, value a, value b)
 {
 	CAMLparam3(out, a, b);
-	fiat_p384_mul((WORD*)Bytes_val(out), (WORD*)Bytes_val(a), (WORD*)Bytes_val(b));
+	fiat_p384_mul((WORD*)Bytes_val(out), (const WORD*)String_val(a), (const WORD*)String_val(b));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_from_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_from_bytes((WORD*)Bytes_val(out), Bytes_val(in));
+	fiat_p384_from_bytes((WORD*)Bytes_val(out), _st_uint8(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_to_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_to_bytes(Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_p384_to_bytes(Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_p384_sqr(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_p384_square((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_p384_square((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
@@ -81,7 +81,7 @@ CAMLprim value mc_p384_to_montgomery(value x)
 CAMLprim value mc_p384_nz(value x)
 {
 	CAMLparam1(x);
-	CAMLreturn(Val_bool(fe_nz((WORD*)Bytes_val(x))));
+	CAMLreturn(Val_bool(fe_nz((const WORD*)String_val(x))));
 }
 
 CAMLprim value mc_p384_set_one(value x)
@@ -94,7 +94,7 @@ CAMLprim value mc_p384_set_one(value x)
 CAMLprim value mc_p384_inv(value out, value in)
 {
 	CAMLparam2(out, in);
-	inversion((WORD*)Bytes_val(out), (WORD*)Bytes_val(in));
+	inversion((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
@@ -105,9 +105,9 @@ CAMLprim value mc_p384_point_double(value out, value in)
 		(WORD*)Bytes_val(Field(out, 0)),
 		(WORD*)Bytes_val(Field(out, 1)),
 		(WORD*)Bytes_val(Field(out, 2)),
-		(WORD*)Bytes_val(Field(in, 0)),
-		(WORD*)Bytes_val(Field(in, 1)),
-		(WORD*)Bytes_val(Field(in, 2))
+		(const WORD*)String_val(Field(in, 0)),
+		(const WORD*)String_val(Field(in, 1)),
+		(const WORD*)String_val(Field(in, 2))
 	);
 	CAMLreturn(Val_unit);
 }
@@ -119,13 +119,13 @@ CAMLprim value mc_p384_point_add(value out, value p, value q)
 		(WORD*)Bytes_val(Field(out, 0)),
 		(WORD*)Bytes_val(Field(out, 1)),
 		(WORD*)Bytes_val(Field(out, 2)),
-		(WORD*)Bytes_val(Field(p, 0)),
-		(WORD*)Bytes_val(Field(p, 1)),
-		(WORD*)Bytes_val(Field(p, 2)),
+		(const WORD*)String_val(Field(p, 0)),
+		(const WORD*)String_val(Field(p, 1)),
+		(const WORD*)String_val(Field(p, 2)),
 		0,
-		(WORD*)Bytes_val(Field(q, 0)),
-		(WORD*)Bytes_val(Field(q, 1)),
-		(WORD*)Bytes_val(Field(q, 2))
+		(const WORD*)String_val(Field(q, 0)),
+		(const WORD*)String_val(Field(q, 1)),
+		(const WORD*)String_val(Field(q, 2))
 	);
 	CAMLreturn(Val_unit);
 }
@@ -136,8 +136,8 @@ CAMLprim value mc_p384_select(value out, value bit, value t, value f)
 	fe_cmovznz(
 		(WORD*)Bytes_val(out),
 		Bool_val(bit),
-		(WORD*)Bytes_val(f),
-		(WORD*)Bytes_val(t)
+		(const WORD*)String_val(f),
+		(const WORD*)String_val(t)
 	);
 	CAMLreturn(Val_unit);
 }
