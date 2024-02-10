@@ -35,10 +35,15 @@ let rev_string buf =
 
 exception Message_too_long
 
+let string_get_uint8 buf idx =
+  (* TODO: use String.get_uint8 when mirage-crypto-ec requires OCaml >= 4.13 *)
+  Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
+
+
 let bit_at buf i =
   let byte_num = i / 8 in
   let bit_num = i mod 8 in
-  let byte = String.get_uint8 buf byte_num in
+  let byte = string_get_uint8 buf byte_num in
   byte land (1 lsl bit_num) <> 0
 
 module type Dh = sig
@@ -319,7 +324,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     if compress then
       let out = Bytes.make (P.byte_length + 1) '\000' in
       let ident =
-        2 + (String.get_uint8 buf ((P.byte_length * 2) - 1)) land 1
+        2 + (string_get_uint8 buf ((P.byte_length * 2) - 1)) land 1
       in
       Bytes.blit_string buf 1 out 1 P.byte_length;
       Bytes.set_uint8 out 0 ident;
@@ -416,7 +421,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       Fe.from_montgomery y';
       Fe.to_bytes y_struct2 (out_fe_to_fe y');(* number must not be in montgomery domain*)
       let y_struct2 = rev_bytes y_struct2 in
-      let ident = String.get_uint8 pk 0 in
+      let ident = string_get_uint8 pk 0 in
       let signY =
         2 + (Bytes.get_uint8 y_struct (P.byte_length - 2)) land 1
       in
@@ -437,7 +442,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         let y = String.sub buf (1 + len) len in
         validate_finite_point ~x ~y
       in
-      match String.get_uint8 buf 0 with
+      match string_get_uint8 buf 0 with
       | 0x00 when String.length buf = 1 ->
         Ok (out_p_to_p (at_infinity ()))
       | 0x02 | 0x03 when String.length P.pident > 0 ->
@@ -572,7 +577,7 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     let first_byte_ok () =
       match Param.first_byte_bits with
       | None -> true
-      | Some m -> (String.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
+      | Some m -> (string_get_uint8 msg 0) land (0xFF land (lnot m)) = 0
     in
     if l > bl || (l = bl && not (first_byte_ok ())) then
       raise Message_too_long
