@@ -78,6 +78,7 @@ module type Dsa = sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
 end
+
 module type Dh_dsa = sig
   module Dh : Dh
   module Dsa : Dsa
@@ -233,23 +234,14 @@ end
 
 module type Point = sig
   val at_infinity : unit -> point
-
   val is_infinity : point -> bool
-
   val add : point -> point -> point
-
   val double : point -> point
-
   val of_octets : string -> (point, error) result
-
   val to_octets : compress:bool -> point -> string
-
   val to_affine_raw : point -> (field_element * field_element) option
-
   val x_of_finite_point : point -> string
-
   val params_g : point
-
   val select : bool -> then_:point -> else_:point -> point
 end
 
@@ -435,13 +427,9 @@ end
 
 module type Scalar = sig
   val not_zero : string -> bool
-
   val is_in_range : string -> bool
-
   val of_octets : string -> (scalar, error) result
-
   val to_octets : scalar -> string
-
   val scalar_mult : scalar -> point -> point
 end
 
@@ -539,7 +527,6 @@ end
 module type Fn = sig
   val from_be_octets : string -> field_element
   val to_be_octets : field_element -> string
-
   val mul : field_element -> field_element -> field_element
   val add : field_element -> field_element -> field_element
   val inv : field_element -> field_element
