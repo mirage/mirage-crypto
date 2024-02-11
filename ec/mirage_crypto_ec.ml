@@ -1045,12 +1045,28 @@ module Ed25519 = struct
   external double_scalar_mult : bytes -> string -> string -> string -> bool = "mc_25519_double_scalar_mult" [@@noalloc]
   external pub_ok : string -> bool = "mc_25519_pub_ok" [@@noalloc]
 
+  let key_len = 32
+
+  let scalar_mult_base_to_bytes p =
+    let tmp = Bytes.make key_len '\000' in
+    scalar_mult_base_to_bytes tmp p;
+    Bytes.unsafe_to_string tmp
+
+  let muladd a b c =
+    let tmp = Bytes.make key_len '\000' in
+    muladd tmp a b c;
+    Bytes.unsafe_to_string tmp
+
+  let double_scalar_mult a b c =
+    let tmp = Bytes.make key_len '\000' in
+    let s = double_scalar_mult tmp a b c in
+    s, Bytes.unsafe_to_string tmp
+
   type pub = string
 
   type priv = string
 
   (* RFC 8032 *)
-  let key_len = 32
 
   let public secret =
     (* section 5.1.5 *)
@@ -1063,9 +1079,7 @@ module Ed25519 = struct
     Bytes.set_uint8 s 31 (((Bytes.get_uint8 s 31) land 127) lor 64);
     let s = Bytes.unsafe_to_string s in
     (* step 3 and 4 *)
-    let public = Bytes.make key_len '\000' in
-    scalar_mult_base_to_bytes public s;
-    let public = Bytes.unsafe_to_string public in
+    let public = scalar_mult_base_to_bytes s in
     public, (s, rest)
 
   let pub_of_priv secret = fst (public secret)
@@ -1106,18 +1120,15 @@ module Ed25519 = struct
     let r = Cstruct.to_bytes r in
     reduce_l r;
     let r = Bytes.unsafe_to_string r in
-    let r_big = Bytes.make key_len '\000' in
-    scalar_mult_base_to_bytes r_big r;
-    let r_big = Bytes.unsafe_to_string r_big in
+    let r_big = scalar_mult_base_to_bytes r in
     let k = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ r_big; pub; msg])) in
     let k = Cstruct.to_bytes k in
     reduce_l k;
     let k = Bytes.unsafe_to_string k in
-    let s_out = Bytes.make key_len '\000' in
-    muladd s_out k s r;
+    let s_out = muladd k s r in
     let res = Bytes.make (key_len + key_len) '\000' in
     Bytes.blit_string r_big 0 res 0 key_len ;
-    Bytes.blit s_out 0 res key_len key_len ;
+    Bytes.blit_string s_out 0 res key_len key_len ;
     Bytes.unsafe_to_string res
 
   let sign ~key msg = Cstruct.of_string (sign ~key (Cstruct.to_string msg))
@@ -1146,9 +1157,7 @@ module Ed25519 = struct
         let k = Cstruct.to_bytes k in
         reduce_l k;
         let k = Bytes.unsafe_to_string k in
-        let r' = Bytes.make key_len '\000' in
-        let success = double_scalar_mult r' k key s in
-        let r' = Bytes.unsafe_to_string r' in
+        let success, r' = double_scalar_mult k key s in
         success && String.equal r r'
       end else
         false
