@@ -32,7 +32,6 @@ let string_get_uint8 buf idx =
   (* TODO: use String.get_uint8 when mirage-crypto-ec requires OCaml >= 4.13 *)
   Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
 
-
 let bit_at buf i =
   let byte_num = i / 8 in
   let bit_num = i mod 8 in
@@ -507,21 +506,21 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Ok secret -> secret
     | Error _ -> generate_private_key ?g ()
 
-  let gen_bytes_key ?compress ?g () =
+  let gen_key_bytes ?compress ?g () =
     let private_key = generate_private_key ?g () in
     (private_key, share ?compress private_key)
 
   let gen_key ?compress ?g () =
-    let private_key, share = gen_bytes_key ?compress ?g () in
+    let private_key, share = gen_key_bytes ?compress ?g () in
     private_key, Cstruct.of_string share
 
-  let key_bytes_exchange secret received =
+  let key_exchange_bytes secret received =
     match point_of_octets received with
     | Error _ as err -> err
     | Ok shared -> Ok (P.x_of_finite_point (S.scalar_mult secret shared))
 
   let key_exchange secret received =
-    match key_bytes_exchange secret (Cstruct.to_string received) with
+    match key_exchange_bytes secret (Cstruct.to_string received) with
     | Error _ as err -> err
     | Ok shared -> Ok (Cstruct.of_string shared)
 end
