@@ -1017,12 +1017,12 @@ module X25519 = struct
 
   let public priv = scalar_mult priv basepoint
 
-  let gen_octets_key ?compress:_ ?g () =
-    let secret = Mirage_crypto_rng.generate ?g key_len in
-    Cstruct.to_string secret, public (Cstruct.to_string secret)
+  let gen_key_octets ?compress:_ ?g () =
+    let secret = Cstruct.to_string (Mirage_crypto_rng.generate ?g key_len) in
+    secret, public secret
 
   let gen_key ?compress ?g () =
-    let secret, public = gen_octets_key ~compress ?g () in
+    let secret, public = gen_key_octets ~compress ?g () in
     secret, Cstruct.of_string public
 
   let secret_of_octets ?compress:_ s =
@@ -1039,7 +1039,7 @@ module X25519 = struct
     let zero = String.make key_len '\000' in
     fun buf -> String.equal zero buf
 
-  let key_octets_exchange secret public =
+  let key_exchange_octets secret public =
     if String.length public = key_len then
       let res = scalar_mult secret public in
       if is_zero res then Error `Low_order else Ok res
@@ -1048,7 +1048,7 @@ module X25519 = struct
 
   let key_exchange secret public =
     Result.map Cstruct.of_string
-      (key_octets_exchange secret (Cstruct.to_string public))
+      (key_exchange_octets secret (Cstruct.to_string public))
 end
 
 module Ed25519 = struct
