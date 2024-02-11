@@ -244,9 +244,9 @@ module type Point = sig
 
   val double : point -> point
 
-  val of_bytes : string -> (point, error) result
+  val of_octets : string -> (point, error) result
 
-  val to_bytes : compress:bool -> point -> string
+  val to_octets : compress:bool -> point -> string
 
   val to_affine_raw : point -> (field_element * field_element) option
 
@@ -319,7 +319,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     Option.map (fun (x, y) -> Fe.to_octets x, Fe.to_octets y)
       (to_affine_raw p)
 
-  let to_bytes ~compress p =
+  let to_octets ~compress p =
     let buf =
       match to_affine p with
       | None -> String.make 1 '\000'
@@ -415,12 +415,12 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       Bytes.blit_string res 0 out (P.byte_length + 1) P.byte_length;
       Bytes.unsafe_to_string out
 
-  let of_bytes buf =
+  let of_octets buf =
     let len = P.byte_length in
     if String.length buf = 0 then
       Error `Invalid_format
     else
-      let of_bytes buf =
+      let of_octets buf =
         let x = String.sub buf 1 len in
         let y = String.sub buf (1 + len) len in
         validate_finite_point ~x ~y
@@ -430,9 +430,9 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         Ok (at_infinity ())
       | 0x02 | 0x03 when String.length P.pident > 0 ->
         let decompressed = decompress buf in
-        of_bytes decompressed
+        of_octets decompressed
       | 0x04 when String.length buf = 1 + len + len ->
-        of_bytes buf
+        of_octets buf
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
 end
@@ -442,9 +442,9 @@ module type Scalar = sig
 
   val is_in_range : string -> bool
 
-  val of_bytes : string -> (scalar, error) result
+  val of_octets : string -> (scalar, error) result
 
-  val to_bytes : scalar -> string
+  val to_octets : scalar -> string
 
   val scalar_mult : scalar -> point -> point
 end
@@ -458,13 +458,13 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
     not_zero buf
     && Eqaf.compare_be_with_len ~len:Param.byte_length Param.n buf > 0
 
-  let of_bytes buf =
+  let of_octets buf =
     match is_in_range buf with
     | exception Invalid_argument _ -> Error `Invalid_length
     | true -> Ok (Scalar (rev_string buf))
     | false -> Error `Invalid_range
 
-  let to_bytes (Scalar buf) = rev_string buf
+  let to_octets (Scalar buf) = rev_string buf
 
   let scalar_mult (Scalar s) p =
     let r0 = ref (P.at_infinity ()) in
@@ -481,32 +481,32 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
 end
 
 module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
-  let point_of_bytes c =
-    match P.of_bytes c with
+  let point_of_octets c =
+    match P.of_octets c with
     | Ok p when not (P.is_infinity p) -> Ok p
     | Ok _ -> Error `At_infinity
     | Error _ as e -> e
 
-  let point_to_bytes = P.to_bytes
+  let point_to_octets = P.to_octets
 
   type secret = scalar
 
   let share ?(compress = false) private_key =
     let public_key = S.scalar_mult private_key P.params_g in
-    point_to_bytes ~compress public_key
+    point_to_octets ~compress public_key
 
-  let secret_of_bytes ?compress s =
-    match S.of_bytes s with
+  let secret_of_octets ?compress s =
+    match S.of_octets s with
     | Ok p -> Ok (p, share ?compress  p)
     | Error _ as e -> e
 
   let secret_of_cs ?compress s =
     Result.map (fun (p, share) -> p, Cstruct.of_string share)
-      (secret_of_bytes ?compress (Cstruct.to_string s))
+      (secret_of_octets ?compress (Cstruct.to_string s))
 
   let rec generate_private_key ?g () =
     let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
-    match S.of_bytes (Cstruct.to_string candidate) with
+    match S.of_octets (Cstruct.to_string candidate) with
     | Ok secret -> secret
     | Error _ -> generate_private_key ?g ()
 
@@ -519,7 +519,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     private_key, Cstruct.of_string share
 
   let key_bytes_exchange secret received =
-    match point_of_bytes received with
+    match point_of_octets received with
     | Error _ as err -> err
     | Ok shared -> Ok (P.x_of_finite_point (S.scalar_mult secret shared))
 
@@ -606,12 +606,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   let byte_length = Param.byte_length
 
-  let priv_of_bytes= S.of_bytes
+  let priv_of_octets= S.of_octets
 
-  let priv_to_bytes = S.to_bytes
+  let priv_to_octets = S.to_octets
 
-  let priv_of_cstruct cs = priv_of_bytes (Cstruct.to_string cs)
-  let priv_to_cstruct p = Cstruct.of_string (priv_to_bytes p)
+  let priv_of_cstruct cs = priv_of_octets (Cstruct.to_string cs)
+  let priv_to_cstruct p = Cstruct.of_string (priv_to_octets p)
 
   let padded msg =
     let l = String.length msg in
@@ -654,7 +654,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     let g ~key cs =
       let g = Mirage_crypto_rng.create ~strict:true drbg in
       Mirage_crypto_rng.reseed ~g
-        (Cstruct.append (Cstruct.of_string (S.to_bytes key)) cs);
+        (Cstruct.append (Cstruct.of_string (S.to_octets key)) cs);
       g
 
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
@@ -666,7 +666,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
       in
       go ()
 
-    (* let generate_bytes ~key buf = gen (g ~key (Cstruct.of_bytes (padded buf))) *)
+    (* let generate_octets ~key buf = gen (g ~key (Cstruct.of_string (padded buf))) *)
 
     let generate ~key buf =
       Cstruct.of_string (gen (g ~key (padded_cs buf)))
@@ -676,19 +676,19 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   type pub = point
 
-  let pub_of_bytes = P.of_bytes
+  let pub_of_octets = P.of_octets
 
-  let pub_to_bytes ?(compress = false) pk = P.to_bytes ~compress pk
+  let pub_to_octets ?(compress = false) pk = P.to_octets ~compress pk
 
-  let pub_of_cstruct cs = pub_of_bytes (Cstruct.to_string cs)
+  let pub_of_cstruct cs = pub_of_octets (Cstruct.to_string cs)
   let pub_to_cstruct ?compress p =
-    Cstruct.of_string (pub_to_bytes ?compress p)
+    Cstruct.of_string (pub_to_octets ?compress p)
 
   let generate ?g () =
     (* FIPS 186-4 B 4.2 *)
     let d =
       let rec one () =
-        match S.of_bytes (Cstruct.to_string (Mirage_crypto_rng.generate ?g Param.byte_length)) with
+        match S.of_octets (Cstruct.to_string (Mirage_crypto_rng.generate ?g Param.byte_length)) with
         | Ok x -> x
         | Error _ -> one ()
       in
@@ -717,7 +717,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         | Some _ -> invalid_arg "k not suitable"
       in
       let k' = match k with None -> K_gen_default.gen g | Some k -> k in
-      let ksc = match S.of_bytes k' with
+      let ksc = match S.of_octets k' with
         | Ok ksc -> ksc
         | Error _ -> invalid_arg "k not in range" (* if no k is provided, this cannot happen since K_gen_*.gen already preserves the Scalar invariants *)
       in
@@ -731,7 +731,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         let kmon = F.to_montgomery kmon in
         let kinv = F.inv kmon in
         let kmon = F.to_montgomery kinv in
-        let dmon = F.from_be_octets (S.to_bytes key) in
+        let dmon = F.from_be_octets (S.to_octets key) in
         let dmon = F.to_montgomery dmon in
         let rd = F.mul r_mon dmon in
         let zmon = F.to_montgomery e in
@@ -772,8 +772,8 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         let u1 = F.from_montgomery u1 in
         let u2 = F.from_montgomery u2 in
         match
-          S.of_bytes (F.to_be_octets u1),
-          S.of_bytes (F.to_be_octets u2)
+          S.of_octets (F.to_be_octets u1),
+          S.of_octets (F.to_be_octets u2)
         with
         | Ok u1, Ok u2 ->
           let point =
