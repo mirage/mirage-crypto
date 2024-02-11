@@ -654,6 +654,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         (Cstruct.append (Cstruct.of_string (S.to_octets key)) cs);
       g
 
+    let g_octets ~key msg =
+      let g = Mirage_crypto_rng.create ~strict:true drbg in
+      Mirage_crypto_rng.reseed ~g
+        (Cstruct.of_string (String.concat "" [ S.to_octets key ; msg ]));
+      g
+
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
     let gen g =
       let rec go () =
@@ -706,7 +712,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
   let sign_bytes ~key ?k msg =
     let msg = padded msg in
     let e = F.from_be_octets msg in
-    let g = K_gen_default.g ~key (Cstruct.of_string msg) in
+    let g = K_gen_default.g_octets ~key msg in
     let rec do_sign g =
       let again () =
         match k with
