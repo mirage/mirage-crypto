@@ -112,12 +112,12 @@ module type Foreign = sig
   val sub : out_field_element -> field_element -> field_element -> unit
   val add : out_field_element -> field_element -> field_element -> unit
   val to_montgomery : out_field_element -> field_element -> unit
-  val from_bytes_buf : out_field_element -> string -> unit
+  val from_octets : out_field_element -> string -> unit
   val set_one : out_field_element -> unit
   val nz : field_element -> bool
   val sqr : out_field_element -> field_element -> unit
   val from_montgomery : out_field_element -> field_element -> unit
-  val to_bytes_buf : bytes -> field_element -> unit
+  val to_octets : bytes -> field_element -> unit
   val inv : out_field_element -> field_element -> unit
   val select_c : out_field_element -> bool -> field_element -> field_element -> unit
 
@@ -195,21 +195,18 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     b_uts tmp
 
   let from_be_octets buf =
-    if String.length buf = P.byte_length then
-      let buf_rev = rev_string buf in
-      let tmp = create () in
-      F.from_bytes_buf tmp buf_rev;
-      F.to_montgomery tmp (b_uts tmp);
-      b_uts tmp
-    else
-      invalid_arg "buffer not of required byte length"
+    let buf_rev = rev_string buf in
+    let tmp = create () in
+    F.from_octets tmp buf_rev;
+    F.to_montgomery tmp (b_uts tmp);
+    b_uts tmp
 
   let create_p () =
     Bytes.make P.byte_length '\000'
 
   let to_octets fe =
     let tmp = create_p () in
-    F.to_bytes_buf tmp fe;
+    F.to_octets tmp fe;
     b_uts tmp
 
   let out_point () = {
@@ -812,12 +809,12 @@ module P224 : Dh_dsa = struct
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p224_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p224_add" [@@noalloc]
     external to_montgomery : out_field_element -> field_element -> unit = "mc_p224_to_montgomery" [@@noalloc]
-    external from_bytes_buf : out_field_element -> string -> unit = "mc_p224_from_bytes" [@@noalloc]
+    external from_octets : out_field_element -> string -> unit = "mc_p224_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p224_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p224_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p224_sqr" [@@noalloc]
     external from_montgomery : out_field_element -> field_element -> unit = "mc_p224_from_montgomery" [@@noalloc]
-    external to_bytes_buf : bytes -> field_element -> unit = "mc_p224_to_bytes" [@@noalloc]
+    external to_octets : bytes -> field_element -> unit = "mc_p224_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p224_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
 
@@ -862,12 +859,12 @@ module P256 : Dh_dsa  = struct
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p256_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p256_add" [@@noalloc]
     external to_montgomery : out_field_element -> field_element -> unit = "mc_p256_to_montgomery" [@@noalloc]
-    external from_bytes_buf : out_field_element -> string -> unit = "mc_p256_from_bytes" [@@noalloc]
+    external from_octets : out_field_element -> string -> unit = "mc_p256_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p256_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p256_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p256_sqr" [@@noalloc]
     external from_montgomery : out_field_element -> field_element -> unit = "mc_p256_from_montgomery" [@@noalloc]
-    external to_bytes_buf : bytes -> field_element -> unit = "mc_p256_to_bytes" [@@noalloc]
+    external to_octets : bytes -> field_element -> unit = "mc_p256_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p256_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p256_select" [@@noalloc]
 
@@ -913,12 +910,12 @@ module P384 : Dh_dsa = struct
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p384_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p384_add" [@@noalloc]
     external to_montgomery : out_field_element -> field_element -> unit = "mc_p384_to_montgomery" [@@noalloc]
-    external from_bytes_buf : out_field_element -> string -> unit = "mc_p384_from_bytes" [@@noalloc]
+    external from_octets : out_field_element -> string -> unit = "mc_p384_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p384_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p384_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p384_sqr" [@@noalloc]
     external from_montgomery : out_field_element -> field_element -> unit = "mc_p384_from_montgomery" [@@noalloc]
-    external to_bytes_buf : bytes -> field_element -> unit = "mc_p384_to_bytes" [@@noalloc]
+    external to_octets : bytes -> field_element -> unit = "mc_p384_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p384_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p384_select" [@@noalloc]
 
@@ -965,12 +962,12 @@ module P521 : Dh_dsa = struct
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p521_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p521_add" [@@noalloc]
     external to_montgomery : out_field_element -> field_element -> unit = "mc_p521_to_montgomery" [@@noalloc]
-    external from_bytes_buf : out_field_element -> string -> unit = "mc_p521_from_bytes" [@@noalloc]
+    external from_octets : out_field_element -> string -> unit = "mc_p521_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p521_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p521_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p521_sqr" [@@noalloc]
     external from_montgomery : out_field_element -> field_element -> unit = "mc_p521_from_montgomery" [@@noalloc]
-    external to_bytes_buf : bytes -> field_element -> unit = "mc_p521_to_bytes" [@@noalloc]
+    external to_octets : bytes -> field_element -> unit = "mc_p521_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p521_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p521_select" [@@noalloc]
 
