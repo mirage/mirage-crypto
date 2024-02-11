@@ -40,41 +40,26 @@ let bit_at buf i =
 
 module type Dh = sig
   type secret
-
   val secret_of_cs : ?compress:bool -> Cstruct.t ->
     (secret * Cstruct.t, error) result
-
   val gen_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit ->
     secret * Cstruct.t
-
   val key_exchange : secret -> Cstruct.t -> (Cstruct.t, error) result
 end
 
 module type Dsa = sig
   type priv
-
   type pub
-
   val byte_length : int
-
   val priv_of_cstruct : Cstruct.t -> (priv, error) result
-
   val priv_to_cstruct : priv -> Cstruct.t
-
   val pub_of_cstruct : Cstruct.t -> (pub, error) result
-
   val pub_to_cstruct : ?compress:bool -> pub -> Cstruct.t
-
   val pub_of_priv : priv -> pub
-
   val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
-
   val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
-
   val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
-
   module K_gen (H : Mirage_crypto.Hash.S) : sig
-
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
 end
@@ -143,7 +128,6 @@ module type Field_element = sig
 end
 
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
-
   let b_uts b = Bytes.unsafe_to_string b
 
   let create () = Bytes.make P.fe_length '\000'
@@ -200,11 +184,11 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     F.to_montgomery tmp (b_uts tmp);
     b_uts tmp
 
-  let create_p () =
+  let create_octets () =
     Bytes.make P.byte_length '\000'
 
   let to_octets fe =
-    let tmp = create_p () in
+    let tmp = create_octets () in
     F.to_octets tmp fe;
     b_uts tmp
 
@@ -480,7 +464,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
 
   let secret_of_octets ?compress s =
     match S.of_octets s with
-    | Ok p -> Ok (p, share ?compress  p)
+    | Ok p -> Ok (p, share ?compress p)
     | Error _ as e -> e
 
   let secret_of_cs ?compress s =
@@ -535,12 +519,11 @@ module type Fn = sig
 end
 
 module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
-
   let b_uts = Bytes.unsafe_to_string
 
   let create () = Bytes.make P.fe_length '\000'
 
-  let create_octet () = Bytes.make P.byte_length '\000'
+  let create_octets () = Bytes.make P.byte_length '\000'
 
   let from_be_octets v =
     let v' = create () in
@@ -549,7 +532,7 @@ module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
     b_uts v'
 
   let to_be_octets v =
-    let buf = create_octet () in
+    let buf = create_octets () in
     F.to_bytes buf v;
     rev_string (b_uts buf)
 
@@ -595,6 +578,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
   let priv_to_octets = S.to_octets
 
   let priv_of_cstruct cs = priv_of_octets (Cstruct.to_string cs)
+
   let priv_to_cstruct p = Cstruct.of_string (priv_to_octets p)
 
   let padded msg =
@@ -631,7 +615,6 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
-
     let drbg : 'a Mirage_crypto_rng.generator =
       let module M = Mirage_crypto_rng.Hmac_drbg (H) in (module M)
 
@@ -671,6 +654,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
   let pub_to_octets ?(compress = false) pk = P.to_octets ~compress pk
 
   let pub_of_cstruct cs = pub_of_octets (Cstruct.to_string cs)
+
   let pub_to_cstruct ?compress p =
     Cstruct.of_string (pub_to_octets ?compress p)
 
@@ -801,7 +785,6 @@ module P224 : Dh_dsa = struct
     external to_octets : bytes -> field_element -> unit = "mc_p224_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p224_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
-
     external double_c : out_point -> point -> unit = "mc_p224_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p224_point_add" [@@noalloc]
   end
@@ -851,7 +834,6 @@ module P256 : Dh_dsa  = struct
     external to_octets : bytes -> field_element -> unit = "mc_p256_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p256_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p256_select" [@@noalloc]
-
     external double_c : out_point -> point -> unit = "mc_p256_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p256_point_add" [@@noalloc]
   end
@@ -902,7 +884,6 @@ module P384 : Dh_dsa = struct
     external to_octets : bytes -> field_element -> unit = "mc_p384_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p384_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p384_select" [@@noalloc]
-
     external double_c : out_point -> point -> unit = "mc_p384_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p384_point_add" [@@noalloc]
   end
@@ -954,7 +935,6 @@ module P521 : Dh_dsa = struct
     external to_octets : bytes -> field_element -> unit = "mc_p521_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p521_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p521_select" [@@noalloc]
-
     external double_c : out_point -> point -> unit = "mc_p521_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p521_point_add" [@@noalloc]
   end
@@ -990,8 +970,7 @@ module X25519 = struct
 
   type secret = string
 
-  let basepoint =
-    String.init key_len (function 0 -> '\009' | _ -> '\000')
+  let basepoint = String.init key_len (function 0 -> '\009' | _ -> '\000')
 
   let public priv = scalar_mult priv basepoint
 
@@ -1030,7 +1009,6 @@ module X25519 = struct
 end
 
 module Ed25519 = struct
-
   external scalar_mult_base_to_bytes : bytes -> string -> unit = "mc_25519_scalar_mult_base" [@@noalloc]
   external reduce_l : bytes -> unit = "mc_25519_reduce_l" [@@noalloc]
   external muladd : bytes -> string -> string -> string -> unit = "mc_25519_muladd" [@@noalloc]
@@ -1059,7 +1037,6 @@ module Ed25519 = struct
   type priv = string
 
   (* RFC 8032 *)
-
   let public secret =
     (* section 5.1.5 *)
     (* step 1 *)
