@@ -138,7 +138,6 @@ module type Field_element = sig
   val select : bool -> then_:field_element -> else_:field_element -> field_element
   val from_be_octets : string -> field_element
   val to_octets : field_element -> string
-
   val double_point : point -> point
   val add_point : point -> point -> point
 end
@@ -539,47 +538,49 @@ module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
 
   let b_uts = Bytes.unsafe_to_string
 
-  let create_fe () = Bytes.make P.fe_length '\000'
+  let create () = Bytes.make P.fe_length '\000'
 
-  let create () = Bytes.make P.byte_length '\000'
+  let create_octet () = Bytes.make P.byte_length '\000'
 
   let from_be_octets v =
     let v' = create () in
     F.from_bytes v' (rev_string v);
+    F.to_montgomery v' (b_uts v');
     b_uts v'
 
   let to_be_octets v =
-    let buf = create () in
+    let buf = create_octet () in
     F.to_bytes buf v;
     rev_string (b_uts buf)
 
   let mul a b =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.mul tmp a b;
     b_uts tmp
 
   let add a b =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.add tmp a b;
     b_uts tmp
 
   let inv a =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.inv tmp a;
+    F.to_montgomery tmp (b_uts tmp);
     b_uts tmp
 
   let one =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.one tmp;
     b_uts tmp
 
   let from_montgomery a =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.from_montgomery tmp a;
     b_uts tmp
 
   let to_montgomery a =
-    let tmp = create_fe () in
+    let tmp = create () in
     F.to_montgomery tmp a;
     b_uts tmp
 end
@@ -715,17 +716,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
       | None -> again ()
       | Some r ->
         let r_mon = F.from_be_octets r in
-        let r_mon = F.to_montgomery r_mon in
         let kmon = F.from_be_octets k' in
-        let kmon = F.to_montgomery kmon in
         let kinv = F.inv kmon in
-        let kmon = F.to_montgomery kinv in
         let dmon = F.from_be_octets (S.to_octets key) in
-        let dmon = F.to_montgomery dmon in
         let rd = F.mul r_mon dmon in
-        let zmon = F.to_montgomery e in
-        let cmon = F.add zmon rd in
-        let smon = F.mul kmon cmon in
+        let cmon = F.add e rd in
+        let smon = F.mul kinv cmon in
         let s = F.from_montgomery smon in
         let s = F.to_be_octets s in
         if S.not_zero s && S.not_zero r then
@@ -750,13 +746,9 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         let msg = padded msg in
         let z = F.from_be_octets msg in
         let s_mon = F.from_be_octets s in
-        let s_mon = F.to_montgomery s_mon in
         let s_inv = F.inv s_mon in
-        let s_inv = F.to_montgomery s_inv in
-        let z = F.to_montgomery z in
         let u1 = F.mul z s_inv in
         let r_mon = F.from_be_octets r in
-        let r_mon = F.to_montgomery r_mon in
         let u2 = F.mul r_mon s_inv in
         let u1 = F.from_montgomery u1 in
         let u2 = F.from_montgomery u2 in
