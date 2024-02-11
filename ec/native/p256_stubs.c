@@ -62,19 +62,17 @@ CAMLprim value mc_p256_sqr(value out, value in)
 	CAMLreturn(Val_unit);
 }
 
-CAMLprim value mc_p256_from_montgomery(value x)
+CAMLprim value mc_p256_from_montgomery(value out, value in)
 {
-	CAMLparam1(x);
-	WORD *l = (WORD*)Bytes_val(x);
-	fiat_p256_from_montgomery(l, l);
+	CAMLparam2(out, in);
+	fiat_p256_from_montgomery((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
-CAMLprim value mc_p256_to_montgomery(value x)
+CAMLprim value mc_p256_to_montgomery(value out, value in)
 {
-	CAMLparam1(x);
-	WORD *l = (WORD*)Bytes_val(x);
-	fiat_p256_to_montgomery(l, l);
+	CAMLparam2(out, in);
+	fiat_p256_to_montgomery((WORD*)Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 

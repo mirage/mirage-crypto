@@ -18,13 +18,6 @@ let error_to_string = function
 let pp_error fmt e =
   Format.fprintf fmt "Cannot parse point: %s" (error_to_string e)
 
-let rev_bytes buf =
-  let len = Bytes.length buf in
-  let res = Bytes.make len '\000' in
-  for i = 0 to len - 1 do
-    Bytes.set res (len - 1 - i) (Bytes.get buf i)
-  done ; res
-
 let rev_string buf =
   let len = String.length buf in
   let res = Bytes.make len '\000' in
@@ -95,8 +88,6 @@ type field_element = string
 
 type out_field_element = bytes
 
-let out_fe_to_fe = Bytes.unsafe_to_string
-
 module type Parameters = sig
   val a : field_element
   val b : field_element
@@ -114,24 +105,18 @@ type point = { f_x : field_element; f_y : field_element; f_z : field_element }
 
 type out_point = { m_f_x : out_field_element; m_f_y : out_field_element; m_f_z : out_field_element }
 
-let out_p_to_p p = {
-  f_x = out_fe_to_fe p.m_f_x ;
-  f_y = out_fe_to_fe p.m_f_y ;
-  f_z = out_fe_to_fe p.m_f_z ;
-}
-
 type scalar = Scalar of string
 
 module type Foreign = sig
   val mul : out_field_element -> field_element -> field_element -> unit
   val sub : out_field_element -> field_element -> field_element -> unit
   val add : out_field_element -> field_element -> field_element -> unit
-  val to_montgomery : out_field_element -> unit
+  val to_montgomery : out_field_element -> field_element -> unit
   val from_bytes_buf : out_field_element -> string -> unit
   val set_one : out_field_element -> unit
   val nz : field_element -> bool
   val sqr : out_field_element -> field_element -> unit
-  val from_montgomery : out_field_element -> unit
+  val from_montgomery : out_field_element -> field_element -> unit
   val to_bytes_buf : bytes -> field_element -> unit
   val inv : out_field_element -> field_element -> unit
   val select_c : out_field_element -> bool -> field_element -> field_element -> unit
@@ -141,73 +126,116 @@ module type Foreign = sig
 end
 
 module type Field_element = sig
-  val create : unit -> out_field_element
-
-  val copy : out_field_element -> field_element -> unit
-
-  val one : unit -> out_field_element
-
-  val to_bytes : bytes -> field_element -> unit
-
-  val from_montgomery : out_field_element -> unit
-
-  val add : out_field_element -> field_element -> field_element -> unit
-
-  val sub : out_field_element -> field_element -> field_element -> unit
-
-  val mul : out_field_element -> field_element -> field_element -> unit
-
+  val mul : field_element -> field_element -> field_element
+  val sub : field_element -> field_element -> field_element
+  val add : field_element -> field_element -> field_element
+  val from_montgomery : field_element -> field_element
+  val zero : field_element
+  val one : field_element
   val nz : field_element -> bool
-
-  val sqr : out_field_element -> field_element -> unit
-
-  val inv : out_field_element -> field_element -> unit
-
-  val from_be_bytes : string -> field_element
-
+  val sqr : field_element -> field_element
+  val inv : field_element -> field_element
   val select : bool -> then_:field_element -> else_:field_element -> field_element
+  val from_be_octets : string -> field_element
+  val to_octets : field_element -> string
+
+  val double_point : point -> point
+  val add_point : point -> point -> point
 end
 
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
-  include F
+
+  let b_uts b = Bytes.unsafe_to_string b
 
   let create () = Bytes.make P.fe_length '\000'
 
-  let copy dst src = Bytes.blit_string src 0 dst 0 (String.length src)
+  let mul a b =
+    let tmp = create () in
+    F.mul tmp a b;
+    b_uts tmp
 
-  let from_bytes fe buf =
-    if String.length buf = P.byte_length then
-      F.from_bytes_buf fe buf
-    else
-      invalid_arg "buffer not of required byte length"
+  let sub a b =
+    let tmp = create () in
+    F.sub tmp a b;
+    b_uts tmp
 
-  let one () =
+  let add a b =
+    let tmp = create () in
+    F.add tmp a b;
+    b_uts tmp
+
+  let from_montgomery a =
+    let tmp = create () in
+    F.from_montgomery tmp a;
+    b_uts tmp
+
+  let zero =
+    b_uts (create ())
+
+  let one =
     let fe = create () in
     F.set_one fe;
-    fe
+    b_uts fe
 
-  let to_bytes buf fe =
-    if Bytes.length buf = P.byte_length then
-      F.to_bytes_buf buf fe
+  let nz a = F.nz a
+
+  let sqr a =
+    let tmp = create () in
+    F.sqr tmp a;
+    b_uts tmp
+
+  let inv a =
+    let tmp = create () in
+    F.inv tmp a;
+    b_uts tmp
+
+  let select bit ~then_ ~else_ =
+    let tmp = create () in
+    F.select_c tmp bit then_ else_;
+    b_uts tmp
+
+  let from_be_octets buf =
+    if String.length buf = P.byte_length then
+      let buf_rev = rev_string buf in
+      let tmp = create () in
+      F.from_bytes_buf tmp buf_rev;
+      F.to_montgomery tmp (b_uts tmp);
+      b_uts tmp
     else
       invalid_arg "buffer not of required byte length"
 
-  let from_be_bytes buf =
-    let buf_rev = rev_string buf in
-    let fe = create () in
-    from_bytes fe buf_rev;
-    F.to_montgomery fe;
-    out_fe_to_fe fe
+  let create_p () =
+    Bytes.make P.byte_length '\000'
 
-  let select bit ~then_ ~else_ =
-    let out = create () in
-    F.select_c out bit then_ else_;
-    out_fe_to_fe out
+  let to_octets fe =
+    let tmp = create_p () in
+    F.to_bytes_buf tmp fe;
+    b_uts tmp
+
+  let out_point () = {
+    m_f_x = create ();
+    m_f_y = create ();
+    m_f_z = create ();
+  }
+
+  let out_p_to_p p = {
+    f_x = b_uts p.m_f_x ;
+    f_y = b_uts p.m_f_y ;
+    f_z = b_uts p.m_f_z ;
+  }
+
+  let double_point p =
+    let tmp = out_point () in
+    F.double_c tmp p;
+    out_p_to_p tmp
+
+  let add_point a b =
+    let tmp = out_point () in
+    F.add_c tmp a b;
+    out_p_to_p tmp
 end
 
 module type Point = sig
-  module Fe : Field_element
-
   val at_infinity : unit -> point
 
   val is_infinity : point -> bool
@@ -222,7 +250,7 @@ module type Point = sig
 
   val to_affine_raw : point -> (field_element * field_element) option
 
-  val x_of_finite_point : point -> bytes
+  val x_of_finite_point : point -> string
 
   val params_g : point
 
@@ -233,36 +261,32 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
   module Fe = Make_field_element(P)(F)
 
   let at_infinity () =
-    let f_x = out_fe_to_fe (Fe.one ()) in
-    let f_y = out_fe_to_fe (Fe.one ()) in
-    let f_z = out_fe_to_fe (Fe.create ()) in
+    let f_x = Fe.one in
+    let f_y = Fe.one in
+    let f_z = Fe.zero in
     { f_x; f_y; f_z }
 
   let is_infinity (p : point) = not (Fe.nz p.f_z)
 
   let is_solution_to_curve_equation =
-    let a = Fe.from_be_bytes P.a in
-    let b = Fe.from_be_bytes P.b in
+    let a = Fe.from_be_octets P.a in
+    let b = Fe.from_be_octets P.b in
     fun ~x ~y ->
-      let x3 = Fe.create () in
-      Fe.mul x3 x x;
-      Fe.mul x3 (out_fe_to_fe x3) x;
-      let ax = Fe.create () in
-      Fe.mul ax a x;
-      let y2 = Fe.create () in
-      Fe.mul y2 y y;
-      let sum = Fe.create () in
-      Fe.add sum (out_fe_to_fe x3) (out_fe_to_fe ax);
-      Fe.add sum (out_fe_to_fe sum) b;
-      Fe.sub sum (out_fe_to_fe sum) (out_fe_to_fe y2);
-      not (Fe.nz (out_fe_to_fe sum))
+      let x3 = Fe.mul x x in
+      let x3 = Fe.mul x3 x in
+      let ax = Fe.mul a x in
+      let y2 = Fe.mul y y in
+      let sum = Fe.add x3 ax in
+      let sum = Fe.add sum b in
+      let sum = Fe.sub sum y2 in
+      not (Fe.nz sum)
 
   let check_coordinate buf =
     (* ensure buf < p: *)
     match Eqaf.compare_be_with_len ~len:P.byte_length buf P.p >= 0 with
     | true -> None
     | exception Invalid_argument _ -> None
-    | false -> Some (Fe.from_be_bytes buf)
+    | false -> Some (Fe.from_be_octets buf)
 
   (** Convert cstruct coordinates to a finite point ensuring:
       - x < p
@@ -273,7 +297,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     match (check_coordinate x, check_coordinate y) with
     | Some f_x, Some f_y ->
       if is_solution_to_curve_equation ~x:f_x ~y:f_y then
-        let f_z = out_fe_to_fe (Fe.one ()) in
+        let f_z = Fe.one in
         Ok { f_x; f_y; f_z }
       else Error `Not_on_curve
     | _ -> Error `Invalid_range
@@ -282,43 +306,30 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     if is_infinity p then
       None
     else
-      let z1 = Fe.create () in
-      let z2 = Fe.create () in
-      Fe.copy z1 p.f_z;
-      Fe.from_montgomery z1;
-      Fe.inv z2 (out_fe_to_fe z1);
-      Fe.sqr z1 (out_fe_to_fe z2);
-      Fe.from_montgomery z1;
-      let x = Fe.create () in
-      Fe.copy x p.f_x;
-      Fe.mul x (out_fe_to_fe x) (out_fe_to_fe z1);
-      let y = Fe.create () in
-      Fe.copy y p.f_y;
-      Fe.mul z1 (out_fe_to_fe z1) (out_fe_to_fe z2);
-      Fe.mul y (out_fe_to_fe y) (out_fe_to_fe z1);
-      Some (out_fe_to_fe x, out_fe_to_fe y)
+      let z1 = Fe.from_montgomery p.f_z in
+      let z2 = Fe.inv z1 in
+      let z1 = Fe.sqr z2 in
+      let z1 = Fe.from_montgomery z1 in
+      let x = Fe.mul p.f_x z1 in
+      let z1 = Fe.mul z1 z2 in
+      let y = Fe.mul p.f_y z1 in
+      Some (x, y)
 
   let to_affine p =
-    match to_affine_raw p with
-    | None -> None
-    | Some (x, y) ->
-      let out_x = Bytes.make P.byte_length '\000' in
-      let out_y = Bytes.make P.byte_length '\000' in
-      Fe.to_bytes out_x x;
-      Fe.to_bytes out_y y;
-      Some (out_x, out_y)
+    Option.map (fun (x, y) -> Fe.to_octets x, Fe.to_octets y)
+      (to_affine_raw p)
 
   let to_bytes ~compress p =
     let buf =
       match to_affine p with
       | None -> String.make 1 '\000'
       | Some (x, y) ->
-        let len_x = Bytes.length x and len_y = Bytes.length y in
+        let len_x = String.length x and len_y = String.length y in
         let res = Bytes.make (1 + len_x + len_y) '\000' in
         Bytes.set res 0 '\004' ;
-        let rev_x = rev_bytes x and rev_y = rev_bytes y in
-        Bytes.blit rev_x 0 res 1 len_x ;
-        Bytes.blit rev_y 0 res (1 + len_x) len_y ;
+        let rev_x = rev_string x and rev_y = rev_string y in
+        Bytes.blit_string rev_x 0 res 1 len_x ;
+        Bytes.blit_string rev_y 0 res (1 + len_x) len_y ;
         Bytes.unsafe_to_string res
     in
     if compress then
@@ -332,18 +343,12 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     else
       buf
 
-  let double p =
-    let out = { m_f_x = Fe.create (); m_f_y = Fe.create (); m_f_z = Fe.create () } in
-    F.double_c out p;
-    out_p_to_p out
+  let double p = Fe.double_point p
 
-  let add fe_p fe_q =
-    let out = { m_f_x = Fe.create (); m_f_y = Fe.create (); m_f_z = Fe.create () } in
-    F.add_c out fe_p fe_q;
-    out_p_to_p out
+  let add p q = Fe.add_point p q
 
   let x_of_finite_point p =
-    match to_affine p with None -> assert false | Some (x, _) -> rev_bytes x
+    match to_affine p with None -> assert false | Some (x, _) -> rev_string x
 
   let params_g =
     match validate_finite_point ~x:P.g_x ~y:P.g_y with
@@ -357,25 +362,14 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       f_z = Fe.select bit ~then_:then_.f_z ~else_:else_.f_z;
     }
 
-  let pow =
-    let mult a b =
-      let r = Fe.create () in
-      Fe.mul r a b;
-      out_fe_to_fe r
-    in
-    let sqr x =
-      let r = Fe.create () in
-      Fe.sqr r x;
-      out_fe_to_fe r
-    in
-    fun x exp ->
-    let r0 = ref (out_fe_to_fe (Fe.one ())) in
+  let pow x exp =
+    let r0 = ref Fe.one in
     let r1 =  ref x in
     for i = P.byte_length * 8 - 1 downto 0 do
       let bit = bit_at exp i in
-      let multiplied = mult !r0 !r1 in
-      let r0_sqr = sqr !r0 in
-      let r1_sqr = sqr !r1 in
+      let multiplied = Fe.mul !r0 !r1 in
+      let r0_sqr = Fe.sqr !r0 in
+      let r1_sqr = Fe.sqr !r1 in
       r0 := Fe.select bit ~then_:multiplied ~else_:r0_sqr;
       r1 := Fe.select bit ~then_:r1_sqr ~else_:multiplied;
     done;
@@ -392,45 +386,34 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
      Q=(x,y) is the canonical representation of the point
   *)
     let pident = P.pident (* (Params.p + 1) / 4*) in
-    let a = Fe.from_be_bytes P.a in
-    let b = Fe.from_be_bytes P.b in
-    let p = Fe.from_be_bytes P.p in
+    let a = Fe.from_be_octets P.a in
+    let b = Fe.from_be_octets P.b in
+    let p = Fe.from_be_octets P.p in
     fun pk ->
-      let x = Fe.from_be_bytes (String.sub pk 1 P.byte_length) in
-      let x3 = Fe.create () in
-      let ax = Fe.create () in
-      let sum = Fe.create () in
-      Fe.mul x3 x x;
-      Fe.mul x3 (out_fe_to_fe x3) x; (* x3 *)
-      Fe.mul ax a x;  (* ax *)
-      Fe.add sum (out_fe_to_fe x3) (out_fe_to_fe ax);
-      Fe.add sum (out_fe_to_fe sum) b; (* y^2 *)
-      let y = pow (out_fe_to_fe sum) pident in (* https://tools.ietf.org/id/draft-jivsov-ecc-compact-00.xml#sqrt point 4.3*)
-      let y' = Fe.create () in
-      Fe.sub y' p y;
-      let y_struct = Bytes.make (P.byte_length) '\000' in
-      let y =
-        let tmp = Fe.create () in
-        Fe.copy tmp y;
-        tmp
-      in
-      Fe.from_montgomery y;
-      Fe.to_bytes y_struct (out_fe_to_fe y); (* number must not be in montgomery domain*)
-      let y_struct = rev_bytes y_struct in
-      let y_struct2 = Bytes.make (P.byte_length) '\000' in
-      Fe.from_montgomery y';
-      Fe.to_bytes y_struct2 (out_fe_to_fe y');(* number must not be in montgomery domain*)
-      let y_struct2 = rev_bytes y_struct2 in
+      let x = Fe.from_be_octets (String.sub pk 1 P.byte_length) in
+      let x3 = Fe.mul x x in
+      let x3 = Fe.mul x3 x in (* x3 *)
+      let ax = Fe.mul a x in  (* ax *)
+      let sum = Fe.add x3 ax in
+      let sum = Fe.add sum b in (* y^2 *)
+      let y = pow sum pident in (* https://tools.ietf.org/id/draft-jivsov-ecc-compact-00.xml#sqrt point 4.3*)
+      let y' = Fe.sub p y in
+      let y = Fe.from_montgomery y in
+      let y_struct = Fe.to_octets y in (* number must not be in montgomery domain*)
+      let y_struct = rev_string y_struct in
+      let y' = Fe.from_montgomery y' in
+      let y_struct2 = Fe.to_octets y' in (* number must not be in montgomery domain*)
+      let y_struct2 = rev_string y_struct2 in
       let ident = string_get_uint8 pk 0 in
       let signY =
-        2 + (Bytes.get_uint8 y_struct (P.byte_length - 2)) land 1
+        2 + (string_get_uint8 y_struct (P.byte_length - 2)) land 1
       in
       let res = if Int.equal signY ident then y_struct else y_struct2 in
       let out = Bytes.make ((P.byte_length * 2) + 1) '\000' in
       Bytes.set out 0 '\004';
       Bytes.blit_string pk 1 out 1 P.byte_length;
-      Bytes.blit res 0 out (P.byte_length + 1) P.byte_length;
-      out_fe_to_fe out
+      Bytes.blit_string res 0 out (P.byte_length + 1) P.byte_length;
+      Bytes.unsafe_to_string out
 
   let of_bytes buf =
     let len = P.byte_length in
@@ -543,7 +526,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
   let key_exchange secret received =
     match key_bytes_exchange secret (Cstruct.to_string received) with
     | Error _ as err -> err
-    | Ok shared -> Ok (Cstruct.of_bytes shared)
+    | Ok shared -> Ok (Cstruct.of_string shared)
 end
 
 module type Foreign_n = sig
@@ -557,9 +540,68 @@ module type Foreign_n = sig
   val to_montgomery : out_field_element -> field_element -> unit
 end
 
-module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H : Mirage_crypto.Hash.S) = struct
-  let create () = Bytes.make Param.fe_length '\000'
+module type Fn = sig
+  val from_be_octets : string -> field_element
+  val to_be_octets : field_element -> string
 
+  val mul : field_element -> field_element -> field_element
+  val add : field_element -> field_element -> field_element
+  val inv : field_element -> field_element
+  val one : field_element
+  val from_montgomery : field_element -> field_element
+  val to_montgomery : field_element -> field_element
+end
+
+module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
+
+  let b_uts = Bytes.unsafe_to_string
+
+  let create_fe () = Bytes.make P.fe_length '\000'
+
+  let create () = Bytes.make P.byte_length '\000'
+
+  let from_be_octets v =
+    let v' = create () in
+    F.from_bytes v' (rev_string v);
+    b_uts v'
+
+  let to_be_octets v =
+    let buf = create () in
+    F.to_bytes buf v;
+    rev_string (b_uts buf)
+
+  let mul a b =
+    let tmp = create_fe () in
+    F.mul tmp a b;
+    b_uts tmp
+
+  let add a b =
+    let tmp = create_fe () in
+    F.add tmp a b;
+    b_uts tmp
+
+  let inv a =
+    let tmp = create_fe () in
+    F.inv tmp a;
+    b_uts tmp
+
+  let one =
+    let tmp = create_fe () in
+    F.one tmp;
+    b_uts tmp
+
+  let from_montgomery a =
+    let tmp = create_fe () in
+    F.from_montgomery tmp a;
+    b_uts tmp
+
+  let to_montgomery a =
+    let tmp = create_fe () in
+    F.to_montgomery tmp a;
+    b_uts tmp
+end
+
+module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mirage_crypto.Hash.S) = struct
   type priv = scalar
 
   let byte_length = Param.byte_length
@@ -602,16 +644,6 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
       msg
     else
       Cstruct.append (Cstruct.create (bl - l)) msg
-
-  let from_be_bytes v =
-    let v' = create () in
-    F.from_bytes v' (rev_string v);
-    v'
-
-  let to_be_bytes v =
-    let buf = Bytes.make Param.byte_length '\000' in
-    F.to_bytes buf v;
-    Bytes.unsafe_to_string (rev_bytes buf)
 
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
@@ -669,21 +701,14 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
     match P.to_affine_raw p with
     | None -> None
     | Some (x, _) ->
-      let x =
-        let tmp = P.Fe.create () in
-        P.Fe.copy tmp x;
-        tmp
-      in
-      F.to_montgomery x (out_fe_to_fe x);
-      let o = create () in
-      F.one o;
-      F.mul x (out_fe_to_fe x) (out_fe_to_fe o);
-      F.from_montgomery x (out_fe_to_fe x);
-      Some (to_be_bytes (out_fe_to_fe x))
+      let x = F.to_montgomery x in
+      let x = F.mul x F.one in
+      let x = F.from_montgomery x in
+      Some (F.to_be_octets x)
 
   let sign_bytes ~key ?k msg =
     let msg = padded msg in
-    let e = out_fe_to_fe (from_be_bytes msg) in
+    let e = F.from_be_octets msg in
     let g = K_gen_default.g ~key (Cstruct.of_string msg) in
     let rec do_sign g =
       let again () =
@@ -700,26 +725,20 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
       match x_of_finite_point_mod_n point with
       | None -> again ()
       | Some r ->
-        let r_mon = from_be_bytes r in
-        F.to_montgomery r_mon (out_fe_to_fe r_mon);
-        let kinv = create () in
-        let kmon = from_be_bytes k' in
-        F.to_montgomery kmon (out_fe_to_fe kmon);
-        F.inv kinv (out_fe_to_fe kmon);
-        F.to_montgomery kmon (out_fe_to_fe kinv);
-        let rd = create () in
-        let dmon = from_be_bytes (S.to_bytes key) in
-        F.to_montgomery dmon (out_fe_to_fe dmon);
-        F.mul rd (out_fe_to_fe r_mon) (out_fe_to_fe dmon);
-        let cmon = create () in
-        let zmon = create () in
-        F.to_montgomery zmon e;
-        F.add cmon (out_fe_to_fe zmon) (out_fe_to_fe rd);
-        let smon = create () in
-        F.mul smon (out_fe_to_fe kmon) (out_fe_to_fe cmon);
-        let s = create () in
-        F.from_montgomery s (out_fe_to_fe smon);
-        let s = to_be_bytes (out_fe_to_fe s) in
+        let r_mon = F.from_be_octets r in
+        let r_mon = F.to_montgomery r_mon in
+        let kmon = F.from_be_octets k' in
+        let kmon = F.to_montgomery kmon in
+        let kinv = F.inv kmon in
+        let kmon = F.to_montgomery kinv in
+        let dmon = F.from_be_octets (S.to_bytes key) in
+        let dmon = F.to_montgomery dmon in
+        let rd = F.mul r_mon dmon in
+        let zmon = F.to_montgomery e in
+        let cmon = F.add zmon rd in
+        let smon = F.mul kmon cmon in
+        let s = F.from_montgomery smon in
+        let s = F.to_be_octets s in
         if S.not_zero s && S.not_zero r then
           r, s
         else
@@ -740,24 +759,21 @@ module Make_dsa (Param : Parameters) (F : Foreign_n) (P : Point) (S : Scalar) (H
         false
       else
         let msg = padded msg in
-        let z = from_be_bytes msg in
-        let s_inv = create () in
-        let s_mon = from_be_bytes s in
-        F.to_montgomery s_mon (out_fe_to_fe s_mon);
-        F.inv s_inv (out_fe_to_fe s_mon);
-        let u1 = create () in
-        F.to_montgomery s_inv (out_fe_to_fe s_inv);
-        F.to_montgomery z (out_fe_to_fe z);
-        F.mul u1 (out_fe_to_fe z) (out_fe_to_fe s_inv);
-        let u2 = create () in
-        let r_mon = from_be_bytes r in
-        F.to_montgomery r_mon (out_fe_to_fe r_mon);
-        F.mul u2 (out_fe_to_fe r_mon) (out_fe_to_fe s_inv);
-        F.from_montgomery u1 (out_fe_to_fe u1);
-        F.from_montgomery u2 (out_fe_to_fe u2);
+        let z = F.from_be_octets msg in
+        let s_mon = F.from_be_octets s in
+        let s_mon = F.to_montgomery s_mon in
+        let s_inv = F.inv s_mon in
+        let s_inv = F.to_montgomery s_inv in
+        let z = F.to_montgomery z in
+        let u1 = F.mul z s_inv in
+        let r_mon = F.from_be_octets r in
+        let r_mon = F.to_montgomery r_mon in
+        let u2 = F.mul r_mon s_inv in
+        let u1 = F.from_montgomery u1 in
+        let u2 = F.from_montgomery u2 in
         match
-          S.of_bytes (to_be_bytes (out_fe_to_fe u1)),
-          S.of_bytes (to_be_bytes (out_fe_to_fe u2))
+          S.of_bytes (F.to_be_octets u1),
+          S.of_bytes (F.to_be_octets u2)
         with
         | Ok u1, Ok u2 ->
           let point =
@@ -795,12 +811,12 @@ module P224 : Dh_dsa = struct
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p224_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p224_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p224_add" [@@noalloc]
-    external to_montgomery : out_field_element -> unit = "mc_p224_to_montgomery" [@@noalloc]
+    external to_montgomery : out_field_element -> field_element -> unit = "mc_p224_to_montgomery" [@@noalloc]
     external from_bytes_buf : out_field_element -> string -> unit = "mc_p224_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p224_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p224_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p224_sqr" [@@noalloc]
-    external from_montgomery : out_field_element -> unit = "mc_p224_from_montgomery" [@@noalloc]
+    external from_montgomery : out_field_element -> field_element -> unit = "mc_p224_from_montgomery" [@@noalloc]
     external to_bytes_buf : bytes -> field_element -> unit = "mc_p224_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p224_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
@@ -823,7 +839,8 @@ module P224 : Dh_dsa = struct
   module P = Make_point(Params)(Foreign)
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
+  module Fn = Make_Fn(Params)(Foreign_n)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA256)
 end
 
 module P256 : Dh_dsa  = struct
@@ -844,12 +861,12 @@ module P256 : Dh_dsa  = struct
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p256_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p256_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p256_add" [@@noalloc]
-    external to_montgomery : out_field_element -> unit = "mc_p256_to_montgomery" [@@noalloc]
+    external to_montgomery : out_field_element -> field_element -> unit = "mc_p256_to_montgomery" [@@noalloc]
     external from_bytes_buf : out_field_element -> string -> unit = "mc_p256_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p256_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p256_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p256_sqr" [@@noalloc]
-    external from_montgomery : out_field_element -> unit = "mc_p256_from_montgomery" [@@noalloc]
+    external from_montgomery : out_field_element -> field_element -> unit = "mc_p256_from_montgomery" [@@noalloc]
     external to_bytes_buf : bytes -> field_element -> unit = "mc_p256_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p256_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p256_select" [@@noalloc]
@@ -872,7 +889,8 @@ module P256 : Dh_dsa  = struct
   module P = Make_point(Params)(Foreign)
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA256)
+  module Fn = Make_Fn(Params)(Foreign_n)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA256)
 end
 
 module P384 : Dh_dsa = struct
@@ -894,12 +912,12 @@ module P384 : Dh_dsa = struct
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p384_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p384_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p384_add" [@@noalloc]
-    external to_montgomery : out_field_element -> unit = "mc_p384_to_montgomery" [@@noalloc]
+    external to_montgomery : out_field_element -> field_element -> unit = "mc_p384_to_montgomery" [@@noalloc]
     external from_bytes_buf : out_field_element -> string -> unit = "mc_p384_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p384_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p384_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p384_sqr" [@@noalloc]
-    external from_montgomery : out_field_element -> unit = "mc_p384_from_montgomery" [@@noalloc]
+    external from_montgomery : out_field_element -> field_element -> unit = "mc_p384_from_montgomery" [@@noalloc]
     external to_bytes_buf : bytes -> field_element -> unit = "mc_p384_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p384_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p384_select" [@@noalloc]
@@ -922,7 +940,8 @@ module P384 : Dh_dsa = struct
   module P = Make_point(Params)(Foreign)
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA384)
+  module Fn = Make_Fn(Params)(Foreign_n)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA384)
 end
 
 module P521 : Dh_dsa = struct
@@ -945,12 +964,12 @@ module P521 : Dh_dsa = struct
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p521_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p521_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p521_add" [@@noalloc]
-    external to_montgomery : out_field_element -> unit = "mc_p521_to_montgomery" [@@noalloc]
+    external to_montgomery : out_field_element -> field_element -> unit = "mc_p521_to_montgomery" [@@noalloc]
     external from_bytes_buf : out_field_element -> string -> unit = "mc_p521_from_bytes" [@@noalloc]
     external set_one : out_field_element -> unit = "mc_p521_set_one" [@@noalloc]
     external nz : field_element -> bool = "mc_p521_nz" [@@noalloc]
     external sqr : out_field_element -> field_element -> unit = "mc_p521_sqr" [@@noalloc]
-    external from_montgomery : out_field_element -> unit = "mc_p521_from_montgomery" [@@noalloc]
+    external from_montgomery : out_field_element -> field_element -> unit = "mc_p521_from_montgomery" [@@noalloc]
     external to_bytes_buf : bytes -> field_element -> unit = "mc_p521_to_bytes" [@@noalloc]
     external inv : out_field_element -> field_element -> unit = "mc_p521_inv" [@@noalloc]
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p521_select" [@@noalloc]
@@ -973,7 +992,8 @@ module P521 : Dh_dsa = struct
   module P = Make_point(Params)(Foreign)
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
-  module Dsa = Make_dsa(Params)(Foreign_n)(P)(S)(Mirage_crypto.Hash.SHA512)
+  module Fn = Make_Fn(Params)(Foreign_n)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA512)
 end
 
 module X25519 = struct
