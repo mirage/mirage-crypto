@@ -623,7 +623,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     else if l = bl then
       msg
     else
-      ( let res = Bytes.make ((bl - l) + (String.length msg)) '\000' in
+      ( let res = Bytes.make bl '\000' in
         Bytes.blit_string msg 0 res (bl - l) (String.length msg) ;
         Bytes.unsafe_to_string res )
 
