@@ -477,21 +477,21 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Ok secret -> secret
     | Error _ -> generate_private_key ?g ()
 
-  let gen_key_bytes ?compress ?g () =
+  let gen_key_octets ?compress ?g () =
     let private_key = generate_private_key ?g () in
     (private_key, share ?compress private_key)
 
   let gen_key ?compress ?g () =
-    let private_key, share = gen_key_bytes ?compress ?g () in
+    let private_key, share = gen_key_octets ?compress ?g () in
     private_key, Cstruct.of_string share
 
-  let key_exchange_bytes secret received =
+  let key_exchange_octets secret received =
     match point_of_octets received with
     | Error _ as err -> err
     | Ok shared -> Ok (P.x_of_finite_point (S.scalar_mult secret shared))
 
   let key_exchange secret received =
-    match key_exchange_bytes secret (Cstruct.to_string received) with
+    match key_exchange_octets secret (Cstruct.to_string received) with
     | Error _ as err -> err
     | Ok shared -> Ok (Cstruct.of_string shared)
 end
@@ -680,7 +680,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
       let x = F.from_montgomery x in
       Some (F.to_be_octets x)
 
-  let sign_bytes ~key ?k msg =
+  let sign_octets ~key ?k msg =
     let msg = padded msg in
     let e = F.from_be_octets msg in
     let g = K_gen_default.g_octets ~key msg in
@@ -716,12 +716,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     do_sign g
 
   let sign ~key ?k msg =
-    let r, s = sign_bytes ~key ?k:(Option.map Cstruct.to_string k) (Cstruct.to_string msg) in
+    let r, s = sign_octets ~key ?k:(Option.map Cstruct.to_string k) (Cstruct.to_string msg) in
     Cstruct.of_string r, Cstruct.of_string s
 
   let pub_of_priv priv = S.scalar_mult priv P.params_g
 
-  let verify_bytes ~key (r, s) msg =
+  let verify_octets ~key (r, s) msg =
     try
       let r = padded r and s = padded s in
       if not (S.is_in_range r && S.is_in_range s) then
@@ -755,7 +755,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     | Message_too_long -> false
 
   let verify ~key (r, s) digest =
-    verify_bytes ~key (Cstruct.to_string r, Cstruct.to_string s) (Cstruct.to_string digest)
+    verify_octets ~key (Cstruct.to_string r, Cstruct.to_string s) (Cstruct.to_string digest)
 end
 
 module P224 : Dh_dsa = struct
@@ -1082,7 +1082,7 @@ module Ed25519 = struct
     let secret = Cstruct.to_string secret in
     secret, pub_of_priv secret
 
-  let sign ~key msg =
+  let sign_octets ~key msg =
     (* section 5.1.6 *)
     let pub, (s, prefix) = public key in
     let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ prefix; msg ])) in
@@ -1100,9 +1100,9 @@ module Ed25519 = struct
     Bytes.blit_string s_out 0 res key_len key_len ;
     Bytes.unsafe_to_string res
 
-  let sign ~key msg = Cstruct.of_string (sign ~key (Cstruct.to_string msg))
+  let sign ~key msg = Cstruct.of_string (sign_octets ~key (Cstruct.to_string msg))
 
-  let verify ~key signature ~msg =
+  let verify_octets ~key signature ~msg =
     (* section 5.1.7 *)
     if String.length signature = 2 * key_len then
       let r, s =
@@ -1134,5 +1134,5 @@ module Ed25519 = struct
       false
 
   let verify ~key signature ~msg =
-    verify ~key (Cstruct.to_string signature) ~msg:(Cstruct.to_string msg)
+    verify_octets ~key (Cstruct.to_string signature) ~msg:(Cstruct.to_string msg)
 end
