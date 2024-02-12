@@ -57,7 +57,7 @@ CAMLprim value mc_np384_from_bytes(value out, value in)
 CAMLprim value mc_np384_to_bytes(value out, value in)
 {
 	CAMLparam2(out, in);
-	fiat_np384_to_bytes(Bytes_val(out), (WORD*)Bytes_val(in));
+	fiat_np384_to_bytes(Bytes_val(out), (const WORD*)String_val(in));
 	CAMLreturn(Val_unit);
 }
 
