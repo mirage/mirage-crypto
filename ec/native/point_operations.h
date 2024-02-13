@@ -214,75 +214,11 @@ static void point_add(fe x3, fe y3, fe z3, const fe x1,
   fe_cmovznz(z3, z2nz, z1, z_out);
 }
 
-/* Change the endianness of a serialized field element */
-static void reverse_bytes(uint8_t out[FE_LENGTH], const uint8_t in[FE_LENGTH]) {
-    for (size_t i = 0 ; i < FE_LENGTH; ++i) {
-        out[i] = in[FE_LENGTH - i - 1];
-    }
-}
-
-/* Set a point to the generator point of the field */
-static void fe_set_g(fe x, fe y, fe z) {
-    fe_one(z);
-    // Compute and cache the field element representation of G
-    static fe g_x = {0};
-    static fe g_y = {0};
-    static int initialized = 0;
-    if (!initialized) {
-        uint8_t gb_x_le[FE_LENGTH] = {0};
-        uint8_t gb_y_le[FE_LENGTH] = {0};
-        reverse_bytes(gb_x_le, gb_x);
-        reverse_bytes(gb_y_le, gb_y);
-        fe_from_bytes(g_x, gb_x_le);
-        fe_from_bytes(g_y, gb_y_le);
-        fe_to_mont(g_x, g_x);
-        fe_to_mont(g_y, g_y);
-        initialized = 1;
-    }
-    fe_copy(x, g_x);
-    fe_copy(y, g_y);
-}
-
-
 /* Use a sliding window optimization method for scalar multiplication
      Hard-coded window size = 4
      Implementation inspired from Go's crypto library
      https://github.com/golang/go/blob/a5cd894318677359f6d07ee74f9004d28b4d164c/src/crypto/internal/nistec/p256.go#L317
   */
-
-/* Pre-compute multiples of the generator point */
-#define TABLE_LENGTH (FE_LENGTH * 2)
-
-static fe generator_table[TABLE_LENGTH][15][3] = {0};
-
-static void compute_generator_table (void) {
-    static int generator_table_initialized = 0;
-    if (generator_table_initialized) {
-        return;
-    }
-    fe b_x, b_y, b_z;
-    fe_set_g(b_x, b_y, b_z);
-    for (int i = 0 ; i < TABLE_LENGTH ; ++i) {
-        fe_copy(generator_table[i][0][0], b_x);
-        fe_copy(generator_table[i][0][1], b_y);
-        fe_copy(generator_table[i][0][2], b_z);
-        for (int j = 1 ; j < 15 ; ++j) {
-            point_add(
-                generator_table[i][j][0],
-                generator_table[i][j][1],
-                generator_table[i][j][2],
-                b_x, b_y, b_z, 0,
-                generator_table[i][j - 1][0],
-                generator_table[i][j - 1][1],
-                generator_table[i][j - 1][2]);
-        }
-        point_double(b_x, b_y, b_z, b_x, b_y, b_z);
-        point_double(b_x, b_y, b_z, b_x, b_y, b_z);
-        point_double(b_x, b_y, b_z, b_x, b_y, b_z);
-        point_double(b_x, b_y, b_z, b_x, b_y, b_z);
-    }
-    generator_table_initialized = 1;
-}
 
 /* Select the n-th element of the table
    without leaking information about [n] */
@@ -305,7 +241,6 @@ static void table_select(fe out_x, fe out_y, fe out_z, size_t index, uint8_t n) 
    pre-computed values of 2^iG */
 static void scalar_mult_base(fe x2, fe y2, fe z2,
                              const uint8_t* scalar, size_t len) {
-    compute_generator_table();
     // P = 0
     fe p_x, p_y, p_z = {0};
     fe_one(p_x);

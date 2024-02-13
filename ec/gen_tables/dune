@@ -1,0 +1,4 @@
+(include_subdirs no)
+(executable
+  (name gen_tables)
+  (libraries mirage_crypto_ec))
