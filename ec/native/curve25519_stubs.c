@@ -1804,10 +1804,10 @@ static void sc_muladd(uint8_t *s, const uint8_t *a, const uint8_t *b,
 
 #include <caml/memory.h>
 
-CAMLprim value mc_x25519_scalar_mult_generic(value out, value scalar, value soff, value point, value poff)
+CAMLprim value mc_x25519_scalar_mult_generic(value out, value scalar, value point)
 {
-  CAMLparam5(out, scalar, soff, point, poff);
-  x25519_scalar_mult_generic(Caml_ba_data_val(out), _ba_uint8_off(scalar, soff), _ba_uint8_off(point, poff));
+  CAMLparam3(out, scalar, point);
+  x25519_scalar_mult_generic(Bytes_val(out), _st_uint8(scalar), _st_uint8(point));
   CAMLreturn(Val_unit);
 }
 
@@ -1816,39 +1816,39 @@ CAMLprim value mc_25519_scalar_mult_base(value out, value hash)
   CAMLparam2(out, hash);
   ge_p3 A;
   ge_p3_0(&A);
-  x25519_ge_scalarmult_base(&A, Caml_ba_data_val(hash));
-  ge_p3_tobytes(Caml_ba_data_val(out), &A);
+  x25519_ge_scalarmult_base(&A, _st_uint8(hash));
+  ge_p3_tobytes(Bytes_val(out), &A);
   CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_25519_reduce_l(value buf)
 {
   CAMLparam1(buf);
-  x25519_sc_reduce(Caml_ba_data_val(buf));
+  x25519_sc_reduce(Bytes_val(buf));
   CAMLreturn(Val_unit);
 }
 
 CAMLprim value mc_25519_muladd(value out, value a, value b, value c)
 {
   CAMLparam4(out, a, b, c);
-  sc_muladd(Caml_ba_data_val(out), Caml_ba_data_val(a), Caml_ba_data_val(b), Caml_ba_data_val(c));
+  sc_muladd(Bytes_val(out), _st_uint8(a), _st_uint8(b), _st_uint8(c));
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value c, value coff)
+CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value c)
 {
-  CAMLparam5(out, k, key, c, coff);
+  CAMLparam4(out, k, key, c);
   ge_p2 R;
   ge_p3 B;
   fe_loose t;
   int success = 0;
-  success = x25519_ge_frombytes_vartime(&B, Caml_ba_data_val(key));
+  success = x25519_ge_frombytes_vartime(&B, _st_uint8(key));
   fe_neg(&t, &B.X);
   fe_carry(&B.X, &t);
   fe_neg(&t, &B.T);
   fe_carry(&B.T, &t);
-  ge_double_scalarmult_vartime(&R, Caml_ba_data_val(k), &B, _ba_uint8_off(c, coff));
-  x25519_ge_tobytes(Caml_ba_data_val(out), &R);
+  ge_double_scalarmult_vartime(&R, _st_uint8(k), &B, _st_uint8(c));
+  x25519_ge_tobytes(Bytes_val(out), &R);
   CAMLreturn(Val_bool(success));
 }
 
@@ -1857,6 +1857,6 @@ CAMLprim value mc_25519_pub_ok(value key)
   CAMLparam1(key);
   int success = 0;
   ge_p3 B;
-  success = x25519_ge_frombytes_vartime(&B, Caml_ba_data_val(key));
+  success = x25519_ge_frombytes_vartime(&B, _st_uint8(key));
   CAMLreturn(Val_bool(success));
 }

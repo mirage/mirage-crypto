@@ -52,7 +52,7 @@ static void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
   return;
 }
 
-static void inversion (WORD out[LIMBS], WORD in[LIMBS]) {
+static void inversion (WORD out[LIMBS], const WORD in[LIMBS]) {
   WORD in_[SAT_LIMBS];
   for (int i = 0; i < LIMBS; i++) in_[i] = in[i];
   in_[LIMBS] = 0;
