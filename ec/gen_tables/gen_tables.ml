@@ -23,14 +23,15 @@ let pp_array elem_fmt fmt arr =
 let pp_string_words ~wordsize fmt str =
   let limbs = String.length str * 8 / wordsize in
   assert (String.length str * 8 mod wordsize = 0);
+  let bytes = Bytes.unsafe_of_string str in
   fprintf fmt "@[<2>{@\n";
   for i = 0 to limbs - 1 do
     let index = i * (wordsize / 8) in
     (if wordsize = 64 then
-       let w = String.get_int64_le str index in
+       let w = Bytes.get_int64_le bytes index in
        fprintf fmt "%#016Lx" w
      else
-       let w = String.get_int32_le str index in
+       let w = Bytes.get_int32_le bytes index in
        fprintf fmt "%#08lx" w);
     if i < limbs - 1 then printf ",@ " else printf ""
   done;
