@@ -135,10 +135,11 @@ module type Dsa = sig
   (** Operations to precompute useful data meant to be hardcoded in
       [mirage-crypto-ec] before compilation *)
   module Precompute : sig
-    val generator_tables : unit -> string array array array
+    val generator_tables : unit -> (string array array array * int)
     (** Return an array of shape (Fe_length * 2, 15, 3) containing multiples of
         the generator point for the curve. Useful only to bootstrap tables
-        necessary for scalar multiplication. *)
+        necessary for scalar multiplication. Returns the tables and the number
+        of significant bytes for each element.*)
   end
 end
 

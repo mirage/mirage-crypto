@@ -20,8 +20,11 @@ let pp_array elem_fmt fmt arr =
   done;
   fout "@]@,}"
 
-let pp_string_words ~wordsize fmt str =
-  let limbs = String.length str * 8 / wordsize in
+let div_round_up a b =
+  a / b + (if a mod b = 0 then 0 else 1)
+
+let pp_string_words ~wordsize ~byte_length fmt str =
+  let limbs = div_round_up (byte_length * 8) wordsize in
   assert (String.length str * 8 mod wordsize = 0);
   let bytes = Bytes.unsafe_of_string str in
   fprintf fmt "@[<2>{@\n";
@@ -51,22 +54,22 @@ let check_shape tables =
         x)
     tables
 
-let print_tables tables ~wordsize =
+let print_tables tables ~wordsize ~byte_length =
   let fe_len = String.length tables.(0).(0).(0) in
   printf "@[<2>static WORD generator_table[%d][15][3][LIMBS] = @," (fe_len * 2);
   pp_array
-    (pp_array (pp_array (pp_string_words ~wordsize)))
+    (pp_array (pp_array (pp_string_words ~wordsize ~byte_length)))
     std_formatter tables;
   printf "@];@,"
 
 let print_toplevel name (module P : Mirage_crypto_ec.Dh_dsa) =
-  let tables = P.Dsa.Precompute.generator_tables () in
+  let tables, byte_length = P.Dsa.Precompute.generator_tables () in
   check_shape tables;
   print_header name;
   printf "@[<v>#ifdef ARCH_64BIT@,";
-  print_tables ~wordsize:64 tables;
+  print_tables ~wordsize:64 ~byte_length tables;
   printf "#else // 32-bit@,";
-  print_tables ~wordsize:32 tables;
+  print_tables ~wordsize:32 ~byte_length tables;
   printf "@]#endif@."
 
 let curves =
