@@ -20,16 +20,26 @@ let pp_array elem_fmt fmt arr =
   done;
   fout "@]@,}"
 
-let div_round_up a b =
-  a / b + (if a mod b = 0 then 0 else 1)
+let div_round_up a b = (a / b) + if a mod b = 0 then 0 else 1
+
+let _rev_str_bytes str =
+    let len = String.length str in
+    let bytes = Bytes.make len '\000' in
+    for i = 0 to len - 1 do
+        Bytes.set bytes i str.[len - i - 1]
+    done;
+    bytes
 
 let pp_string_words ~wordsize ~byte_length fmt str =
   let limbs = div_round_up (byte_length * 8) wordsize in
   assert (String.length str * 8 mod wordsize = 0);
+  (* Truncate at the beginning (little-endian) *)
+  let offset = String.length str mod limbs in
   let bytes = Bytes.unsafe_of_string str in
+  (* let bytes = rev_str_bytes str in *)
   fprintf fmt "@[<2>{@\n";
   for i = 0 to limbs - 1 do
-    let index = i * (wordsize / 8) in
+    let index = (i * (wordsize / 8)) + offset in
     (if wordsize = 64 then
        let w = Bytes.get_int64_le bytes index in
        fprintf fmt "%#016Lx" w
