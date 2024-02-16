@@ -33,13 +33,13 @@ let () =
   in
   let accelerate_flags =
     match arch, ccomp_type_opt with
-    | `x86_64, Some ccomp_type when ccomp_type = "msvc" -> [ "-DACCELERATE" ]
+    | `x86_64, Some "msvc" -> [ "-DACCELERATE" ]
     | `x86_64, _ -> [ "-DACCELERATE"; "-mssse3"; "-maes"; "-mpclmul" ]
     | _ -> []
   in
   let ent_flags =
     match arch, ccomp_type_opt with
-    | (`x86_64 | `x86), Some ccomp_type when ccomp_type = "msvc" -> [ "-DENTROPY" ]
+    | (`x86_64 | `x86), Some "msvc" -> [ "-DENTROPY" ]
     | (`x86_64 | `x86), _ -> [ "-DENTROPY"; "-mrdrnd"; "-mrdseed" ]
     | _ -> []
   in
@@ -51,7 +51,7 @@ let () =
   let warn_flags =
     (* See #178, there may be false positives on ppc&s390 with no-stringop-overflow *)
     match arch, ccomp_type_opt with
-    | _, Some ccomp_type when ccomp_type = "msvc" -> [ "/WX" ]
+    | _, Some "msvc" -> [ "/WX" ]
     | (`ppc64, _) | (`s390x, _) -> [ "-Wno-stringop-overflow"; "-Werror" ]
     | _ -> [ "-Werror" ]
   in
