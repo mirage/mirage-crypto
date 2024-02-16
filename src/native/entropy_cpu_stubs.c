@@ -118,10 +118,10 @@ static inline uint64_t read_cycle_counter(void)
 #endif
 
 #if defined (__riscv) && (64 == __riscv_xlen)
-static inline uint64_t rdcycle64(void)
+static inline uint64_t rdtime64(void)
 {
   uint64_t rval;
-  __asm__ __volatile__ ("rdcycle %0" : "=r" (rval));
+  __asm__ __volatile__ ("rdtime %0" : "=r" (rval));
   return rval;
 }
 #endif
@@ -160,7 +160,7 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #elif defined(__powerpc64__)
   return Val_long (read_cycle_counter ());
 #elif defined(__riscv) && (64 == __riscv_xlen)
-  return Val_long (rdcycle64 ());
+  return Val_long (rdtime64 ());
 #elif defined (__s390x__)
   return Val_long (getticks ());
 #elif defined(__mips__)
