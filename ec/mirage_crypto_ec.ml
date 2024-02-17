@@ -63,7 +63,7 @@ module type Dsa = sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
   module Precompute : sig
-    val generator_tables : unit -> (string array array array * int)
+    val generator_tables : unit -> string array array array
   end
 end
 
@@ -428,7 +428,7 @@ module type Scalar = sig
   val to_octets : scalar -> string
   val scalar_mult : scalar -> point -> point
   val scalar_mult_base : scalar -> point
-  val generator_tables : unit -> (field_element array array array * int)
+  val generator_tables : unit -> field_element array array array
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
@@ -483,7 +483,7 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
       base := P.double !base
     done;
     let convert {f_x; f_y; f_z} = [|f_x; f_y; f_z|] in
-    (Array.map (Array.map convert) table, Param.byte_length)
+    Array.map (Array.map convert) table
 end
 
 module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct

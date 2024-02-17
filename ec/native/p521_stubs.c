@@ -5,18 +5,19 @@
 #define LIMBS 9
 #define WORD uint64_t
 #define WORDSIZE 64
+#include "p521_tables_64.h"
 #else
 #include "p521_32.h"
 #define LIMBS 17
 #define WORD uint32_t
 #define WORDSIZE 32
+#include "p521_tables_32.h"
 #endif
 
 #define LEN_PRIME 521
 #define CURVE_DESCRIPTION fiat_p521
 
 #include "inversion_template.h"
-#include "p521_tables.h"
 #include "point_operations.h"
 
 #include <caml/memory.h>

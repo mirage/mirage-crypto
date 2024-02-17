@@ -5,18 +5,19 @@
 #define LIMBS 4
 #define WORD uint64_t
 #define WORDSIZE 64
+#include "p224_tables_64.h"
 #else
 #include "p224_32.h"
 #define LIMBS 7
 #define WORD uint32_t
 #define WORDSIZE 32
+#include "p224_tables_32.h"
 #endif
 
 #define LEN_PRIME 224
 #define CURVE_DESCRIPTION fiat_p224
 
 #include "inversion_template.h"
-#include "p224_tables.h"
 #include "point_operations.h"
 
 #include <caml/memory.h>

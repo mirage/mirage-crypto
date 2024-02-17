@@ -5,18 +5,19 @@
 #define LIMBS 6
 #define WORD uint64_t
 #define WORDSIZE 64
+#include "p384_tables_64.h"
 #else
 #include "p384_32.h"
 #define LIMBS 12
 #define WORD uint32_t
 #define WORDSIZE 32
+#include "p384_tables_32.h"
 #endif
 
 #define LEN_PRIME 384
 #define CURVE_DESCRIPTION fiat_p384
 
 #include "inversion_template.h"
-#include "p384_tables.h"
 #include "point_operations.h"
 
 #include <caml/memory.h>
