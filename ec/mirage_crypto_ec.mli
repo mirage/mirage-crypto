@@ -112,6 +112,12 @@ module type Dsa = sig
       deterministic construction from RFC 6979. The result is a pair of [r]
       and [s].
 
+      Warning: there {{:https://www.hertzbleed.com/2h2b.pdf}are}
+      {{:https://www.hertzbleed.com/hertzbleed.pdf}attacks} that recover the
+      private key from a power and timing analysis of the RFC 6979 computation
+      of [k] - thus it is advised to provide a good nonce ([k]) explicitly,
+      which is independent of key and digest.
+
       @raise Invalid_argument if [k] is not suitable or not in range.
       @raise Message_too_long if the bit size of [msg] exceeds the curve. *)
 
