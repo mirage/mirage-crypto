@@ -1,5 +1,11 @@
 ## unreleased
 
+* mirage-crypto-ec: documentation: warn about power timing analysis on `k` in
+  Dsa.sign (#195 @hannesm, as proposed by @edwintorok)
+* mirage-crypto-ec: replace internal Cstruct.t by string (speedup up to 2.5x)
+  (#146 @dinosaure @hannesm @reynir, review @Firobe @palainp @hannesm @reynir)
+* bench/speed: add EC (ECDSA & EdDSA generate/sign/verify, ECDH secret/share)
+  operations (#192 @hannesm)
 * mirage-crypto-rng: support Loongarch (#190 @fangyaling, review @loongson-zn)
 * mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
 * mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
