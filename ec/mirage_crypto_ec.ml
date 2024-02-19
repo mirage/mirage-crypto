@@ -62,6 +62,9 @@ module type Dsa = sig
   module K_gen (H : Mirage_crypto.Hash.S) : sig
     val generate : key:priv -> Cstruct.t -> Cstruct.t
   end
+  module Precompute : sig
+    val generator_tables : unit -> string array array array
+  end
 end
 
 module type Dh_dsa = sig
@@ -108,6 +111,7 @@ module type Foreign = sig
 
   val double_c : out_point -> point -> unit
   val add_c : out_point -> point -> point -> unit
+  val scalar_mult_base_c : out_point -> string -> unit
 end
 
 module type Field_element = sig
@@ -125,6 +129,7 @@ module type Field_element = sig
   val to_octets : field_element -> string
   val double_point : point -> point
   val add_point : point -> point -> point
+  val scalar_mult_base_point : scalar -> point
 end
 
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
@@ -213,6 +218,11 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     let tmp = out_point () in
     F.add_c tmp a b;
     out_p_to_p tmp
+
+  let scalar_mult_base_point (Scalar d) =
+    let tmp = out_point () in
+    F.scalar_mult_base_c tmp d;
+    out_p_to_p tmp
 end
 
 module type Point = sig
@@ -226,6 +236,7 @@ module type Point = sig
   val x_of_finite_point : point -> string
   val params_g : point
   val select : bool -> then_:point -> else_:point -> point
+  val scalar_mult_base : scalar -> point
 end
 
 module Make_point (P : Parameters) (F : Foreign) : Point = struct
@@ -406,6 +417,8 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         of_octets buf
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
+
+  let scalar_mult_base = Fe.scalar_mult_base_point
 end
 
 module type Scalar = sig
@@ -414,6 +427,8 @@ module type Scalar = sig
   val of_octets : string -> (scalar, error) result
   val to_octets : scalar -> string
   val scalar_mult : scalar -> point -> point
+  val scalar_mult_base : scalar -> point
+  val generator_tables : unit -> field_element array array array
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
@@ -433,6 +448,7 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
 
   let to_octets (Scalar buf) = rev_string buf
 
+  (* Branchless Montgomery ladder method *)
   let scalar_mult (Scalar s) p =
     let r0 = ref (P.at_infinity ()) in
     let r1 = ref p in
@@ -445,6 +461,29 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
       r1 := P.select bit ~then_:r1_double ~else_:sum
     done;
     !r0
+
+  (* Specialization of [scalar_mult d p] when [p] is the generator *)
+  let scalar_mult_base = P.scalar_mult_base
+
+  (* Pre-compute multiples of the generator point
+     returns the tables along with the number of significant bytes *)
+  let generator_tables () =
+    let len = Param.fe_length * 2 in
+    let one_table _ = Array.init 15 (fun _ -> P.at_infinity ()) in
+    let table = Array.init len one_table in
+    let base = ref P.params_g in
+    for i = 0 to len - 1 do
+      table.(i).(0) <- !base;
+      for j = 1 to 14 do
+        table.(i).(j) <- P.add !base table.(i).(j - 1)
+      done;
+      base := P.double !base;
+      base := P.double !base;
+      base := P.double !base;
+      base := P.double !base
+    done;
+    let convert {f_x; f_y; f_z} = [|f_x; f_y; f_z|] in
+    Array.map (Array.map convert) table
 end
 
 module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
@@ -459,7 +498,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
   type secret = scalar
 
   let share ?(compress = false) private_key =
-    let public_key = S.scalar_mult private_key P.params_g in
+    let public_key = S.scalar_mult_base private_key in
     point_to_octets ~compress public_key
 
   let secret_of_octets ?compress s =
@@ -668,7 +707,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
       in
       one ()
     in
-    let q = S.scalar_mult d P.params_g in
+    let q = S.scalar_mult_base d in
     (d, q)
 
   let x_of_finite_point_mod_n p =
@@ -695,7 +734,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         | Ok ksc -> ksc
         | Error _ -> invalid_arg "k not in range" (* if no k is provided, this cannot happen since K_gen_*.gen already preserves the Scalar invariants *)
       in
-      let point = S.scalar_mult ksc P.params_g in
+      let point = S.scalar_mult_base ksc in
       match x_of_finite_point_mod_n point with
       | None -> again ()
       | Some r ->
@@ -719,7 +758,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     let r, s = sign_octets ~key ?k:(Option.map Cstruct.to_string k) (Cstruct.to_string msg) in
     Cstruct.of_string r, Cstruct.of_string s
 
-  let pub_of_priv priv = S.scalar_mult priv P.params_g
+  let pub_of_priv priv = S.scalar_mult_base priv
 
   let verify_octets ~key (r, s) msg =
     try
@@ -743,7 +782,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         | Ok u1, Ok u2 ->
           let point =
             P.add
-              (S.scalar_mult u1 P.params_g)
+              (S.scalar_mult_base u1)
               (S.scalar_mult u2 key)
           in
           begin match x_of_finite_point_mod_n point with
@@ -756,6 +795,10 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   let verify ~key (r, s) digest =
     verify_octets ~key (Cstruct.to_string r, Cstruct.to_string s) (Cstruct.to_string digest)
+
+  module Precompute = struct
+    let generator_tables = S.generator_tables
+  end
 end
 
 module P224 : Dh_dsa = struct
@@ -787,6 +830,7 @@ module P224 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p224_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p224_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p224_scalar_mult_base" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -836,6 +880,7 @@ module P256 : Dh_dsa  = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p256_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p256_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p256_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p256_scalar_mult_base" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -886,6 +931,7 @@ module P384 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p384_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p384_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p384_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p384_scalar_mult_base" [@@noalloc]
   end
 
   module Foreign_n = struct
@@ -937,6 +983,7 @@ module P521 : Dh_dsa = struct
     external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p521_select" [@@noalloc]
     external double_c : out_point -> point -> unit = "mc_p521_point_double" [@@noalloc]
     external add_c : out_point -> point -> point -> unit = "mc_p521_point_add" [@@noalloc]
+    external scalar_mult_base_c : out_point -> string -> unit = "mc_p521_scalar_mult_base" [@@noalloc]
   end
 
   module Foreign_n = struct

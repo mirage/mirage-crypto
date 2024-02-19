@@ -59,6 +59,16 @@ The following references discuss this algorithm:
 - {{:https://eprint.iacr.org/2017/293.pdf}Montgomery curves and the Montgomery
 ladder, Daniel J. Bernstein and Tanja Lange}
 
+For the special case of base scalar multiplication (where the generator point of
+the curve specifically is multiplied by a scalar), instead an algorithm
+(implemented by hand in C) using pre-computed tables of point doubling is used
+(tables are in `native/p*_tables_32|64.c`).
+
+The key for this algorithm being constant-time is the function selecting values
+from the tables, which conceals what value it selects by exploring the whole
+table in the same order no matter the input, using const-time selection (as
+defined in fiat code). See `native/point_operations.h`.
+
 {2 Key exchange}
 
 Key exchange consists in

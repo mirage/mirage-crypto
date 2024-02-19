@@ -5,11 +5,13 @@
 #define LIMBS 4
 #define WORD uint64_t
 #define WORDSIZE 64
+#include "p256_tables_64.h"
 #else
 #include "p256_32.h"
 #define LIMBS 8
 #define WORD uint32_t
 #define WORDSIZE 32
+#include "p256_tables_32.h"
 #endif
 
 #define LEN_PRIME 256
@@ -138,4 +140,18 @@ CAMLprim value mc_p256_select(value out, value bit, value t, value f)
 		(const WORD*)String_val(t)
 	);
 	CAMLreturn(Val_unit);
+}
+
+
+CAMLprim value mc_p256_scalar_mult_base(value out, value s)
+{
+    CAMLparam2(out, s);
+    scalar_mult_base(
+		(WORD *) Bytes_val(Field(out, 0)),
+		(WORD *) Bytes_val(Field(out, 1)),
+		(WORD *) Bytes_val(Field(out, 2)),
+		_st_uint8(s),
+		caml_string_length(s)
+    );
+    CAMLreturn(Val_unit);
 }

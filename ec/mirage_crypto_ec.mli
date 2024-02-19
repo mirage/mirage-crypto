@@ -135,6 +135,17 @@ module type Dsa = sig
     (** [generate ~key digest] deterministically takes the given private key
         and message digest to a [k] suitable for seeding the signing process. *)
   end
+
+  (** {2 Misc} *)
+
+  (** Operations to precompute useful data meant to be hardcoded in
+      [mirage-crypto-ec] before compilation *)
+  module Precompute : sig
+    val generator_tables : unit -> string array array array
+    (** Return an array of shape (Fe_length * 2, 15, 3) containing multiples of
+        the generator point for the curve. Useful only to bootstrap tables
+        necessary for scalar multiplication. *)
+  end
 end
 
 (** Elliptic curve with Diffie-Hellman and DSA. *)

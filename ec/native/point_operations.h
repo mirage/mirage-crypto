@@ -1,6 +1,8 @@
 #define MAKE_FN_NAME1(x,y) x ## y
 #define MAKE_FN_NAME(x,y) MAKE_FN_NAME1(x,y)
 
+#define fe_one MAKE_FN_NAME(CURVE_DESCRIPTION,_set_one)
+
 #define fe_add MAKE_FN_NAME(CURVE_DESCRIPTION,_add)
 #define fe_sub MAKE_FN_NAME(CURVE_DESCRIPTION,_sub)
 
@@ -9,6 +11,9 @@
 
 #define fe_nonzero MAKE_FN_NAME(CURVE_DESCRIPTION,_nonzero)
 #define fe_selectznz MAKE_FN_NAME(CURVE_DESCRIPTION,_selectznz)
+
+#define fe_from_bytes MAKE_FN_NAME(CURVE_DESCRIPTION,_from_bytes)
+#define fe_to_mont MAKE_FN_NAME(CURVE_DESCRIPTION,_to_montgomery)
 
 typedef WORD fe[LIMBS];
 
@@ -207,4 +212,52 @@ static void point_add(fe x3, fe y3, fe z3, const fe x1,
   fe_cmovznz(y3, z2nz, y1, y_out);
   fe_cmovznz(z_out, z1nz, z2, z_out);
   fe_cmovznz(z3, z2nz, z1, z_out);
+}
+
+/* Use a sliding window optimization method for scalar multiplication
+     Hard-coded window size = 4
+     Implementation inspired from Go's crypto library
+     https://github.com/golang/go/blob/a5cd894318677359f6d07ee74f9004d28b4d164c/src/crypto/internal/nistec/p256.go#L317
+  */
+
+/* Select the n-th element of the table
+   without leaking information about [n] */
+static void table_select(fe out_x, fe out_y, fe out_z, size_t index, uint8_t n) {
+    fe x, y, z = {0};
+    fe_one(x); fe_one(y);
+    for(uint8_t i = 1 ; i < 16 ; ++i) {
+        WORD cond = i ^ n;
+        fe_cmovznz(x, cond, generator_table[index][n - 1][0], x);
+        fe_cmovznz(y, cond, generator_table[index][n - 1][1], y);
+        fe_cmovznz(z, cond, generator_table[index][n - 1][2], z);
+    }
+    fe_copy(out_x, x);
+    fe_copy(out_y, y);
+    fe_copy(out_z, z);
+}
+
+/* Returns [kG] by decomposing [k] in binary form, and adding
+   [2^0G * k_0 + 2^1G * k_1 + ...] in constant time using
+   pre-computed values of 2^iG */
+static void scalar_mult_base(fe x2, fe y2, fe z2,
+                             const uint8_t* scalar, size_t len) {
+    // P = 0
+    fe p_x, p_y, p_z = {0};
+    fe_one(p_x);
+    fe_one(p_y);
+    size_t index = 0;
+    for(size_t i = 0 ; i < len ; ++i) {
+        fe s_x, s_y, s_z;
+        uint8_t window = scalar[i] & 0xf;
+        table_select(s_x, s_y, s_z, index, window);
+        point_add(p_x, p_y, p_z, p_x, p_y, p_z, 0, s_x, s_y, s_z);
+        index++;
+        window = scalar[i] >> 4;
+        table_select(s_x, s_y, s_z, index, window);
+        point_add(p_x, p_y, p_z, p_x, p_y, p_z, 0, s_x, s_y, s_z);
+        index++;
+    }
+    fe_copy(x2, p_x);
+    fe_copy(y2, p_y);
+    fe_copy(z2, p_z);
 }
