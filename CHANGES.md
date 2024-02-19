@@ -1,5 +1,8 @@
 ## unreleased
 
+* mirage-crypto-ec: use sliding window method with pre-computed calues of
+  multiples of the generator point for NIST curves, speedup around 4x for P-256
+  sign (#191 @Firobe, review @palainp @hannesm)
 * mirage-crypto-ec: documentation: warn about power timing analysis on `k` in
   Dsa.sign (#195 @hannesm, as proposed by @edwintorok)
 * mirage-crypto-ec: replace internal Cstruct.t by string (speedup up to 2.5x)
