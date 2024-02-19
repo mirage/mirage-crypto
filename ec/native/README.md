@@ -10,3 +10,8 @@ and has some modifications: the "inversion" function is declared "static",
 and the convenience function "inversion" is provided.
 
 The "*_stubs.c" files are handcrafted.
+
+The "p*_tables_32/64.c" are generated from `../gen_tables` (see each file's
+header) and contain pre-computed data to speed up scalar multiplication for
+ECDSA. The 64- and 32-bit tables must be respectively generated from a 64-bit or
+32-bit build of `gen_tables`.

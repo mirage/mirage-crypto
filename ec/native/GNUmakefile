@@ -43,7 +43,9 @@ p224_tables_32.h:
 	$(GEN_TABLE) p224 32 > $@
 
 .PHONY: p224
-p224: p224_64.h p224_32.h np224_64.h np224_32.h p224_tables_64.h p224_tables_32.h
+p224: p224_64.h p224_32.h np224_64.h np224_32.h
+
+p224_tables: p224_tables_64.h p224_tables_32.h
 
 
 # The NIST curve P-256 (AKA SECP256R1)
@@ -77,7 +79,9 @@ p256_tables_32.h:
 	$(GEN_TABLE) p256 32 > $@
 
 .PHONY: p256
-p256: p256_64.h p256_32.h np256_64.h np256_32.h p256_tables_64.h p256_tables_32.h
+p256: p256_64.h p256_32.h np256_64.h np256_32.h
+
+p224_tables: p256_tables_64.h p256_tables_32.h
 
 # The NIST curve P-384 (AKA SECP384R1)
 P384="2^384 - 2^128 - 2^96 + 2^32 - 1"
@@ -110,7 +114,9 @@ p384_tables_32.h:
 	$(GEN_TABLE) p384 32 > $@
 
 .PHONY: p384
-p384: p384_64.h p384_32.h np384_64.h np384_32.h p384_tables_64.h p384_tables_32.h
+p384: p384_64.h p384_32.h np384_64.h np384_32.h
+
+p384_tables: p384_tables_64.h p384_tables_32.h
 
 # The NIST curve P-521 (AKA SECP521R1)
 P521="2^521 - 1"
@@ -143,7 +149,9 @@ p521_tables_32.h:
 	$(GEN_TABLE) p521 32 > $@
 
 .PHONY: p521
-p521: p521_64.h p521_32.h np521_64.h np521_32.h p521_tables_64.h p521_tables_32.h
+p521: p521_64.h p521_32.h np521_64.h np521_32.h
+
+p521_tables: p521_tables_64.h p521_tables_32.h
 
 # 25519
 25519="2^255 - 19"
@@ -160,18 +168,23 @@ curve25519_32.h:
 .PHONY: curve25519
 curve25519: curve25519_64.h curve25519_32.h
 
+.PHONY: tables
+tables: p224_tables p256_tables p384_tables p521_tables
 
 .PHONY: clean
 clean:
 	$(RM) p224_32.h p224_64.h np224_32.h np224_64.h
-	$(RM) p224_tables_32.h p224_tables_64.h
 	$(RM) p256_32.h p256_64.h np256_32.h np256_64.h
-	$(RM) p256_tables_32.h p256_tables_64.h
 	$(RM) p384_32.h p384_64.h np384_32.h np384_64.h
-	$(RM) p384_tables_32.h p384_tables_64.h
 	$(RM) p521_32.h p521_64.h np521_32.h np521_64.h
-	$(RM) p521_tables_32.h p521_tables_64.h
 	$(RM) curve25519_32.h curve25519_64.h
+
+.PHONY: clean_tables
+clean_tables:
+	$(RM) p224_tables_32.h p224_tables_64.h
+	$(RM) p256_tables_32.h p256_tables_64.h
+	$(RM) p384_tables_32.h p384_tables_64.h
+	$(RM) p521_tables_32.h p521_tables_64.h
 
 .PHONY: all
 all: p224 p256 p384 p521 curve25519
