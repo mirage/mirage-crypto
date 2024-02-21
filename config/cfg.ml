@@ -46,7 +46,7 @@ let () =
   let std_flags =
     match ccomp_type_opt with
     | Some "msvc" -> ["/Wall"]
-    | _ -> ["-Wall"]
+    | _ -> ["--std=c11"; "-Wall"; "-Wextra"; "-Wpedantic"; "-O3"]
   in
   let warn_flags =
     (* See #178, there may be false positives on ppc&s390 with no-stringop-overflow *)
