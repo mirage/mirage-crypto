@@ -29,8 +29,9 @@
 name: Build with DkML compiler
 
 on:
-  # trigger on any push
+  # trigger on any push or pull request
   push:
+  pull_request:
   # ... or trigger manually from GitHub web interface
   workflow_dispatch:
 
