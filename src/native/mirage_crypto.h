@@ -9,7 +9,11 @@
 #include <caml/bigarray.h>
 
 #ifdef ACCELERATE
-#include <x86intrin.h>
+# ifdef _MSC_VER
+#  include <intrin.h>
+# else
+#  include <x86intrin.h>
+# endif
 #define __mc_ACCELERATE__
 #define __mc_detect_features__
 #endif
@@ -47,16 +51,23 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 
 #endif /* __mc_ACCELERATE__ */
 
-#if defined (__x86_64__) || defined (__aarch64__) || defined (__powerpc64__) || (64 == __riscv_xlen) || defined (__s390x__) || (defined (__mips__) && _MIPS_SIM==_ABI64) || defined (__loongarch_lp64)
+#if defined (__x86_64__) || defined (__aarch64__) || defined (__powerpc64__) || (64 == __riscv_xlen) || defined (__s390x__) || (defined (__mips__) && _MIPS_SIM==_ABI64) || defined (__loongarch_lp64) || (1 == _WIN64)
 #define ARCH_64BIT
-#elif defined (__i386__) || defined (__arm__) || (32 == __riscv_xlen) || (defined (__mips__) && _MIPS_SIM==_ABIO32)
+#elif defined (__i386__) || defined (__arm__) || (32 == __riscv_xlen) || (defined (__mips__) && _MIPS_SIM==_ABIO32) || (1 == _WIN32)
 #define ARCH_32BIT
 #else
 #error "unsupported platform"
 #endif
 
 #ifndef __unused
-#define __unused(x) x __attribute__((unused))
+# if defined(_MSC_VER) && _MSC_VER >= 1500
+#  define __unused(x) __pragma( warning (push) ) \
+    __pragma( warning (disable:4189 ) ) \
+    x \
+    __pragma( warning (pop))
+# else
+#  define __unused(x) x __attribute__((unused))
+# endif
 #endif
 #define __unit() value __unused(_)
 

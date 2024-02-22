@@ -27,7 +27,7 @@ static int _mc_aesni_rk_size (uint8_t rounds) {
   return (rounds + 1) * 16 + 15;
 }
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_WIN64)
 static inline __m128i* __rk (const void *rk) {
   return (__m128i *) (((uint64_t)rk + 15) & -16);
 }
@@ -48,10 +48,17 @@ static inline __m128i __mix (__m128i r1, __m128i r2) {
 
 #define __assist(r1, r2, mode) (__mix (r1, _mm_shuffle_epi32 (r2, mode)))
 
+#ifdef _MSC_VER
+static inline void __pack (__m128i *o1, __m128i *o2, __m128i r1, __m128i r2, __m128i r3) {
+  *o1 = _mm_castpd_si128 (_mm_shuffle_pd (_mm_castsi128_pd (r1), _mm_castsi128_pd (r2), 0));
+  *o2 = _mm_castpd_si128 (_mm_shuffle_pd (_mm_castsi128_pd (r2), _mm_castsi128_pd (r3), 1));
+}
+#else
 static inline void __pack (__m128i *o1, __m128i *o2, __m128i r1, __m128i r2, __m128i r3) {
   *o1 = (__m128i) _mm_shuffle_pd ((__m128d) r1, (__m128d) r2, 0);
   *o2 = (__m128i) _mm_shuffle_pd ((__m128d) r2, (__m128d) r3, 1);
 }
+#endif
 
 static inline void _mc_aesni_derive_e_key (const uint8_t *key, uint8_t *rk0, uint8_t rounds) {
 

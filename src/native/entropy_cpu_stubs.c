@@ -40,6 +40,22 @@
    output.
 */
 
+#if defined (_MSC_VER)
+#include <immintrin.h>
+
+#if defined (_WIN64)
+#define random_t unsigned long long
+#define _rdseed_step _rdseed64_step
+#define _rdrand_step _rdrand64_step
+
+#elif defined (_WIN32)
+#define random_t unsigned int
+#define _rdseed_step _rdseed32_step
+#define _rdrand_step _rdrand32_step
+#endif
+
+#endif /* _MSC_VER */
+
 #if defined (__arm__)
 /*
  * The ideal timing source on ARM are the performance counters, but these are
@@ -153,7 +169,7 @@ static inline unsigned long get_count(void) {
 #endif
 
 CAMLprim value mc_cycle_counter (value __unused(unit)) {
-#if defined (__i386__) || defined (__x86_64__)
+#if defined (__i386__) || defined (__x86_64__) || defined (_MSC_VER)
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
   return Val_long (read_virtual_count ());

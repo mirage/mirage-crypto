@@ -7,7 +7,10 @@ typedef struct poly1305_context {
         unsigned char opaque[136];
 } poly1305_context;
 
-#ifdef ARCH_64BIT
+/* 64-bit Windows sets ARCH_64BIT but poly1305-donna-64 requires 128-bit integers
+ * that are not supported by the Microsoft compiler. Drop down to 32-bit for MSVC.
+ */
+#if defined(ARCH_64BIT) && !defined(_MSC_VER)
 #include "poly1305-donna-64.h"
 #else
 #include "poly1305-donna-32.h"

@@ -1,6 +1,9 @@
 #include "mirage_crypto.h"
 
-#ifdef ARCH_64BIT
+/* Microsoft compiler does not support 128-bit integers. Drop down to
+ * 32-bit for MSVC.
+ */
+#if defined(ARCH_64BIT) && !defined(_MSC_VER)
 #include "np521_64.h"
 #define LIMBS 9
 #define WORD uint64_t

@@ -39,7 +39,10 @@
 #include "mirage_crypto.h"
 #include <string.h>
 
-#if defined (ARCH_32BIT)
+/* Microsoft compiler does not support 128-bit integers. Drop down to
+ * 32-bit for MSVC.
+ */
+#if defined (ARCH_32BIT) || defined(_MSC_VER)
 
 /*
  * We cannot really autodetect whether multiplications are "slow" or

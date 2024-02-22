@@ -121,8 +121,8 @@ static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
 	while (nb--) *d++ = *s++;
 }
 
-#ifdef __BYTE_ORDER__
-#if __ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__
+#if defined(_MSC_VER) || defined(__BYTE_ORDER__)
+#if defined(_MSC_VER) || (__ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__)
 
 # define be32_to_cpu(a) bitfn_swap32(a)
 # define cpu_to_be32(a) bitfn_swap32(a)
