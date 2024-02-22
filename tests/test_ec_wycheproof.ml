@@ -25,10 +25,10 @@ let parse_asn1 curve s =
       else if not (Asn.OID.equal oid2 prime_oid) then Error "ASN1: wrong oid 2"
       else Ok (Cstruct.to_string data)
 
-let ( >>= ) xr f = match xr with Error _ as e -> e | Ok x -> f x
+let ( let* ) = Result.bind
 
 let parse_point curve p =
-  parse_asn1 curve p >>= fun h ->
+  let* h = parse_asn1 curve p in
   Ok Hex.(to_cstruct (of_string h))
 
 let to_string_result ~pp_error = function
@@ -108,8 +108,8 @@ let is_ok = function Ok _ -> true | Error _ -> false
 
 let interpret_invalid_test curve { public; private_ } () =
   let result =
-    parse_point curve public >>= fun public_key ->
-    parse_secret curve private_ >>= fun raw_private_key ->
+    let* public_key = parse_point curve public in
+    let* raw_private_key = parse_secret curve private_ in
     perform_key_exchange curve ~public_key ~raw_private_key
   in
   Alcotest.check Alcotest.bool __LOC__ false (is_ok result)
@@ -127,13 +127,13 @@ let make_ecdh_test curve (test : ecdh_test) =
   | Invalid ->
       Ok (Invalid_test { public = test.public; private_ = test.private_ })
   | Acceptable when curve_compression_test curve ->
-    parse_point curve test.public >>= fun public_key ->
-    parse_secret curve test.private_ >>= fun raw_private_key ->
+    let* public_key = parse_point curve test.public in
+    let* raw_private_key = parse_secret curve test.private_ in
     Ok (Test { public_key; raw_private_key; expected = test.shared })
   | Acceptable -> Ok Skip
   | Valid ->
-    parse_point curve test.public >>= fun public_key ->
-    parse_secret curve test.private_ >>= fun raw_private_key ->
+    let* public_key = parse_point curve test.public in
+    let* raw_private_key = parse_secret curve test.private_ in
     Ok (Test { public_key; raw_private_key; expected = test.shared })
 
 let concat_map f l = List.map f l |> List.concat
