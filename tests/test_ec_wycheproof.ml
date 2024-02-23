@@ -14,19 +14,23 @@ module Asn = struct
 
   let guard p e = if p then Ok () else Error e
 
+  let string_get_uint8 d off =
+    (* adapt once OCaml 4.13 is lower bound *)
+    Bytes.get_uint8 (Bytes.unsafe_of_string d) off
+
   let decode_len start_off buf =
-    let len = String.get_uint8 buf start_off in
+    let len = string_get_uint8 buf start_off in
     if len >= 0x80 then
       let bytes = len - 0x80 in
       let rec g acc off =
         if off = bytes then
           Ok (acc, bytes + start_off + 1)
         else
-          let this = String.get_uint8 buf (start_off + 1 + off) in
+          let this = string_get_uint8 buf (start_off + 1 + off) in
           let* () = guard (off = 0 && this >= 0x80) "badly encoded length" in
           let acc' = acc lsl 8 + this in
           let* () = guard (acc <= acc') "decode_len overflow in acc" in
-          g (acc lsl 8 + String.get_uint8 buf (start_off + 1 + off)) (succ off)
+          g (acc lsl 8 + string_get_uint8 buf (start_off + 1 + off)) (succ off)
       in
       g 0 0
     else
@@ -34,7 +38,7 @@ module Asn = struct
 
   let decode_seq data =
     let* () = guard (String.length data > 2) "decode_seq: data too short" in
-    let tag = String.get_uint8 data 0 in
+    let tag = string_get_uint8 data 0 in
     let* () = guard (tag = 0x30) "decode_seq: bad tag (should be 0x30)" in
     let* len, off = decode_len 1 data in
     let* () = guard (String.length data - off >= len) "decode_seq: too short" in
@@ -46,9 +50,9 @@ module Asn = struct
 
   let decode_2_oid data =
     let decode_one off =
-      let tag = String.get_uint8 data off in
+      let tag = string_get_uint8 data off in
       let* () = guard (tag = 0x06) "decode_oid: bad tag (should be 0x06)" in
-      let len = String.get_uint8 data (off + 1) in
+      let len = string_get_uint8 data (off + 1) in
       let* () = guard (String.length data - 2 - off >= len) "decode_oid: data too short" in
       Ok (String.sub data (off + 2) len, off + 2 + len)
     in
@@ -58,26 +62,26 @@ module Asn = struct
     Ok (first, second)
 
   let decode_bit_string data =
-    let tag = String.get_uint8 data 0 in
+    let tag = string_get_uint8 data 0 in
     let* () = guard (tag = 0x03) "decode_bit_string: bad tag (expected 0x03)" in
     let* len, off = decode_len 1 data in
     let* () = guard (String.length data - off = len) "decode_bit_string: leftover or too short data" in
-    let unused = String.get_uint8 data off in
+    let unused = string_get_uint8 data off in
     let* () = guard (unused = 0) "unused is not 0" in
     Ok (String.sub data (off + 1) (len - 1))
 
   let decode_int_pair data =
     let decode_int off =
       let* () = guard (String.length data - off > 2) "decode_int: data too short" in
-      let tag = String.get_uint8 data off in
+      let tag = string_get_uint8 data off in
       let* () = guard (tag = 0x02) "decode_int: bad tag (should be 0x02)" in
-      let len = String.get_uint8 data (off + 1) in
+      let len = string_get_uint8 data (off + 1) in
       let* () = guard (String.length data - off - 2 >= len) "decode_int: too short" in
-      let fix_one = if String.get_uint8 data (off + 2) = 0x00 then 1 else 0 in
-      let* () = guard (String.get_uint8 data (off + 2) land 0x80 = 0) "decode_int: negative number" in
+      let fix_one = if string_get_uint8 data (off + 2) = 0x00 then 1 else 0 in
+      let* () = guard (string_get_uint8 data (off + 2) land 0x80 = 0) "decode_int: negative number" in
       let* () =
         if String.length data > off + 3 && fix_one = 1 then
-          guard (String.get_uint8 data (off + 3) <> 0x00) "decode_int: leading extra 0 byte"
+          guard (string_get_uint8 data (off + 3) <> 0x00) "decode_int: leading extra 0 byte"
         else
           Ok ()
       in
