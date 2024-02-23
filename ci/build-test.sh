@@ -80,19 +80,15 @@ opamrun update
 
 # Build logic
 #   2024-02-09: Remove mirage-crypto-pk on Windows since no portable GMP library (used by Zarith).
-#       mirage-crypto-ec has a test dependency on mirage-crypto-pk.
-packages_BUILD_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
-packages_TEST_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
+packages_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
 case "$dkml_host_abi" in
     windows_*)
-        packages_BUILD_TOPOLOGICALSORT="$packages_BUILD_TOPOLOGICALSORT,mirage-crypto-ec"
+        packages_TOPOLOGICALSORT="$packages_TOPOLOGICALSORT,mirage-crypto-ec"
         ;;
     *)
-        packages_BUILD_TOPOLOGICALSORT="$packages_BUILD_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
-        packages_TEST_TOPOLOGICALSORT="$packages_TEST_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
+        packages_TOPOLOGICALSORT="$packages_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
 esac
 #   shellcheck disable=SC2086
-opamrun install --yes --deps-only --with-test $(echo $packages_TEST_TOPOLOGICALSORT | tr ',' ' ')
-opamrun install --yes --deps-only $(echo $packages_BUILD_TOPOLOGICALSORT | tr ',' ' ')
-opamrun exec -- dune build -p "$packages_BUILD_TOPOLOGICALSORT"
-opamrun exec -- dune runtest -p "$packages_TEST_TOPOLOGICALSORT"
+opamrun install --yes --deps-only --with-test $(echo $packages_TOPOLOGICALSORT | tr ',' ' ')
+opamrun exec -- dune build -p "$packages_TOPOLOGICALSORT"
+opamrun exec -- dune runtest -p "$packages_TOPOLOGICALSORT"
