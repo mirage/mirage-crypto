@@ -4,6 +4,14 @@ open Mirage_crypto_ec
 
 let ( let* ) = Result.bind
 
+let concat_map f l =
+  (* adapt once OCaml 4.10 is lower bound *)
+  List.map f l |> List.concat
+
+let string_get_uint8 d off =
+  (* adapt once OCaml 4.13 is lower bound *)
+  Bytes.get_uint8 (Bytes.unsafe_of_string d) off
+
 let hex = Alcotest.testable Wycheproof.pp_hex Wycheproof.equal_hex
 
 module Asn = struct
@@ -13,10 +21,6 @@ module Asn = struct
      build on windows with CL.EXE). *)
 
   let guard p e = if p then Ok () else Error e
-
-  let string_get_uint8 d off =
-    (* adapt once OCaml 4.13 is lower bound *)
-    Bytes.get_uint8 (Bytes.unsafe_of_string d) off
 
   let decode_len start_off buf =
     let len = string_get_uint8 buf start_off in
@@ -95,7 +99,7 @@ module Asn = struct
   let encode_oid = function
     | first :: second :: rt ->
       let oct1 = 40 * first + second in
-      let octs = List.concat_map (fun x ->
+      let octs = concat_map (fun x ->
           let fst = x / 16384
           and snd = x / 128
           and thr = x mod 128
@@ -251,8 +255,6 @@ let make_ecdh_test curve (test : ecdh_test) =
     let* public_key = Asn.parse_point curve test.public in
     let* raw_private_key = parse_secret curve test.private_ in
     Ok (Test { public_key; raw_private_key; expected = test.shared })
-
-let concat_map f l = List.map f l |> List.concat
 
 let to_ecdh_tests curve (x : ecdh_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment in
