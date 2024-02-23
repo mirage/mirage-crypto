@@ -50,10 +50,6 @@ jobs:
     runs-on: ${{ matrix.gh_os }}
     name: build / ${{ matrix.abi_pattern }}
 
-    # mirage-crypto does not support MSVC as of 2023-09-03. Remove
-    # this when MSVC is properly supported.
-    continue-on-error: true
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
