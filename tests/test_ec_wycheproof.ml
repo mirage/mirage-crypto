@@ -131,7 +131,7 @@ module Asn = struct
         else if not (String.equal oid2 prime_oid) then
           Error "ASN1: wrong oid 2"
         else
-          Ok data
+          Ok (Cstruct.of_string data)
 
   let parse_signature s =
     let* r = decode_seq s in
@@ -141,10 +141,6 @@ module Asn = struct
       let* r, s = decode_int_pair data in
       Ok (Cstruct.of_string r, Cstruct.of_string s)
 end
-
-let parse_point curve p =
-  let* h = Asn.parse_point curve p in
-  Ok Hex.(to_cstruct (of_string h))
 
 let to_string_result ~pp_error = function
   | Ok _ as ok -> ok
@@ -224,7 +220,7 @@ let is_ok = function Ok _ -> true | Error _ -> false
 
 let interpret_invalid_test curve { public; private_ } () =
   let result =
-    let* public_key = parse_point curve public in
+    let* public_key = Asn.parse_point curve public in
     let* raw_private_key = parse_secret curve private_ in
     perform_key_exchange curve ~public_key ~raw_private_key
   in
@@ -243,12 +239,12 @@ let make_ecdh_test curve (test : ecdh_test) =
   | Invalid ->
       Ok (Invalid_test { public = test.public; private_ = test.private_ })
   | Acceptable when curve_compression_test curve ->
-    let* public_key = parse_point curve test.public in
+    let* public_key = Asn.parse_point curve test.public in
     let* raw_private_key = parse_secret curve test.private_ in
     Ok (Test { public_key; raw_private_key; expected = test.shared })
   | Acceptable -> Ok Skip
   | Valid ->
-    let* public_key = parse_point curve test.public in
+    let* public_key = Asn.parse_point curve test.public in
     let* raw_private_key = parse_secret curve test.private_ in
     Ok (Test { public_key; raw_private_key; expected = test.shared })
 
@@ -270,8 +266,6 @@ let ecdh_tests file =
   concat_map (fun (group : ecdh_test_group) ->
       concat_map (to_ecdh_tests group.curve) group.tests)
     groups
-
-let parse_sig s = Asn.parse_signature s
 
 let make_ecdsa_test curve key hash (tst : dsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
@@ -308,14 +302,14 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
   | Acceptable
   | Invalid ->
     let f () =
-      match parse_sig tst.sig_ with
+      match Asn.parse_signature tst.sig_ with
       | Ok (r, s) -> Alcotest.(check bool __LOC__ false (verified (r, s)))
       | Error _s -> ()
     in
     name, `Quick, f
   | Valid ->
     let f () =
-      match parse_sig tst.sig_ with
+      match Asn.parse_signature tst.sig_ with
       | Ok (r, s) -> Alcotest.(check bool __LOC__ true (verified (r, s)))
       | Error s -> Alcotest.fail s
     in
@@ -342,12 +336,12 @@ let ecdsa_tests file =
 
 let to_x25519_test (x : ecdh_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment in
-  let pub = Hex.(to_cstruct (of_string x.public))
+  let pub = Cstruct.of_string x.public
   and priv =
-    match X25519.secret_of_cs Hex.(to_cstruct (of_string x.private_)) with
+    match X25519.secret_of_cs (Cstruct.of_string x.private_) with
     | Ok (p, _) -> p
     | Error _ -> assert false
-  and shared = Hex.(to_cstruct (of_string x.shared))
+  and shared = Cstruct.of_string x.shared
   in
   match x.result with
   | Acceptable ->
@@ -389,8 +383,8 @@ let x25519_tests =
 
 let to_ed25519_test (priv, pub) (x : dsa_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment in
-  let msg = Hex.(to_cstruct (of_string x.msg))
-  and sig_cs = Hex.(to_cstruct (of_string x.sig_))
+  let msg = Cstruct.of_string x.msg
+  and sig_cs = Cstruct.of_string x.sig_
   in
   match x.result with
   | Invalid ->
@@ -410,8 +404,8 @@ let to_ed25519_test (priv, pub) (x : dsa_test) =
   | Acceptable -> assert false
 
 let to_ed25519_keys (key : eddsa_key) =
-  let priv_cs = Hex.(to_cstruct (of_string key.sk))
-  and pub_cs = Hex.(to_cstruct (of_string key.pk))
+  let priv_cs = Cstruct.of_string key.sk
+  and pub_cs = Cstruct.of_string key.pk
   in
   match Ed25519.priv_of_cstruct priv_cs, Ed25519.pub_of_cstruct pub_cs with
   | Ok priv, Ok pub ->
