@@ -66,8 +66,7 @@
    ecdsa_secp384r1_sha384_test.json ecdsa_secp384r1_sha512_test.json
    ecdh_secp521r1_test.json ecdsa_secp521r1_sha512_test.json
    x25519_test.json eddsa_test.json)
- (libraries alcotest mirage-crypto-ec wycheproof asn1-combinators
-   mirage-crypto-pk mirage-crypto)
+ (libraries alcotest mirage-crypto-ec wycheproof mirage-crypto)
  (package mirage-crypto-ec))
 
 (tests
