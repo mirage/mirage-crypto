@@ -89,6 +89,7 @@ case "$dkml_host_abi" in
         packages_TOPOLOGICALSORT="$packages_TOPOLOGICALSORT,mirage-crypto-pk,mirage-crypto-ec"
 esac
 #   shellcheck disable=SC2086
+opamrun pin add -y -n .
 opamrun install --yes --deps-only --with-test $(echo $packages_TOPOLOGICALSORT | tr ',' ' ')
 opamrun exec -- dune build -p "$packages_TOPOLOGICALSORT"
 opamrun exec -- dune runtest -p "$packages_TOPOLOGICALSORT"
