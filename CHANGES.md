@@ -1,5 +1,12 @@
 ## unreleased
 
+* mirage-crypto, mirage-crypto-rng{,lwt,mirage}: support CL.EXE compiler
+  (#137 @jonahbeckford) - mirage-crypto-pk not yet due to gmp dependency,
+  mirage-crypto-ec doesn't pass testsuite
+* mirage-crypto-ec: use simpler square root for ed25519 - saving 3
+  multiplications and 2 squarings, details
+  https://mailarchive.ietf.org/arch/msg/cfrg/qlKpMBqxXZYmDpXXIx6LO3Oznv4/
+  (#196 @hannesm)
 * mirage-crypto-ec: use sliding window method with pre-computed calues of
   multiples of the generator point for NIST curves, speedup around 4x for P-256
   sign (#191 @Firobe, review @palainp @hannesm)
@@ -13,6 +20,8 @@
 * mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
 * mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
   reported by @palainp)
+* mirage-crypto-ec: avoid mirage-crypto-pk and asn1-combinators test dependency
+  (instead, craft our own asn.1 decoder -- #200 @hannesm)
 
 ## v0.11.2 (2023-09-18)
 
