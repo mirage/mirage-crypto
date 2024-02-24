@@ -16,6 +16,8 @@
   (#146 @dinosaure @hannesm @reynir, review @Firobe @palainp @hannesm @reynir)
 * bench/speed: add EC (ECDSA & EdDSA generate/sign/verify, ECDH secret/share)
   operations (#192 @hannesm)
+* mirage-crypto-rng: use rdtime instead of rdcycle on RISC-V (rdcycle is
+  privileged since Linux kernel 6.6) (#194 @AdrianBunk, review by @edwintorok)
 * mirage-crypto-rng: support Loongarch (#190 @fangyaling, review @loongson-zn)
 * mirage-crypto-rng: support NetBSD (#189 @drchrispinnock)
 * mirage-crypto-rng: allocate less in Fortuna when feeding (#188 @hannesm,
