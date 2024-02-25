@@ -65,7 +65,7 @@ let throughput title f =
 
 let count_period = 10.
 
-let count f n =
+let count_it f n =
   ignore (f n);
   let i1 = 5 in
   let t1 = Time.time ~n:i1 f n in
@@ -77,6 +77,50 @@ let count title f to_str args =
   Printf.printf "\n* [%s]\n%!" title ;
   args |> List.iter @@ fun arg ->
   Gc.full_major () ;
-  let iters, time = count f arg in
+  let iters, time = count_it f arg in
   Printf.printf "    %s:  %.03f ops per second (%d iters in %.03f)\n%!"
     (to_str arg) (float iters /. time) iters time
+
+let footer =
+  "First column in bytes, all others in MB/s (1MB = 1024 * 1024)%!"
+
+let print_result_table ?(first = "size") ?(footer = footer) alg rs =
+  if rs = [] then
+    print_endline "rs is empty"
+  else
+    let first = first, List.map fst (snd (List.hd rs)) in
+    let col_width = 13 in
+    let space ?(extra = 0) s = String.make (col_width - String.length s - extra) ' ' in
+    print_endline "";
+    print_endline ("## " ^ alg);
+    print_endline "";
+    (let extra = 7 in
+     if String.length (fst first) > col_width - extra then
+       Printf.printf "| %s " (String.sub (fst first) 0 (col_width - extra - 1))
+     else
+       Printf.printf "| %s%s" (fst first) (space ~extra (fst first)));
+    let rpad s =
+      if String.length s > col_width - 2 then
+        Printf.printf "| %s " (String.sub s 0 (col_width - 2))
+      else
+        Printf.printf "| %s%s " (space ~extra:2 s) s
+    in
+    List.iter rpad (List.map fst rs);
+    Printf.printf "|\n";
+    Printf.printf "|-------|%s\n"
+      (String.concat "" (List.map (fun _ -> String.make col_width '-' ^ "|") rs));
+    List.iter (fun size ->
+        Printf.printf "| %5d " size;
+        let vals =
+          List.map (fun data ->
+              Option.value ~default:0.0 (List.assoc_opt size data))
+            (List.map snd rs)
+        in
+        let max_bw = List.fold_left Float.max 0.0 vals in
+        List.iter (fun v ->
+            let st = if Float.equal max_bw v then "*" else " " in
+            Printf.printf "| %s%9.3f%s " st v st)
+          vals;
+        Printf.printf "|\n";
+      ) (snd first);
+    Printf.printf "\n%s\n%!" footer

@@ -15,3 +15,9 @@
  (modules digests)
  (libraries helper mirage-crypto mirage-crypto-rng nocrypto digestif sha cryptokit bos)
  (optional))
+
+(executables
+ (names ec)
+ (modules ec)
+ (libraries helper mirage-crypto mirage-crypto-rng mirage-crypto-ec callipyge rfc7748 hacl_x25519 bos)
+ (optional))
