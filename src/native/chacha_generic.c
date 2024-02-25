@@ -25,7 +25,7 @@ void mc_chacha_core_generic(int count, const uint32_t *src, uint32_t *dst) {
   }
   for (int i = 0; i < 16; i++) {
     uint32_t xi = x[i];
-    uint32_t hj = src[i];
+    uint32_t hj = cpu_to_le32(src[i]);
     dst[i] = le32_to_cpu(xi + hj);
   }
 }
