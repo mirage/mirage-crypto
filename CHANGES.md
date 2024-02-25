@@ -32,8 +32,10 @@
 * mirage-crypto-rng-eio: update to eio 0.12 (#182 @talex5)
 * mirage-crypto-rng: fix typo in RNG setup (#179 @samueldurantes)
 * macOS: on arm64 with clang 14.0.3, avoid instcombine (due to miscompilations)
-  reported by @samoht https://github.com/mit-plv/fiat-crypto/issues/1606#issuecomment-1560122239
-  re-reported in https://github.com/ulrikstrid/ocaml-jose/issues/63 and https://github.com/mirleft/ocaml-tls/issues/478
+  reported by @samoht
+  https://github.com/mit-plv/fiat-crypto/issues/1606#issuecomment-1560122239
+  re-reported in https://github.com/ulrikstrid/ocaml-jose/issues/63 and
+  https://github.com/mirleft/ocaml-tls/issues/478
   (#185 @hannesm @kit-ty-kate)
 * avoid "stringop-overflow" warning on PPC64 and S390x (spurious warnings) when
   in devel mode (#178 #184 @avsm @hannesm)
