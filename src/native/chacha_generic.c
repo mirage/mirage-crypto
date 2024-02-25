@@ -11,9 +11,7 @@ static inline void mc_chacha_quarterround(uint32_t *x, int a, int b, int c, int 
 
 void mc_chacha_core_generic(int count, const uint32_t *src, uint32_t *dst) {
   uint32_t x[16];
-  for (int i = 0; i < 16; i++) {
-    x[i] = src[i];
-  }
+  cpu_to_le32_array(x, src, 16);
   for (int i = 0; i < count; i++) {
     mc_chacha_quarterround(x, 0, 4, 8, 12);
     mc_chacha_quarterround(x, 1, 5, 9, 13);
@@ -28,7 +26,7 @@ void mc_chacha_core_generic(int count, const uint32_t *src, uint32_t *dst) {
   for (int i = 0; i < 16; i++) {
     uint32_t xi = x[i];
     uint32_t hj = src[i];
-    dst[i] = xi + hj;
+    dst[i] = le32_to_cpu(xi + hj);
   }
 }
 
