@@ -1,21 +1,22 @@
 module type S = sig
-  type mac = Cstruct.t
+  type mac = string
   type 'a iter = 'a Uncommon.iter
 
   type t
   val mac_size : int
 
-  val empty : key:Cstruct.t -> t
-  val feed : t -> Cstruct.t -> t
-  val feedi : t -> Cstruct.t iter -> t
-  val get : t -> Cstruct.t
+  val empty : key:string -> t
+  val feed : t -> string -> t
+  val feedi : t -> string iter -> t
+  val get : t -> string
 
-  val mac : key:Cstruct.t -> Cstruct.t -> mac
-  val maci : key:Cstruct.t -> Cstruct.t iter -> mac
+  val mac : key:string -> string -> mac
+  val maci : key:string -> string iter -> mac
+  val macl : key:string -> string list -> mac
 end
 
 module It : S = struct
-  type mac = Cstruct.t
+  type mac = string
   type 'a iter = 'a Uncommon.iter
 
   module P = Native.Poly1305
@@ -25,14 +26,14 @@ module It : S = struct
 
   let dup = Bytes.copy
 
-  let empty ~key:{ Cstruct.buffer ; off ; len } =
+  let empty ~key =
     let ctx = Bytes.create (P.ctx_size ()) in
-    if len <> 32 then invalid_arg "Poly1305 key must be 32 bytes" ;
-    P.init ctx buffer off ;
+    if String.length key <> 32 then invalid_arg "Poly1305 key must be 32 bytes" ;
+    P.init ctx key ;
     ctx
 
-  let update ctx { Cstruct.buffer ; off ; len } =
-    P.update ctx buffer off len
+  let update ctx data =
+    P.update ctx data (String.length data)
 
   let feed ctx cs =
     let t = dup ctx in
@@ -45,13 +46,18 @@ module It : S = struct
     t
 
   let final ctx =
-    let res = Cstruct.create mac_size in
-    P.finalize ctx res.buffer res.off;
-    res
+    let res = Bytes.create mac_size in
+    P.finalize ctx res;
+    Bytes.unsafe_to_string res
 
   let get ctx = final (dup ctx)
 
   let mac ~key data = feed (empty ~key) data |> final
 
   let maci ~key iter = feedi (empty ~key) iter |> final
+
+  let macl ~key datas =
+    let ctx = empty ~key in
+    List.iter (update ctx) datas;
+    final ctx
 end

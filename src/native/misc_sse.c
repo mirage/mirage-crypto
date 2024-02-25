@@ -2,7 +2,7 @@
 
 #ifdef __mc_ACCELERATE__
 
-static inline void xor_into (uint8_t *src, uint8_t *dst, size_t n) {
+static inline void xor_into (const uint8_t *src, uint8_t *dst, size_t n) {
 /* see issue #70 #81 for alignment considerations (memcpy used below) */
 #ifdef ARCH_64BIT
   __m128i r;
@@ -44,6 +44,14 @@ mc_xor_into (value b1, value off1, value b2, value off2, value n) {
   _mc_switch_accel(ssse3,
     mc_xor_into_generic(b1, off1, b2, off2, n),
     xor_into (_ba_uint8_off (b1, off1), _ba_uint8_off (b2, off2), Int_val (n)))
+  return Val_unit;
+}
+
+CAMLprim value
+mc_xor_into_bytes (value b1, value off1, value b2, value off2, value n) {
+  _mc_switch_accel(ssse3,
+    mc_xor_into_bytes_generic(b1, off1, b2, off2, n),
+    xor_into (_st_uint8 (b1) + Long_val(off1), Bytes_val (b2) + Long_val(off2), Int_val (n)))
   return Val_unit;
 }
 

@@ -1,6 +1,6 @@
 #include "mirage_crypto.h"
 
-static inline void xor_into (uint8_t *src, uint8_t *dst, size_t n) {
+static inline void xor_into (const uint8_t *src, uint8_t *dst, size_t n) {
 /* see issue #70 #81 for alignment considerations (memcpy used below) */
 #ifdef ARCH_64BIT
   uint64_t s;
@@ -56,6 +56,12 @@ static inline void _mc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t bloc
 CAMLprim value
 mc_xor_into_generic (value b1, value off1, value b2, value off2, value n) {
   xor_into (_ba_uint8_off (b1, off1), _ba_uint8_off (b2, off2), Int_val (n));
+  return Val_unit;
+}
+
+CAMLprim value
+mc_xor_into_bytes_generic (value b1, value off1, value b2, value off2, value n) {
+  xor_into (_st_uint8 (b1) + Long_val(off1), Bytes_val (b2) + Long_val(off2), Int_val (n));
   return Val_unit;
 }
 

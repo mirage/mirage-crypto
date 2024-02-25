@@ -31,13 +31,13 @@ module DES = struct
 end
 
 module Chacha = struct
-  external round : int -> buffer -> off -> buffer -> off -> unit = "mc_chacha_round" [@@noalloc]
+  external round : int -> bytes -> bytes -> off -> unit = "mc_chacha_round" [@@noalloc]
 end
 
 module Poly1305 = struct
-  external init     : ctx -> buffer -> off -> unit = "mc_poly1305_init" [@@noalloc]
-  external update   : ctx -> buffer -> off -> size -> unit = "mc_poly1305_update" [@@noalloc]
-  external finalize : ctx -> buffer -> off -> unit = "mc_poly1305_finalize" [@@noalloc]
+  external init     : ctx -> string -> unit = "mc_poly1305_init" [@@noalloc]
+  external update   : ctx -> string -> size -> unit = "mc_poly1305_update" [@@noalloc]
+  external finalize : ctx -> bytes -> unit = "mc_poly1305_finalize" [@@noalloc]
   external ctx_size : unit -> int = "mc_poly1305_ctx_size" [@@noalloc]
   external mac_size : unit -> int = "mc_poly1305_mac_size" [@@noalloc]
 end
@@ -94,6 +94,8 @@ end
 (* XXX TODO
  * Unsolved: bounds-checked XORs are slowing things down considerably... *)
 external xor_into : buffer -> off -> buffer -> off -> size -> unit = "mc_xor_into" [@@noalloc]
+
+external xor_into_bytes : string -> off -> bytes -> off -> size -> unit = "mc_xor_into_bytes" [@@noalloc]
 
 external count8be   : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_8_be"    [@@noalloc]
 external count16be  : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_16_be"   [@@noalloc]

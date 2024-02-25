@@ -204,7 +204,7 @@ end
 
 (** The poly1305 message authentication code *)
 module Poly1305 : sig
-  type mac = Cstruct.t
+  type mac = string
 
   type 'a iter = ('a -> unit) -> unit
 
@@ -214,27 +214,30 @@ module Poly1305 : sig
   val mac_size : int
   (** [mac_size] is the size of the output. *)
 
-  val empty : key:Cstruct.t -> t
+  val empty : key:string -> t
   (** [empty] is the empty context with the given [key].
 
       @raise Invalid_argument if key is not 32 bytes. *)
 
-  val feed : t -> Cstruct.t -> t
+  val feed : t -> string -> t
   (** [feed t msg] adds the information in [msg] to [t]. *)
 
-  val feedi : t -> Cstruct.t iter -> t
+  val feedi : t -> string iter -> t
   (** [feedi t iter] feeds iter into [t]. *)
 
   val get : t -> mac
   (** [get t] is the mac corresponding to [t]. *)
 
-  val mac : key:Cstruct.t -> Cstruct.t -> mac
+  val mac : key:string -> string -> mac
   (** [mac ~key msg] is the all-in-one mac computation:
       [get (feed (empty ~key) msg)]. *)
 
-  val maci : key:Cstruct.t -> Cstruct.t iter -> mac
+  val maci : key:string -> string iter -> mac
   (** [maci ~key iter] is the all-in-one mac computation:
       [get (feedi (empty ~key) iter)]. *)
+
+  val macl : key:string -> string list -> mac
+  (** [macl ~key datas] computes the [mac] of [datas]. *)
 end
 
 (** {1 Symmetric-key cryptography} *)
@@ -506,7 +509,7 @@ end
 module Chacha20 : sig
   include AEAD
 
-  val crypt : key:key -> nonce:Cstruct.t -> ?ctr:int64 -> Cstruct.t -> Cstruct.t
+  val crypt : key:key -> nonce:string -> ?ctr:int64 -> string -> string
   (** [crypt ~key ~nonce ~ctr data] generates a ChaCha20 key stream using
       the [key], and [nonce]. The [ctr] defaults to 0. The generated key
       stream is of the same length as [data], and the output is the XOR
@@ -520,6 +523,9 @@ module Chacha20 : sig
       IETF mode (and counter fit into 32 bits), or [key] must be either 16
       bytes or 32 bytes and [nonce] 8 bytes.
   *)
+
+  val auth_enc_str : key:key -> nonce:string -> ?adata:string ->
+    string -> string
 end
 
 (** Streaming ciphers. *)
