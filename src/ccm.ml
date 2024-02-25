@@ -78,10 +78,8 @@ let prepare_header nonce adata plen tlen =
 
 type mode = Encrypt | Decrypt
 
-let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
-  let datalen = Cstruct.length data in
-  let cbcheader = prepare_header nonce adata datalen maclen in
-  let target = Cstruct.create datalen in
+let crypto_core_into ~cipher ~mode ~key ~nonce ~maclen ~adata ~target ~tag_target data =
+  let cbcheader = prepare_header nonce adata (Cstruct.length data) maclen in
 
   let blkprefix, blkpreflen, preflen = gen_ctr_prefix nonce in
   let ctrblock i block =
@@ -104,7 +102,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
          doit (Cstruct.sub block 0 block_size)
               (Cstruct.shift block block_size)
     in
-    doit (Cstruct.create block_size) cbcheader
+    doit tag_target cbcheader
   in
 
   let rec loop iv ctr src target =
@@ -114,15 +112,14 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
       | Decrypt -> target
     in
     match Cstruct.length src with
-    | 0 -> iv
+    | 0 -> ()
     | x when x < block_size ->
        let ctrbl = pad_block target in
        ctrblock ctr ctrbl ;
        Cstruct.blit ctrbl 0 target 0 x ;
        Cs.xor_into src target x ;
        let cbblock = pad_block cbcblock in
-       cbc cbblock iv ;
-       iv
+       cbc cbblock iv
     | _ ->
        ctrblock ctr target ;
        Cs.xor_into src target block_size ;
@@ -132,9 +129,15 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
             (Cstruct.shift src block_size)
             (Cstruct.shift target block_size)
   in
-  let last = loop cbcprep 1 data target in
-  let t = Cstruct.sub last 0 maclen in
-  (target, t)
+  loop cbcprep 1 data target
+
+let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
+  assert (maclen = block_size);
+  let datalen = Cstruct.length data in
+  let target = Cstruct.create datalen in
+  let tag_target = Cstruct.create maclen in
+  crypto_core_into ~cipher ~mode ~key ~nonce ~maclen ~adata ~target ~tag_target data;
+  target, tag_target
 
 let crypto_t t nonce cipher key =
   let ctr = gen_ctr nonce 0 in
@@ -145,6 +148,11 @@ let valid_nonce nonce =
   let nsize = Cstruct.length nonce in
   if nsize < 7 || nsize > 13 then
     invalid_arg "CCM: nonce length not between 7 and 13: %d" nsize
+
+let generation_encryption_into ~cipher ~key ~nonce ~maclen ~adata ~target ~tag_target data =
+  valid_nonce nonce;
+  crypto_core_into ~cipher ~mode:Encrypt ~key ~nonce ~maclen ~adata ~target ~tag_target data;
+  crypto_t tag_target nonce cipher key
 
 let generation_encryption ~cipher ~key ~nonce ~maclen ~adata data =
   valid_nonce nonce;

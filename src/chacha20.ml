@@ -42,36 +42,38 @@ let init ctr ~key ~nonce =
   Cstruct.blit nonce 0 state nonce_off (Cstruct.length nonce) ;
   state, inc
 
-let crypt ~key ~nonce ?(ctr = 0L) data =
+let crypt_into ~key ~nonce ?(ctr = 0L) ~dst data =
   let state, inc = init ctr ~key ~nonce in
   let l = Cstruct.length data in
   let block_count = l // block in
-  let len = block * block_count in
   let last_len =
     let last = l mod block in
     if last = 0 then block else last
   in
-  let key_stream = Cstruct.create_unsafe len in
   let rec loop i = function
     | 0 -> ()
     | 1 ->
-      chacha20_block state i key_stream ;
-      Native.xor_into data.buffer (data.off + i) key_stream.buffer i last_len
+      chacha20_block state i dst ;
+      Native.xor_into data.buffer (data.off + i) dst.buffer i last_len
     | n ->
-      chacha20_block state i key_stream ;
-      Native.xor_into data.buffer (data.off + i) key_stream.buffer i block ;
+      chacha20_block state i dst ;
+      Native.xor_into data.buffer (data.off + i) dst.buffer i block ;
       inc state;
       loop (i + block) (n - 1)
   in
-  loop 0 block_count ;
-  Cstruct.sub key_stream 0 l
+  loop 0 block_count
+
+let crypt ~key ~nonce ?ctr data =
+  let dst = Cstruct.create_unsafe (Cstruct.length data) in
+  crypt_into ~key ~nonce ?ctr ~dst data;
+  dst
 
 module P = Poly1305.It
 
 let generate_poly1305_key ~key ~nonce =
   crypt ~key ~nonce (Cstruct.create 32)
 
-let mac ~key ~adata ciphertext =
+let mac_raw ~key ~adata ciphertext =
   let pad16 b =
     let len = Cstruct.length b mod 16 in
     if len = 0 then Cstruct.empty else Cstruct.create (16 - len)
@@ -87,6 +89,14 @@ let mac ~key ~adata ciphertext =
   let ctx = P.feed ctx ciphertext in
   let ctx = P.feed ctx (pad16 ciphertext) in
   let ctx = P.feed ctx len in
+  ctx
+
+let mac_into ~dst ~key ~adata ciphertext =
+  let ctx = mac_raw ~key ~adata ciphertext in
+  P.get_into ~dst ctx
+
+let mac ~key ~adata ciphertext =
+  let ctx = mac_raw ~key ~adata ciphertext in
   P.get ctx
 
 let authenticate_encrypt_tag ~key ~nonce ?(adata = Cstruct.empty) data =
@@ -98,6 +108,20 @@ let authenticate_encrypt_tag ~key ~nonce ?(adata = Cstruct.empty) data =
 let authenticate_encrypt ~key ~nonce ?adata data =
   let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata data in
   Cstruct.append cdata ctag
+
+let tag_size = P.mac_size
+
+let authenticate_encrypt_into ~tag_first ~key ~nonce ?(adata = Cstruct.empty) ~dst data =
+  let buf, tag =
+    if tag_first then
+      let tag, buf = Cstruct.split dst tag_size in
+      buf, tag
+    else
+      Cstruct.split dst (Cstruct.length dst - tag_size)
+  in
+  crypt_into ~key ~nonce ~ctr:1L ~dst:buf data;
+  let poly1305_key = generate_poly1305_key ~key ~nonce in
+  mac_into ~dst:tag ~key:poly1305_key ~adata buf
 
 let authenticate_decrypt_tag ~key ~nonce ?(adata = Cstruct.empty) ~tag data =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
@@ -111,5 +135,3 @@ let authenticate_decrypt ~key ~nonce ?adata data =
   else
     let cipher, tag = Cstruct.split data (Cstruct.length data - P.mac_size) in
     authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
-
-let tag_size = P.mac_size

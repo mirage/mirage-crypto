@@ -300,6 +300,16 @@ module type AEAD = sig
       returned.
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  val authenticate_encrypt_into : tag_first:bool -> key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> dst:Cstruct.t -> Cstruct.t -> unit
+  (** [authenticat_encrypt_into ~tag_first ~key ~nonce ~adata ~dst src]
+      encrypts and authenticates [src] using [key], [nonce], and [adata]. The
+      resulting ciphertext is blit into [dst]. If [tag_first] is true, the
+      authentication tag is put first, otherwise it is put last.
+
+      @raise Invalid_argument if [nonce] is not of the right size, or [dst] too
+      small, *)
 end
 
 (** Block ciphers.
@@ -433,6 +443,8 @@ module Cipher_block : sig
 
       val decrypt : key:key -> ctr:ctr -> Cstruct.t -> Cstruct.t
       (** [decrypt] is [encrypt]. *)
+
+      val encrypt_into : key:key -> ctr:ctr -> dst:Cstruct.t -> Cstruct.t -> unit
 
       val add_ctr : ctr -> int64 -> ctr
       (** [add_ctr ctr n] adds [n] to [ctr]. *)

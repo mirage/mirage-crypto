@@ -10,4 +10,6 @@ module type AEAD = sig
     ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
   val authenticate_decrypt_tag : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
     tag:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  val authenticate_encrypt_into : tag_first:bool -> key:key -> nonce:Cstruct.t ->
+    ?adata:Cstruct.t -> dst:Cstruct.t -> Cstruct.t -> unit
 end
