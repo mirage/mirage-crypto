@@ -5,27 +5,28 @@ let print_result_table alg rs =
     print_endline "rs is empty"
   else
     let first = "size", List.map fst (snd (List.hd rs)) in
-    let col_width = 11 in
+    let col_width = 12 in
     let space ?(extra = 0) s = String.make (col_width - String.length s - extra) ' ' in
     print_endline "";
-    print_endline "------------";
-    print_endline ("| " ^ alg ^ space ~extra:3 alg ^ " |");
-    print_endline "------------";
-    (let extra = 5 in
+    print_endline ("## " ^ alg);
+    print_endline "";
+    (let extra = 6 in
      if String.length (fst first) > col_width - extra then
-       Printf.printf "%s " (String.sub (fst first) 0 (col_width - extra - 1))
+       Printf.printf "| %s " (String.sub (fst first) 0 (col_width - extra - 1))
      else
-       Printf.printf "%s%s" (fst first) (space ~extra (fst first)));
+       Printf.printf "| %s%s" (fst first) (space ~extra (fst first)));
     let rpad s =
-      if String.length s > col_width - 1 then
-        Printf.printf "%s " (String.sub s 0 (col_width - 1))
+      if String.length s > col_width - 2 then
+        Printf.printf "| %s " (String.sub s 0 (col_width - 2))
       else
-        Printf.printf "%s%s " (space ~extra:1 s) s
+        Printf.printf "| %s%s " (space ~extra:2 s) s
     in
     List.iter rpad (List.map fst rs);
-    Printf.printf "\n";
+    Printf.printf "|\n";
+    Printf.printf "|-------|%s\n"
+      (String.concat "" (List.map (fun _ -> String.make col_width '-' ^ "|") rs));
     List.iter (fun size ->
-        Printf.printf "%5d " size;
+        Printf.printf "| %5d " size;
         let vals =
           List.map (fun data ->
               Option.value ~default:0.0 (List.assoc_opt size data) /. mb)
@@ -34,11 +35,11 @@ let print_result_table alg rs =
         let max_bw = List.fold_left Float.max 0.0 vals in
         List.iter (fun v ->
             let st = if Float.equal max_bw v then "*" else " " in
-            Printf.printf " %s%8.3f%s" st v st)
+            Printf.printf "| %s%8.3f%s " st v st)
           vals;
-        Printf.printf "\n";
+        Printf.printf "|\n";
       ) (snd first);
-    Printf.printf "First column in bytes, all others in MB/s (1MB = 1024 * 1024)\n\n%!"
+    Printf.printf "\nFirst column in bytes, all others in MB/s (1MB = 1024 * 1024)\n%!"
 
 let openssl_speed args =
   let cmd = Bos.Cmd.(v "openssl" % "speed" % "-mr" %% of_list args) in
@@ -77,8 +78,7 @@ let benchmarks = [
       let std = bench "stdlib" through_str Digest.string in
       let ck = bench "cryptokit" through_str Cryptokit.(hash_string (Hash.md5 ())) in
       let os = openssl_speed [ "md5" ] in
-      let rs = [ nc ; mc ; di ; std ; ck ; os ]
-      in
+      let rs = [ nc ; mc ; di ; std ; ck ; os ] in
       print_result_table "MD5" rs;
   );
 
