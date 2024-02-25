@@ -1,5 +1,17 @@
+(library
+ (name helper)
+ (wrapped false)
+ (modules helper)
+ (libraries cstruct mirage-crypto-rng))
+
 (executables
  (names speed)
  (modules speed)
- (libraries mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix
+ (libraries helper mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix
    mirage-crypto-pk mirage-crypto-ec))
+
+(executables
+ (names digests)
+ (modules digests)
+ (libraries helper mirage-crypto mirage-crypto-rng nocrypto digestif sha cryptokit bos)
+ (optional))
