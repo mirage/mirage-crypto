@@ -46,18 +46,22 @@ let crypt_into ~key ~nonce ?(ctr = 0L) ~dst data =
   let state, inc = init ctr ~key ~nonce in
   let l = Cstruct.length data in
   let block_count = l // block in
-  let last_len =
-    let last = l mod block in
-    if last = 0 then block else last
-  in
   let rec loop i = function
     | 0 -> ()
     | 1 ->
-      chacha20_block state i dst ;
-      Native.xor_into data.buffer (data.off + i) dst.buffer i last_len
+      let last = l mod block in
+      if last = 0 then begin
+        chacha20_block state i dst ;
+        Native.xor_into data.buffer (data.off + i) dst.buffer (dst.off + i) block
+      end else begin
+        let tmp = Cstruct.create_unsafe block in
+        chacha20_block state tmp.off tmp ;
+        Native.xor_into data.buffer (data.off + i) tmp.buffer tmp.off last;
+        Cstruct.blit tmp 0 dst i last
+      end
     | n ->
       chacha20_block state i dst ;
-      Native.xor_into data.buffer (data.off + i) dst.buffer i block ;
+      Native.xor_into data.buffer (data.off + i) dst.buffer (dst.off + i) block ;
       inc state;
       loop (i + block) (n - 1)
   in
