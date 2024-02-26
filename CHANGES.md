@@ -1,4 +1,4 @@
-## unreleased
+## v0.11.3 (2024-02-26)
 
 * mirage-crypto, mirage-crypto-rng{,lwt,mirage}: support CL.EXE compiler
   (#137 @jonahbeckford) - mirage-crypto-pk not yet due to gmp dependency,
@@ -24,6 +24,66 @@
   reported by @palainp)
 * mirage-crypto-ec: avoid mirage-crypto-pk and asn1-combinators test dependency
   (instead, craft our own asn.1 decoder -- #200 @hannesm)
+
+### Performance differences between v0.11.2 and v0.11.3 and OpenSSL
+
+The overall result is promising: P-256 sign operation improved 9.4 times, but
+is still a 4.9 times slower than OpenSSL.
+
+Numbers in operations per second (apart from speedup, which is a factor
+v0.11.3 / v0.11.2), gathered on a Intel i7-5600U CPU 2.60GHz using FreeBSD 14.0,
+OCaml 4.14.1, and OpenSSL 3.0.12.
+
+#### P224
+
+| op     | v0.11.2 | v0.11.3 | speedup | OpenSSL |
+|--------|---------|---------|---------|---------|
+| gen    | 1160    | 20609   |    17.8 |         |
+| sign   | 931     | 8169    |     8.8 | 21319   |
+| verify | 328     | 1606    |     4.9 | 10719   |
+| dh-sec | 1011    | 12595   |    12.5 |         |
+| dh-kex | 992     | 2021    |     2.0 | 16691   |
+
+#### P256
+
+| op     | v0.11.2 | v0.11.3 | speedup | OpenSSL |
+|--------|---------|---------|---------|---------|
+| gen    | 990     | 19365   |    19.6 |         |
+| sign   | 792     | 7436    |     9.4 | 36182   |
+| verify | 303     | 1488    |     4.9 | 13383   |
+| dh-sec | 875     | 11508   |    13.2 |         |
+| dh-kex | 895     | 1861    |     2.1 | 17742   |
+
+#### P384
+
+| op     | v0.11.2 | v0.11.3 | speedup | OpenSSL |
+|--------|---------|---------|---------|---------|
+| gen    | 474     | 6703    |    14.1 |         |
+| sign   | 349     | 3061    |     8.8 | 900     |
+| verify | 147     | 544     |     3.7 | 1062    |
+| dh-sec | 378     | 4405    |    11.7 |         |
+| dh-kex | 433     | 673     |     1.6 | 973     |
+
+#### P521
+
+| op     | v0.11.2 | v0.11.3 | speedup | OpenSSL |
+|--------|---------|---------|---------|---------|
+| gen    | 185     | 1996    |    10.8 |         |
+| sign   | 137     | 438     |     3.2 | 2737    |
+| verify | 66      | 211     |     3.2 | 1354    |
+| dh-sec | 180     | 1535    |     8.5 |         |
+| dh-kex | 201     | 268     |     1.3 | 2207    |
+
+#### 25519
+
+| op     | v0.11.2 | v0.11.3 | speedup | OpenSSL |
+|--------|---------|---------|---------|---------|
+| gen    | 23271   | 22345   |     1.0 |         |
+| sign   | 11228   | 10985   |     1.0 | 21794   |
+| verify | 8149    | 8029    |     1.0 | 7729    |
+| dh-sec | 14075   | 13968   |     1.0 |         |
+| dh-kex | 13487   | 14079   |     1.0 | 24824   |
+
 
 ## v0.11.2 (2023-09-18)
 
