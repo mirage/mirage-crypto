@@ -36,36 +36,41 @@ let init ctr ~key ~nonce =
                         bytes (counter 64 bit)."
   in
   let state = Bytes.create block in
-  Bytes.blit_string s 0 state 0 16 ;
-  Bytes.blit_string key 0 state 16 32 ;
+  Bytes.unsafe_blit_string s 0 state 0 16 ;
+  Bytes.unsafe_blit_string key 0 state 16 32 ;
   init_ctr state ;
-  Bytes.blit_string nonce 0 state nonce_off (String.length nonce) ;
+  Bytes.unsafe_blit_string nonce 0 state nonce_off (String.length nonce) ;
   state, inc
 
 let crypt ~key ~nonce ?(ctr = 0L) data =
   let state, inc = init ctr ~key ~nonce in
   let l = String.length data in
   let block_count = l // block in
-  let len = block * block_count in
   let last_len =
     let last = l mod block in
     if last = 0 then block else last
   in
-  let key_stream = Bytes.create len in
+  let res = Bytes.create l in
   let rec loop i = function
     | 0 -> ()
     | 1 ->
-      chacha20_block state i key_stream ;
-      Native.xor_into_bytes data i key_stream i last_len
+      if last_len = block then begin
+        chacha20_block state i res ;
+        Native.xor_into_bytes data i res i block
+      end else begin
+        let buf = Bytes.create block in
+        chacha20_block state 0 buf ;
+        Native.xor_into_bytes data i buf 0 last_len ;
+        Bytes.unsafe_blit buf 0 res i last_len
+      end
     | n ->
-      chacha20_block state i key_stream ;
-      Native.xor_into_bytes data i key_stream i block ;
+      chacha20_block state i res ;
+      Native.xor_into_bytes data i res i block ;
       inc state;
       loop (i + block) (n - 1)
   in
   loop 0 block_count ;
-  let res = Bytes.unsafe_to_string key_stream in
-  if l <> len then String.sub res 0 l else res
+  Bytes.unsafe_to_string res
 
 module P = Poly1305.It
 
