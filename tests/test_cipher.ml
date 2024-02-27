@@ -390,7 +390,7 @@ let ccm_regressions =
     and expected = vx "6592169e946f98973bc06d080f7c9dbb493a536f8a"
     in
     let cipher = authenticate_encrypt ~adata ~key ~nonce plaintext in
-    assert_cs_equal ~msg:"CCM encrypt 32 bit" expected cipher
+    assert_cs_equal ~msg:"CCM encrypt of >=65280 adata" expected cipher
   in
   [
     test_case no_vs_empty_ad ;
