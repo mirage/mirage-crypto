@@ -116,6 +116,9 @@ CAMLprim value
 mc_xor_into_generic (value b1, value off1, value b2, value off2, value n);
 
 CAMLprim value
+mc_xor_into3_generic (value b1, value off1, value b2, value off2, value b3, value off3, value n);
+
+CAMLprim value
 mc_count_16_be_4_generic (value ctr, value dst, value off, value blocks);
 
 #endif /* H__MIRAGE_CRYPTO */

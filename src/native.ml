@@ -94,6 +94,7 @@ end
 (* XXX TODO
  * Unsolved: bounds-checked XORs are slowing things down considerably... *)
 external xor_into : buffer -> off -> buffer -> off -> size -> unit = "mc_xor_into" [@@noalloc]
+external xor_into3 : buffer -> off -> buffer -> off -> buffer -> off -> size -> unit = "mc_xor_into3_bytecode" "mc_xor_into3" [@@noalloc]
 
 external count8be   : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_8_be"    [@@noalloc]
 external count16be  : bytes -> buffer -> off -> blocks:size -> unit = "mc_count_16_be"   [@@noalloc]

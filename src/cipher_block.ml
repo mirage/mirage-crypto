@@ -172,15 +172,15 @@ module Modes = struct
 
     let encrypt ~key:(key, _) ~iv src =
       bounds_check ~iv src ;
-      let msg = Cs.clone src in
+      let msg = Cstruct.create_unsafe (Cstruct.length src) in
       let dst = msg.buffer in
-      let rec loop iv iv_i dst_i = function
+      let rec loop iv iv_i src_i dst_i = function
         0 -> ()
-      | b -> Native.xor_into iv iv_i dst dst_i block ;
+      | b -> Native.xor_into3 iv iv_i src.buffer src_i dst dst_i block ;
              Core.encrypt ~key ~blocks:1 dst dst_i dst dst_i ;
-             loop dst dst_i (dst_i + block) (b - 1)
+             loop dst dst_i (src_i + block) (dst_i + block) (b - 1)
       in
-      loop iv.buffer iv.off msg.off (msg.len / block) ; msg
+      loop iv.buffer iv.off src.off msg.off (msg.len / block) ; msg
 
     let decrypt ~key:(_, key) ~iv src =
       bounds_check ~iv src ;
