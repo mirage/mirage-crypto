@@ -1,3 +1,22 @@
+## unreleased
+
+### Breaking changes
+
+* mirage-crypto: Poly1305 interface now uses string (#203 @hannesm)
+* mirage-crypto-pk: s-expression conversions for private and public keys (Dh,
+  Dsa, Rsa) have been removed. You can use PKCS8 for encoding and decoding
+  `X509.{Private,Public}_key.{en,de}code_{der,pem}` (#208 @hannesm)
+
+### Bugfixes
+
+* mirage-crypto (32 bit systems): CCM with long adata (#207 @reynir)
+
+### Other changes
+
+* PERFORMANCE mirage-crypto: ChaCha20/Poly1305 use string instead of Cstruct.t,
+  ChaCha20 interface unchanged, performance improvement roughly 2x
+  (#203 @hannesm @reynir)
+
 ## v0.11.3 (2024-02-26)
 
 * mirage-crypto, mirage-crypto-rng{,lwt,mirage}: support CL.EXE compiler
