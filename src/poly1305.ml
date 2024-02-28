@@ -9,6 +9,7 @@ module type S = sig
   val feed : t -> Cstruct.t -> t
   val feedi : t -> Cstruct.t iter -> t
   val get : t -> Cstruct.t
+  val get_into : dst:Cstruct.t -> t -> unit
 
   val mac : key:Cstruct.t -> Cstruct.t -> mac
   val maci : key:Cstruct.t -> Cstruct.t iter -> mac
@@ -48,6 +49,11 @@ module It : S = struct
     let res = Cstruct.create mac_size in
     P.finalize ctx res.buffer res.off;
     res
+
+  let final_into ~dst ctx =
+    P.finalize ctx dst.Cstruct.buffer dst.off
+
+  let get_into ~dst ctx = final_into ~dst (dup ctx)
 
   let get ctx = final (dup ctx)
 

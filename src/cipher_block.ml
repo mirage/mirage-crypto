@@ -57,6 +57,8 @@ module S = struct
     val encrypt : key:key -> ctr:ctr -> Cstruct.t -> Cstruct.t
     val decrypt : key:key -> ctr:ctr -> Cstruct.t -> Cstruct.t
 
+    val encrypt_into : key:key -> ctr:ctr -> dst:Cstruct.t -> Cstruct.t -> unit
+
     val add_ctr        : ctr -> int64 -> ctr
     val next_ctr       : ctr:ctr -> Cstruct.t -> ctr
     val ctr_of_cstruct : Cstruct.t -> ctr
@@ -221,6 +223,12 @@ module Modes = struct
 
     let decrypt = encrypt
 
+    let encrypt_into ~key ~ctr ~dst src =
+      let blocks = src.len // block_size in
+      Ctr.unsafe_count_into ctr ~blocks dst.buffer dst.off ;
+      Core.encrypt ~key ~blocks dst.buffer dst.off dst.buffer dst.off ;
+      Native.xor_into src.buffer src.off dst.buffer dst.off src.len
+
     let add_ctr = Ctr.add
     let next_ctr ~ctr msg = add_ctr ctr (Int64.of_int @@ msg.len // block_size)
     let ctr_of_cstruct = Ctr.of_cstruct
@@ -279,6 +287,11 @@ module Modes = struct
         GHASH.digesti ~key:hkey @@
           iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
 
+    let tag_into ~key ~hkey ~ctr ?(adata=Cstruct.empty) ~dst cdata =
+      CTR.encrypt_into ~key ~ctr ~dst @@
+        GHASH.digesti ~key:hkey @@
+          iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
+
     let authenticate_encrypt_tag ~key:{ key; hkey } ~nonce ?adata data =
       let ctr   = counter ~hkey nonce in
       let cdata = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) data) in
@@ -303,6 +316,19 @@ module Modes = struct
           Cstruct.split cdata (Cstruct.length cdata - tag_size)
         in
         authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
+
+    let authenticate_encrypt_into ~tag_first ~key:{ key ; hkey } ~nonce ?adata ~dst data =
+      let ctr = counter ~hkey nonce in
+      let ts = tag_size in
+      let buf, tag =
+        if tag_first then
+          let tag, buf = split dst ts in
+          buf, tag
+        else
+          split dst (dst.len - ts)
+      in
+      CTR.(encrypt_into ~key ~ctr:(add_ctr ctr 1L) ~dst:buf data);
+      tag_into ~key ~hkey ~ctr ?adata ~dst:tag buf;
   end
 
   module CCM16_of (C : S.Core) : S.CCM16 = struct
@@ -338,6 +364,17 @@ module Modes = struct
       else
         let data, tag = Cstruct.split data (Cstruct.length data - tag_size) in
         authenticate_decrypt_tag ~key ~nonce ?adata ~tag data
+
+    let authenticate_encrypt_into ~tag_first ~key ~nonce ?(adata = Cstruct.empty) ~dst cs =
+      let buf, tag =
+        if tag_first then
+          let tag, buf = Cstruct.split dst tag_size in
+          buf, tag
+        else
+          Cstruct.split dst (dst.len - tag_size)
+      in
+      Ccm.generation_encryption_into ~cipher ~key ~nonce ~maclen:tag_size ~adata ~target:buf ~tag_target:tag cs
+      
   end
 end
 
