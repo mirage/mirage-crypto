@@ -118,10 +118,4 @@ let authenticate_decrypt ~key ~nonce ?adata data =
     let cipher, tag = Cstruct.split data (Cstruct.length data - P.mac_size) in
     authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
 
-let auth_enc_str ~key ~nonce ?(adata = "") data =
-  let poly1305_key = generate_poly1305_key ~key ~nonce in
-  let ciphertext = crypt ~key ~nonce ~ctr:1L data in
-  let mac = mac ~key:poly1305_key ~adata ciphertext in
-  ciphertext ^ mac
-
 let tag_size = P.mac_size

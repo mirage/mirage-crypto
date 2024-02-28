@@ -523,9 +523,6 @@ module Chacha20 : sig
       IETF mode (and counter fit into 32 bits), or [key] must be either 16
       bytes or 32 bytes and [nonce] 8 bytes.
   *)
-
-  val auth_enc_str : key:key -> nonce:string -> ?adata:string ->
-    string -> string
 end
 
 (** Streaming ciphers. *)

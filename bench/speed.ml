@@ -22,24 +22,13 @@ module Time = struct
 
 end
 
-let burn_period = 3.0
+let burn_period = 2.0
 
 let sizes = [16; 64; 256; 1024; 8192]
 (* let sizes = [16] *)
 
 let burn f n =
   let cs = Mirage_crypto_rng.generate n in
-  let (t1, i1) =
-    let rec loop it =
-      let t = Time.time ~n:it f cs in
-      if t > 0.2 then (t, it) else loop (it * 10) in
-    loop 10 in
-  let iters = int_of_float (float i1 *. burn_period /. t1) in
-  let time  = Time.time ~n:iters f cs in
-  (iters, time, float (n * iters) /. time)
-
-let burn_str f n =
-  let cs = Cstruct.to_string (Mirage_crypto_rng.generate n) in
   let (t1, i1) =
     let rec loop it =
       let t = Time.time ~n:it f cs in
@@ -56,14 +45,6 @@ let throughput title f =
   sizes |> List.iter @@ fun size ->
     Gc.full_major () ;
     let (iters, time, bw) = burn f size in
-    Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
-      size (bw /. mb) iters time
-
-let throughput_str title f =
-  Printf.printf "\n* [%s]\n%!" title ;
-  sizes |> List.iter @@ fun size ->
-    Gc.full_major () ;
-    let (iters, time, bw) = burn_str f size in
     Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
       size (bw /. mb) iters time
 
@@ -389,8 +370,8 @@ let benchmarks = [
 
   bm "chacha20-poly1305" (fun name ->
       let key = Mirage_crypto.Chacha20.of_secret (Mirage_crypto_rng.generate 32)
-      and nonce = Cstruct.to_string (Mirage_crypto_rng.generate 8) in
-      throughput_str name (Mirage_crypto.Chacha20.auth_enc_str ~key ~nonce)) ;
+      and nonce = Mirage_crypto_rng.generate 8 in
+      throughput name (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce)) ;
 
   bm "aes-128-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
