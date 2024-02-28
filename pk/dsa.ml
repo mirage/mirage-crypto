@@ -1,18 +1,8 @@
 open Mirage_crypto.Uncommon
-open Sexplib0.Sexp_conv
 
 open Common
 
 type pub = { p : Z.t ; q : Z.t ; gg : Z.t ; y : Z.t }
-
-let sexp_of_pub { p ; q ; gg ; y } =
-  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
-    [ "p", p; "q", q; "gg", gg; "y", y ]
-
-let pub_of_sexp s =
-  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
-  | [ "p", p; "q", q; "gg", gg; "y", y ] -> { p ; q ; gg ; y }
-  | _ -> raise (Of_sexp_error (Failure "expected p, q, gg, and y'", s))
 
 let pub ?(fips = false) ~p ~q ~gg ~y () =
   let* () = guard Z.(one < gg && gg < p) (`Msg "bad generator") in
@@ -31,35 +21,14 @@ let pub ?(fips = false) ~p ~q ~gg ~y () =
   in
   Ok { p ; q ; gg ; y }
 
-let pub_of_sexp s =
-  let p = pub_of_sexp s in
-  match pub ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~y:p.y () with
-  | Ok p -> p
-  | Error (`Msg m) -> invalid_arg "bad public %s" m
-
 type priv =
   { p : Z.t ; q : Z.t ; gg : Z.t ; x : Z.t ; y : Z.t }
-
-let sexp_of_priv { p ; q ; gg ; x ; y } =
-  sexp_of_list (sexp_of_pair sexp_of_string sexp_of_z)
-    [ "p", p; "q", q; "gg", gg; "x", x; "y", y ]
-
-let priv_of_sexp s =
-  match list_of_sexp (pair_of_sexp string_of_sexp z_of_sexp) s with
-  | [ "p", p; "q", q; "gg", gg; "x", x; "y", y ] -> { p ; q ; gg ; x ; y }
-  | _ -> raise (Of_sexp_error (Failure "expected p, q, gg, x, and y'", s))
 
 let priv ?fips ~p ~q ~gg ~x ~y () =
   let* _ = pub ?fips ~p ~q ~gg ~y () in
   let* () = guard Z.(zero < x && x < q) (`Msg "x not in 1..q-1") in
   let* () = guard Z.(y = powm gg x p) (`Msg "y <> g ^ x mod p") in
   Ok { p ; q ; gg ; x ; y }
-
-let priv_of_sexp s =
-  let p = priv_of_sexp s in
-  match priv ?fips:None ~p:p.p ~q:p.q ~gg:p.gg ~x:p.x ~y:p.y () with
-  | Ok p -> p
-  | Error (`Msg m) -> invalid_arg "bad private %s" m
 
 let pub_of_priv { p; q; gg; y; _ } = { p; q; gg; y }
 

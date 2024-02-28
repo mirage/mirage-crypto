@@ -30,9 +30,7 @@ module Rsa : sig
     e : Z.t ; (** Public exponent *)
     n : Z.t ; (** Modulus *)
   }
-  (** The public portion of the key.
-
-      {e [Sexplib] convertible}. *)
+  (** The public portion of the key. *)
 
   val pub : e:Z.t -> n:Z.t -> (pub, [> `Msg of string ]) result
   (** [pub ~e ~n] validates the public key: [1 < e < n], [n > 0],
@@ -55,9 +53,7 @@ module Rsa : sig
       Some systems assume otherwise. When using keys produced by a system that
       computes [u = p^(-1) mod q], either exchange [p] with [q] and [dp] with
       [dq], or re-generate the full private key using
-      {{!priv_of_primes}[priv_of_primes]}.
-
-      {e [Sexplib] convertible}. *)
+      {{!priv_of_primes}[priv_of_primes]}. *)
 
   val priv : e:Z.t -> d:Z.t -> n:Z.t -> p:Z.t -> q:Z.t -> dp:Z.t -> dq:Z.t ->
     q':Z.t -> (priv, [> `Msg of string ]) result
@@ -282,15 +278,6 @@ module Rsa : sig
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size. *)
   end
-
-  (**/**)
-  val pub_of_sexp : Sexplib0.Sexp.t -> pub
-  val sexp_of_pub : pub -> Sexplib0.Sexp.t
-
-  val priv_of_sexp : Sexplib0.Sexp.t -> priv
-  val sexp_of_priv : priv -> Sexplib0.Sexp.t
-  (**/**)
-
 end
 
 
@@ -306,9 +293,7 @@ module Dsa : sig
     x  : Z.t ; (** Private key proper *)
     y  : Z.t ; (** Public component *)
   }
-  (** Private key. [p], [q] and [gg] comprise {i domain parameters}.
-
-      {e [Sexplib] convertible}. *)
+  (** Private key. [p], [q] and [gg] comprise {i domain parameters}. *)
 
   val priv : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> x:Z.t -> y:Z.t -> unit ->
     (priv, [> `Msg of string ]) result
@@ -323,9 +308,7 @@ module Dsa : sig
     gg : Z.t ;
     y  : Z.t ;
   }
-  (** Public key, a subset of {{!type-priv}private key}.
-
-      {e [Sexplib] convertible}. *)
+  (** Public key, a subset of {{!type-priv}private key}. *)
 
   val pub : ?fips:bool -> p:Z.t -> q:Z.t -> gg:Z.t -> y:Z.t -> unit ->
     (pub, [> `Msg of string ]) result
@@ -396,15 +379,6 @@ module Dsa : sig
     (** [generate key digest] deterministically takes the given private key and
         message digest to a [k] suitable for seeding the signing process. *)
   end
-
-  (**/**)
-  val pub_of_sexp : Sexplib0.Sexp.t -> pub
-  val sexp_of_pub : pub -> Sexplib0.Sexp.t
-
-  val priv_of_sexp : Sexplib0.Sexp.t -> priv
-  val sexp_of_priv : priv -> Sexplib0.Sexp.t
-  (**/**)
-
 end
 
 
@@ -425,9 +399,7 @@ module Dh : sig
     gg : Z.t ;        (** generator *)
     q  : Z.t option ; (** subgroup order; potentially unknown *)
   }
-  (** A DH group.
-
-      {e [Sexplib] convertible}. *)
+  (** A DH group. *)
 
   val group : p:Z.t -> gg:Z.t -> ?q:Z.t -> unit ->
     (group, [> `Msg of string ]) result
@@ -435,9 +407,7 @@ module Dh : sig
       and greater than [zero]. [gg] must be in the range [1 < gg < p]. *)
 
   type secret = private { group : group ; x : Z.t }
-  (** A private key.
-
-      {e [Sexplib] convertible.} *)
+  (** A private key. *)
 
   val modulus_size : group -> bits
   (** Bit size of the modulus. *)
@@ -505,15 +475,6 @@ module Dh : sig
     val ffdhe8192 : group
 
   end
-
-  (**/**)
-  val group_of_sexp : Sexplib0.Sexp.t -> group
-  val sexp_of_group : group -> Sexplib0.Sexp.t
-
-  val secret_of_sexp : Sexplib0.Sexp.t -> secret
-  val sexp_of_secret : secret -> Sexplib0.Sexp.t
-  (**/**)
-
 end
 
 (** {b Z} Convert Z to big endian Cstruct.t and generate random Z values. *)
