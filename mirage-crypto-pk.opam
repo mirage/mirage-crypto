@@ -21,7 +21,6 @@ depends: [
   "cstruct" {>="6.00"}
   "mirage-crypto" {=version}
   "mirage-crypto-rng" {=version}
-  "sexplib0"
   "zarith" {>= "1.4"}
   "eqaf" {>= "0.8"}
 ]
