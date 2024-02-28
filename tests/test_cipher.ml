@@ -440,14 +440,14 @@ let gcm_regressions =
 
 
 let chacha20_cases =
-  let case msg ?ctr ~key ~nonce ?(input = Cstruct.create 128) output =
+  let case msg ?ctr ~key ~nonce ?(input = String.make 128 '\000') output =
     let key = Chacha20.of_secret (vx key)
-    and nonce = vx nonce
-    and output = vx output
+    and nonce = vx_str nonce
+    and output = vx_str output
     in
-    assert_cs_equal ~msg (Chacha20.crypt ~key ~nonce ?ctr input) output
+    assert_str_equal ~msg (Chacha20.crypt ~key ~nonce ?ctr input) output
   in
-  let rfc8439_input = Cstruct.of_string "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it." in
+  let rfc8439_input = "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it." in
   let rfc8439_test_2_4_2 _ =
     let key = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
     and nonce = "000000000000004a00000000"
@@ -478,13 +478,13 @@ let chacha20_cases =
   1a e1 0b 59 4f 09 e2 6a 7e 90 2e cb d0 60 06 91|}
     in
     assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt"
-      (Chacha20.authenticate_encrypt ~key ~nonce ~adata rfc8439_input)
+      (Chacha20.authenticate_encrypt ~key ~nonce ~adata (Cstruct.of_string rfc8439_input))
       output;
     assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 decrypt"
       (match Chacha20.authenticate_decrypt ~key ~nonce ~adata output with
        | Some cs -> cs | None -> assert_failure "Chacha20/poly1305 decryption broken")
-      rfc8439_input;
-    let input = Cstruct.(shift (append (create 16) rfc8439_input) 16) in
+      (Cstruct.of_string rfc8439_input);
+    let input = Cstruct.(shift (append (create 16) (Cstruct.of_string rfc8439_input)) 16) in
     assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt 2"
       (Chacha20.authenticate_encrypt ~key ~nonce ~adata input)
       output;
@@ -693,11 +693,11 @@ let chacha20_cases =
     ]
 
 let poly1305_rfc8439_2_5_2 _ =
-  let key = vx "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
-  and data = Cstruct.of_string "Cryptographic Forum Research Group"
-  and output = vx "a8061dc1305136c6c22b8baf0c0127a9"
+  let key = vx_str "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
+  and data = "Cryptographic Forum Research Group"
+  and output = vx_str "a8061dc1305136c6c22b8baf0c0127a9"
   in
-  assert_cs_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
+  assert_str_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
     (Poly1305.mac ~key data) output
 
 let empty_cases _ =

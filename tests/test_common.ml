@@ -27,6 +27,10 @@ let assert_cs_equal ?msg =
   assert_equal ~cmp:Cstruct.equal ?msg
     ~pp_diff:(pp_diff Cstruct.hexdump_pp)
 
+let assert_str_equal ?msg =
+  assert_equal ~cmp:String.equal ?msg
+    ~pp_diff:(fun ppf (a, b) -> pp_diff Cstruct.hexdump_pp ppf (Cstruct.of_string a, Cstruct.of_string b))
+
 let iter_list xs f = List.iter f xs
 
 let cases_of f =
@@ -35,6 +39,8 @@ let cases_of f =
 let any _ = true
 
 let vx = Cstruct.of_hex
+
+let vx_str data = Cstruct.to_string (Cstruct.of_hex data)
 
 let f1_eq ?msg f (a, b) _ =
   assert_cs_equal ?msg (f (vx a)) (vx b)

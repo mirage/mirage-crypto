@@ -99,24 +99,24 @@ static inline uint64_t ror64(uint64_t word, uint32_t shift)
 	return (word >> shift) | (word << (64 - shift));
 }
 
-static inline void array_swap32(uint32_t *d, uint32_t *s, uint32_t nb)
+static inline void array_swap32(uint32_t *d, const uint32_t *s, uint32_t nb)
 {
 	while (nb--)
 		*d++ = bitfn_swap32(*s++);
 }
 
-static inline void array_swap64(uint64_t *d, uint64_t *s, uint32_t nb)
+static inline void array_swap64(uint64_t *d, const uint64_t *s, uint32_t nb)
 {
 	while (nb--)
 		*d++ = bitfn_swap64(*s++);
 }
 
-static inline void array_copy32(uint32_t *d, uint32_t *s, uint32_t nb)
+static inline void array_copy32(uint32_t *d, const uint32_t *s, uint32_t nb)
 {
 	while (nb--) *d++ = *s++;
 }
 
-static inline void array_copy64(uint64_t *d, uint64_t *s, uint32_t nb)
+static inline void array_copy64(uint64_t *d, const uint64_t *s, uint32_t nb)
 {
 	while (nb--) *d++ = *s++;
 }
