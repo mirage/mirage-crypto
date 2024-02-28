@@ -118,7 +118,6 @@ module Asn = struct
   let parse_point curve s =
     let ec_public_key = encode_oid [ 1 ; 2 ; 840; 10045; 2; 1 ] in
     let prime_oid = encode_oid (match curve with
-        | "secp224r1" -> [ 1 ; 3 ; 132; 0; 33 ]
         | "secp256r1" -> [ 1 ; 2 ; 840; 10045; 3; 1; 7 ]
         | "secp384r1" -> [ 1 ; 3 ; 132; 0; 34 ]
         | "secp521r1" -> [ 1 ; 3 ; 132; 0; 35 ]
@@ -173,7 +172,6 @@ let pad ~total_len cs =
     Ok (Cstruct.append (Cstruct.create pad_len) cs)
 
 let len = function
-  | "secp224r1" -> 28
   | "secp256r1" -> 32
   | "secp384r1" -> 48
   | "secp521r1" -> 66
@@ -192,11 +190,6 @@ type test = {
 let perform_key_exchange curve ~public_key ~raw_private_key =
   to_string_result ~pp_error
     (match curve with
-     | "secp224r1" ->
-       begin match P224.Dh.secret_of_cs raw_private_key with
-         | Ok (p, _) -> P224.Dh.key_exchange p public_key
-         | Error _ -> assert false
-       end
      | "secp256r1" ->
        begin match P256.Dh.secret_of_cs raw_private_key with
          | Ok (p, _) -> P256.Dh.key_exchange p public_key
@@ -282,11 +275,6 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
   in
   let verified (r,s) =
     match curve with
-    | "secp224r1" ->
-      begin match P224.Dsa.pub_of_cstruct key with
-        | Ok key -> P224.Dsa.verify ~key (r, s) msg
-        | Error _ -> assert false
-      end
     | "secp256r1" ->
       begin match P256.Dsa.pub_of_cstruct key with
         | Ok key -> P256.Dsa.verify ~key (r, s) msg
@@ -431,13 +419,6 @@ let ed25519_tests =
 
 let () =
   Alcotest.run "Wycheproof NIST curves" [
-    ("ECDH P224 test vectors", ecdh_tests "ecdh_secp224r1_test.json") ;
-    ("ECDSA P224 test vectors (SHA224)",
-     ecdsa_tests "ecdsa_secp224r1_sha224_test.json") ;
-    ("ECDSA P224 test vectors (SHA256)",
-     ecdsa_tests "ecdsa_secp224r1_sha256_test.json") ;
-    ("ECDSA P224 test vectors (SHA512)",
-     ecdsa_tests "ecdsa_secp224r1_sha512_test.json") ;
     ("ECDH P256 test vectors", ecdh_tests "ecdh_secp256r1_test.json") ;
     ("ECDSA P256 test vectors (SHA256)",
      ecdsa_tests "ecdsa_secp256r1_sha256_test.json") ;

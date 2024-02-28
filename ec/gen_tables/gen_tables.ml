@@ -86,8 +86,7 @@ let print_toplevel name wordsize (module P : Mirage_crypto_ec.Dh_dsa) =
 let curves =
   Mirage_crypto_ec.
     [
-      ("p224", (module P224 : Dh_dsa));
-      ("p256", (module P256));
+      ("p256", (module P256 : Dh_dsa));
       ("p384", (module P384));
       ("p521", (module P521));
     ]

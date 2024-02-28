@@ -12,42 +12,6 @@ N_FUNCS=mul add opp from_montgomery to_montgomery one msat divstep_precomp divst
 
 GEN_TABLE=../../_build/default/ec/gen_tables/gen_tables.exe
 
-# The NIST curve P-224 (AKA SECP224R1)
-P224="2^224 - 2^96 + 1"
-
-.PHONY: p224_64.h
-p224_64.h:
-	$(WBW_MONT) p224 64 $(P224) > $@
-
-.PHONY: p224_32.h
-p224_32.h:
-	$(WBW_MONT) p224 32 $(P224) > $@
-
-# The group order N of P-224
-P224N="0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D"
-
-.PHONY: np224_64.h
-np224_64.h:
-	$(WBW_MONT) np224 64 $(P224N) $(N_FUNCS) > $@
-
-.PHONY: np224_32.h
-np224_32.h:
-	$(WBW_MONT) np224 32 $(P224N) $(N_FUNCS) > $@
-
-.PHONY: p224_tables_64.h
-p224_tables_64.h:
-	$(GEN_TABLE) p224 64 > $@
-
-.PHONY: p224_tables_32.h
-p224_tables_32.h:
-	$(GEN_TABLE) p224 32 > $@
-
-.PHONY: p224
-p224: p224_64.h p224_32.h np224_64.h np224_32.h
-
-p224_tables: p224_tables_64.h p224_tables_32.h
-
-
 # The NIST curve P-256 (AKA SECP256R1)
 P256="2^256 - 2^224 + 2^192 + 2^96 - 1"
 
@@ -169,11 +133,10 @@ curve25519_32.h:
 curve25519: curve25519_64.h curve25519_32.h
 
 .PHONY: tables
-tables: p224_tables p256_tables p384_tables p521_tables
+tables: p256_tables p384_tables p521_tables
 
 .PHONY: clean
 clean:
-	$(RM) p224_32.h p224_64.h np224_32.h np224_64.h
 	$(RM) p256_32.h p256_64.h np256_32.h np256_64.h
 	$(RM) p384_32.h p384_64.h np384_32.h np384_64.h
 	$(RM) p521_32.h p521_64.h np521_32.h np521_64.h
@@ -181,10 +144,9 @@ clean:
 
 .PHONY: clean_tables
 clean_tables:
-	$(RM) p224_tables_32.h p224_tables_64.h
 	$(RM) p256_tables_32.h p256_tables_64.h
 	$(RM) p384_tables_32.h p384_tables_64.h
 	$(RM) p521_tables_32.h p521_tables_64.h
 
 .PHONY: all
-all: p224 p256 p384 p521 curve25519
+all: p256 p384 p521 curve25519

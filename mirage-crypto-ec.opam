@@ -4,7 +4,7 @@ description: """
 An implementation of key exchange (ECDH) and digital signature (ECDSA/EdDSA)
 algorithms using code from Fiat (<https://github.com/mit-plv/fiat-crypto>).
 
-The curves P224 (SECP224R1), P256 (SECP256R1), P384 (SECP384R1),
+The curves P256 (SECP256R1), P384 (SECP384R1),
 P521 (SECP521R1), and 25519 (X25519, Ed25519) are implemented by this package.
 """
 maintainer: "Hannes Mehnert <hannes@mehnert.org>"

@@ -158,10 +158,6 @@ module type Dh_dsa = sig
   module Dsa : Dsa
 end
 
-(** The NIST P-224 curve, also known as SECP224R1. Please note that
-    decompression is not supported for P-224 public keys. *)
-module P224 : Dh_dsa
-
 (** The NIST P-256 curve, also known as SECP256R1. *)
 module P256 : Dh_dsa
 
