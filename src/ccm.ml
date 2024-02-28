@@ -51,11 +51,11 @@ let gen_adata a =
        let buf = Cstruct.create 2 in
        Cstruct.BE.set_uint16 buf 0 x ;
        buf
-    | x when x < (1 lsl 32)           ->
+    | x when Sys.int_size < 32 || x < (1 lsl 32) ->
        let buf = Cstruct.create 4 in
        Cstruct.BE.set_uint32 buf 0 (Int32.of_int x) ;
        Cs.of_bytes [0xff ; 0xfe] <+> buf
-    | x                               ->
+    | x ->
        let buf = Cstruct.create 8 in
        Cstruct.BE.set_uint64 buf 0 (Int64.of_int x) ;
        Cs.of_bytes [0xff ; 0xff] <+> buf

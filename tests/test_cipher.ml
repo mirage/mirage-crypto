@@ -381,6 +381,16 @@ let ccm_regressions =
     match authenticate_decrypt ~key ~nonce ~adata cipher with
     | Some x -> assert_cs_equal ~msg:"CCM decrypt of empty message" p x
     | None -> assert_failure "decryption broken"
+  and long_adata _ =
+    let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "0001020304050607"
+    and plaintext = Cstruct.of_string "hello"
+    (* [adata] is greater than [1 lsl 16 - 1 lsl 8] *)
+    and adata = Cstruct.create 65280
+    and expected = vx "6592169e946f98973bc06d080f7c9dbb493a536f8a"
+    in
+    let cipher = authenticate_encrypt ~adata ~key ~nonce plaintext in
+    assert_cs_equal ~msg:"CCM encrypt of >=65280 adata" expected cipher
   in
   [
     test_case no_vs_empty_ad ;
@@ -389,6 +399,7 @@ let ccm_regressions =
     test_case short_nonce_enc3 ;
     test_case long_nonce_enc ;
     test_case enc_dec_empty_message ;
+    test_case long_adata ;
   ]
 
 let gcm_regressions =
