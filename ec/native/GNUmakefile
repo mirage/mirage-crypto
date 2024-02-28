@@ -81,7 +81,7 @@ p256_tables_32.h:
 .PHONY: p256
 p256: p256_64.h p256_32.h np256_64.h np256_32.h
 
-p224_tables: p256_tables_64.h p256_tables_32.h
+p256_tables: p256_tables_64.h p256_tables_32.h
 
 # The NIST curve P-384 (AKA SECP384R1)
 P384="2^384 - 2^128 - 2^96 + 2^32 - 1"
