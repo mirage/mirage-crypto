@@ -682,12 +682,12 @@ let chacha20_cases =
     ]
 
 let poly1305_rfc8439_2_5_2 _ =
-  let key = Cstruct.to_string (vx "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b")
+  let key = vx_str "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
   and data = "Cryptographic Forum Research Group"
-  and output = vx "a8061dc1305136c6c22b8baf0c0127a9"
+  and output = vx_str "a8061dc1305136c6c22b8baf0c0127a9"
   in
-  assert_cs_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
-    (Cstruct.of_string (Poly1305.mac ~key data)) output
+  assert_str_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
+    (Poly1305.mac ~key data) output
 
 let empty_cases _ =
   let open Cipher_block in
