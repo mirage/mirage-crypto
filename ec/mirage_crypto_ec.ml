@@ -40,27 +40,27 @@ let bit_at buf i =
 
 module type Dh = sig
   type secret
-  val secret_of_cs : ?compress:bool -> Cstruct.t ->
-    (secret * Cstruct.t, error) result
+  val secret_of_octets : ?compress:bool -> string ->
+    (secret * string, error) result
   val gen_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit ->
-    secret * Cstruct.t
-  val key_exchange : secret -> Cstruct.t -> (Cstruct.t, error) result
+    secret * string
+  val key_exchange : secret -> string -> (string, error) result
 end
 
 module type Dsa = sig
   type priv
   type pub
   val byte_length : int
-  val priv_of_cstruct : Cstruct.t -> (priv, error) result
-  val priv_to_cstruct : priv -> Cstruct.t
-  val pub_of_cstruct : Cstruct.t -> (pub, error) result
-  val pub_to_cstruct : ?compress:bool -> pub -> Cstruct.t
+  val priv_of_octets : string -> (priv, error) result
+  val priv_to_octets : priv -> string
+  val pub_of_octets : string -> (pub, error) result
+  val pub_to_octets : ?compress:bool -> pub -> string
   val pub_of_priv : priv -> pub
   val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
-  val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
-  val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
+  val sign : key:priv -> ?k:string -> string -> string * string
+  val verify : key:pub -> string * string -> string -> bool
   module K_gen (H : Mirage_crypto.Hash.S) : sig
-    val generate : key:priv -> Cstruct.t -> Cstruct.t
+    val generate : key:priv -> string -> string
   end
   module Precompute : sig
     val generator_tables : unit -> string array array array
@@ -506,33 +506,20 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Ok p -> Ok (p, share ?compress p)
     | Error _ as e -> e
 
-  let secret_of_cs ?compress s =
-    Result.map (fun (p, share) -> p, Cstruct.of_string share)
-      (secret_of_octets ?compress (Cstruct.to_string s))
-
   let rec generate_private_key ?g () =
-    let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
-    match S.of_octets (Cstruct.to_string candidate) with
+    let candidate = Cstruct.to_string (Mirage_crypto_rng.generate ?g Param.byte_length) in
+    match S.of_octets candidate with
     | Ok secret -> secret
     | Error _ -> generate_private_key ?g ()
 
-  let gen_key_octets ?compress ?g () =
-    let private_key = generate_private_key ?g () in
-    (private_key, share ?compress private_key)
-
   let gen_key ?compress ?g () =
-    let private_key, share = gen_key_octets ?compress ?g () in
-    private_key, Cstruct.of_string share
+    let private_key = generate_private_key ?g () in
+    private_key, share ?compress private_key
 
-  let key_exchange_octets secret received =
+  let key_exchange secret received =
     match point_of_octets received with
     | Error _ as err -> err
     | Ok shared -> Ok (P.x_of_finite_point (S.scalar_mult secret shared))
-
-  let key_exchange secret received =
-    match key_exchange_octets secret (Cstruct.to_string received) with
-    | Error _ as err -> err
-    | Ok shared -> Ok (Cstruct.of_string shared)
 end
 
 module type Foreign_n = sig
@@ -616,10 +603,6 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
 
   let priv_to_octets = S.to_octets
 
-  let priv_of_cstruct cs = priv_of_octets (Cstruct.to_string cs)
-
-  let priv_to_cstruct p = Cstruct.of_string (priv_to_octets p)
-
   let padded msg =
     let l = String.length msg in
     let bl = Param.byte_length in
@@ -637,33 +620,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         Bytes.blit_string msg 0 res (bl - l) (String.length msg) ;
         Bytes.unsafe_to_string res )
 
-  let padded_cs msg =
-    let l = Cstruct.length msg in
-    let bl = Param.byte_length in
-    let first_byte_ok () =
-      match Param.first_byte_bits with
-      | None -> true
-      | Some m -> (Cstruct.get_uint8 msg 0) land (0xFF land (lnot m)) = 0
-    in
-    if l > bl || (l = bl && not (first_byte_ok ())) then
-      raise Message_too_long
-    else if l = bl then
-      msg
-    else
-      Cstruct.append (Cstruct.create (bl - l)) msg
-
   (* RFC 6979: compute a deterministic k *)
   module K_gen (H : Mirage_crypto.Hash.S) = struct
     let drbg : 'a Mirage_crypto_rng.generator =
       let module M = Mirage_crypto_rng.Hmac_drbg (H) in (module M)
 
-    let g ~key cs =
-      let g = Mirage_crypto_rng.create ~strict:true drbg in
-      Mirage_crypto_rng.reseed ~g
-        (Cstruct.append (Cstruct.of_string (S.to_octets key)) cs);
-      g
-
-    let g_octets ~key msg =
+    let g ~key msg =
       let g = Mirage_crypto_rng.create ~strict:true drbg in
       Mirage_crypto_rng.reseed ~g
         (Cstruct.of_string (String.concat "" [ S.to_octets key ; msg ]));
@@ -672,16 +634,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
     let gen g =
       let rec go () =
-        let r = Mirage_crypto_rng.generate ~g Param.byte_length in
-        let r = Cstruct.to_string r in
+        let r = Cstruct.to_string (Mirage_crypto_rng.generate ~g Param.byte_length) in
         if S.is_in_range r then r else go ()
       in
       go ()
 
-    (* let generate_octets ~key buf = gen (g ~key (Cstruct.of_string (padded buf))) *)
-
-    let generate ~key buf =
-      Cstruct.of_string (gen (g ~key (padded_cs buf)))
+    let generate ~key buf = gen (g ~key (padded buf))
   end
 
   module K_gen_default = K_gen(H)
@@ -691,11 +649,6 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
   let pub_of_octets = P.of_octets
 
   let pub_to_octets ?(compress = false) pk = P.to_octets ~compress pk
-
-  let pub_of_cstruct cs = pub_of_octets (Cstruct.to_string cs)
-
-  let pub_to_cstruct ?compress p =
-    Cstruct.of_string (pub_to_octets ?compress p)
 
   let generate ?g () =
     (* FIPS 186-4 B 4.2 *)
@@ -719,10 +672,10 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
       let x = F.from_montgomery x in
       Some (F.to_be_octets x)
 
-  let sign_octets ~key ?k msg =
+  let sign ~key ?k msg =
     let msg = padded msg in
     let e = F.from_be_octets msg in
-    let g = K_gen_default.g_octets ~key msg in
+    let g = K_gen_default.g ~key msg in
     let rec do_sign g =
       let again () =
         match k with
@@ -754,13 +707,9 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     in
     do_sign g
 
-  let sign ~key ?k msg =
-    let r, s = sign_octets ~key ?k:(Option.map Cstruct.to_string k) (Cstruct.to_string msg) in
-    Cstruct.of_string r, Cstruct.of_string s
-
   let pub_of_priv priv = S.scalar_mult_base priv
 
-  let verify_octets ~key (r, s) msg =
+  let verify ~key (r, s) msg =
     try
       let r = padded r and s = padded s in
       if not (S.is_in_range r && S.is_in_range s) then
@@ -792,9 +741,6 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         | Error _, _ | _, Error _ -> false
     with
     | Message_too_long -> false
-
-  let verify ~key (r, s) digest =
-    verify_octets ~key (Cstruct.to_string r, Cstruct.to_string s) (Cstruct.to_string digest)
 
   module Precompute = struct
     let generator_tables = S.generator_tables
@@ -971,13 +917,9 @@ module X25519 = struct
 
   let public priv = scalar_mult priv basepoint
 
-  let gen_key_octets ?compress:_ ?g () =
+  let gen_key ?compress:_ ?g () =
     let secret = Cstruct.to_string (Mirage_crypto_rng.generate ?g key_len) in
     secret, public secret
-
-  let gen_key ?compress ?g () =
-    let secret, public = gen_key_octets ~compress ?g () in
-    secret, Cstruct.of_string public
 
   let secret_of_octets ?compress:_ s =
     if String.length s = key_len then
@@ -985,24 +927,16 @@ module X25519 = struct
     else
       Error `Invalid_length
 
-  let secret_of_cs ?compress cs =
-    Result.map (fun (secret, public) -> secret, Cstruct.of_string public)
-      (secret_of_octets ~compress (Cstruct.to_string cs))
-
   let is_zero =
     let zero = String.make key_len '\000' in
     fun buf -> String.equal zero buf
 
-  let key_exchange_octets secret public =
+  let key_exchange secret public =
     if String.length public = key_len then
       let res = scalar_mult secret public in
       if is_zero res then Error `Low_order else Ok res
     else
       Error `Invalid_length
-
-  let key_exchange secret public =
-    Result.map Cstruct.of_string
-      (key_exchange_octets secret (Cstruct.to_string public))
 end
 
 module Ed25519 = struct
@@ -1053,11 +987,7 @@ module Ed25519 = struct
   let priv_of_octets buf =
     if String.length buf = key_len then Ok buf else Error `Invalid_length
 
-  let priv_of_cstruct p = priv_of_octets (Cstruct.to_string p)
-
-  let priv_to_octets priv = priv
-
-  let priv_to_cstruct p = Cstruct.of_string (priv_to_octets p)
+  let priv_to_octets (priv : priv) = priv
 
   let pub_of_octets buf =
     if String.length buf = key_len then
@@ -1068,18 +998,13 @@ module Ed25519 = struct
     else
       Error `Invalid_length
 
-  let pub_of_cstruct p = pub_of_octets (Cstruct.to_string p)
-
   let pub_to_octets pub = pub
 
-  let pub_to_cstruct p = Cstruct.of_string (pub_to_octets p)
-
   let generate ?g () =
-    let secret = Mirage_crypto_rng.generate ?g key_len in
-    let secret = Cstruct.to_string secret in
+    let secret = Cstruct.to_string (Mirage_crypto_rng.generate ?g key_len) in
     secret, pub_of_priv secret
 
-  let sign_octets ~key msg =
+  let sign ~key msg =
     (* section 5.1.6 *)
     let pub, (s, prefix) = public key in
     let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ prefix; msg ])) in
@@ -1097,9 +1022,7 @@ module Ed25519 = struct
     Bytes.blit_string s_out 0 res key_len key_len ;
     Bytes.unsafe_to_string res
 
-  let sign ~key msg = Cstruct.of_string (sign_octets ~key (Cstruct.to_string msg))
-
-  let verify_octets ~key signature ~msg =
+  let verify ~key signature ~msg =
     (* section 5.1.7 *)
     if String.length signature = 2 * key_len then
       let r, s =
@@ -1129,7 +1052,4 @@ module Ed25519 = struct
         false
     else
       false
-
-  let verify ~key signature ~msg =
-    verify_octets ~key (Cstruct.to_string signature) ~msg:(Cstruct.to_string msg)
 end

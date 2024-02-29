@@ -62,6 +62,8 @@ module Uncommon : sig
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
   val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
+
+  val of_hex : ?skip_ws:bool -> string -> string
 end
 
 (**/**)

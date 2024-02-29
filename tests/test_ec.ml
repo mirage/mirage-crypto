@@ -5,10 +5,13 @@ module Testable = struct
     Alcotest.result Alcotest.unit (Alcotest.testable pp_error ( = ))
 end
 
-let pp_hex_le fmt cs =
-  let n = Cstruct.length cs in
+let of_hex = Mirage_crypto.Uncommon.of_hex
+
+let pp_hex_le fmt buf =
+  let n = String.length buf in
+  let bbuf = Bytes.unsafe_of_string buf in
   for i = n - 1 downto 0 do
-    let byte = Cstruct.get_uint8 cs i in
+    let byte = Bytes.get_uint8 bbuf i in
     Format.fprintf fmt "%02x" byte
   done
 
@@ -25,29 +28,21 @@ let key_exchange =
         |> Format.asprintf "%a" pp_result
         |> Alcotest.check Alcotest.string __LOC__ expected )
   in
-  let kp_of_cs data =
-    match P256.Dh.secret_of_cs data with
+  let kp data =
+    match P256.Dh.secret_of_octets data with
     | Ok (p, s) -> p, s
     | Error _ -> assert false
   in
   let d_a, p_a =
-    kp_of_cs (Cstruct.of_hex "200102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+    kp (of_hex "200102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
   and d_b, p_b =
-    kp_of_cs (Cstruct.of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-  and d_b', p_b' =
-    kp_of_cs (Cstruct.shift (Cstruct.of_hex "00000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f") 1)
+    kp (of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
   in
   [
     test ~name:"b*A" d_b p_a
       ~expected:
         "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
     test ~name:"a*B" d_a p_b
-      ~expected:
-        "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
-    test ~name:"b'*A" d_b' p_a
-      ~expected:
-        "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
-    test ~name:"a*B'" d_a p_b'
       ~expected:
         "2e3e4065a62a7f425aaf8aae3d158f367c733300b5002e0b62f4bc6260789e1b";
     test ~name:"a*A" d_a p_a
@@ -61,11 +56,10 @@ let key_exchange =
 let scalar_mult =
   let test ~n ~scalar ~point ~expected =
     let scalar =
-      match P256.Dh.secret_of_cs scalar with
+      match P256.Dh.secret_of_octets scalar with
       | Ok (p, _) -> p
       | Error _ -> assert false
     in
-    let point = Hex.to_cstruct point in
     ( Printf.sprintf "Scalar mult (#%d)" n,
       `Quick,
       fun () ->
@@ -74,58 +68,33 @@ let scalar_mult =
         |> Alcotest.check Alcotest.string __LOC__ expected )
   in
   let point =
-    `Hex
-      "046B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C2964FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5"
+    of_hex "046B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C2964FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5"
   in
   [
     test ~n:0
-      ~scalar:
-        (Cstruct.of_hex
-           "0000000000000000000000000000000000000000000000000000000000000001")
+      ~scalar:(of_hex "0000000000000000000000000000000000000000000000000000000000000001")
       ~point
-      ~expected:
-        "96c298d84539a1f4a033eb2d817d0377f240a463e5e6bcf847422ce1f2d1176b";
+      ~expected:"96c298d84539a1f4a033eb2d817d0377f240a463e5e6bcf847422ce1f2d1176b";
     test ~n:1
-      ~scalar:
-        (Cstruct.of_hex
-           "0000000000000000000000000000000000000000000000000000000000000002")
+      ~scalar:(of_hex "0000000000000000000000000000000000000000000000000000000000000002")
       ~point
-      ~expected:
-        "78996647fc480ba6351bf277e26989c0c31ab5040338528a7e4f038d187bf27c";
+      ~expected:"78996647fc480ba6351bf277e26989c0c31ab5040338528a7e4f038d187bf27c";
     test ~n:2
-      ~scalar:
-        (Cstruct.of_hex
-           "0000000000000000000000000000000000000000000000000000000000000004")
+      ~scalar:(of_hex "0000000000000000000000000000000000000000000000000000000000000004")
       ~point
-      ~expected:
-        "5208036b44029350ef965578dbe21f03d02be69e65de2da0bb8fd032354a53e2";
+      ~expected:"5208036b44029350ef965578dbe21f03d02be69e65de2da0bb8fd032354a53e2";
     test ~n:3
-      ~scalar:
-        (Cstruct.of_hex
-           "0612465c89a023ab17855b0a6bcebfd3febb53aef84138647b5352e02c10c346")
-      ~point:
-        (`Hex
-          "0462d5bd3372af75fe85a040715d0f502428e07046868b0bfdfa61d731afe44f26ac333a93a9e70a81cd5a95b5bf8d13990eb741c8c38872b4a07d275a014e30cf")
-      ~expected:
-        "854271e19508bc935ab22b95cd2be13a0e78265f528b658b3219028b900d0253";
+      ~scalar:(of_hex "0612465c89a023ab17855b0a6bcebfd3febb53aef84138647b5352e02c10c346")
+      ~point:(of_hex "0462d5bd3372af75fe85a040715d0f502428e07046868b0bfdfa61d731afe44f26ac333a93a9e70a81cd5a95b5bf8d13990eb741c8c38872b4a07d275a014e30cf")
+      ~expected:"854271e19508bc935ab22b95cd2be13a0e78265f528b658b3219028b900d0253";
     test ~n:4
-      ~scalar:
-        (Cstruct.of_hex
-           "0a0d622a47e48f6bc1038ace438c6f528aa00ad2bd1da5f13ee46bf5f633d71a")
-      ~point:
-        (`Hex
-          "043cbc1b31b43f17dc200dd70c2944c04c6cb1b082820c234a300b05b7763844c74fde0a4ef93887469793270eb2ff148287da9265b0334f9e2609aac16e8ad503")
-      ~expected:
-        "ffffffffffffffffffffffffffffffff3022cfeeffffffffffffffffffffff7f";
+      ~scalar:(of_hex "0a0d622a47e48f6bc1038ace438c6f528aa00ad2bd1da5f13ee46bf5f633d71a")
+      ~point:(of_hex "043cbc1b31b43f17dc200dd70c2944c04c6cb1b082820c234a300b05b7763844c74fde0a4ef93887469793270eb2ff148287da9265b0334f9e2609aac16e8ad503")
+      ~expected:"ffffffffffffffffffffffffffffffff3022cfeeffffffffffffffffffffff7f";
     test ~n:5
-      ~scalar:
-        (Cstruct.of_hex
-           "55d55f11bb8da1ea318bca7266f0376662441ea87270aa2077f1b770c4854a48")
-      ~point:
-        (`Hex
-          "04000000000000000000000000000000000000000000000000000000000000000066485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4")
-      ~expected:
-        "48e82c9b82c88cb9fc2a5cff9e7c41bc4255ff6bd3814538c9b130877c07e4cf";
+      ~scalar:(of_hex "55d55f11bb8da1ea318bca7266f0376662441ea87270aa2077f1b770c4854a48")
+      ~point:(of_hex "04000000000000000000000000000000000000000000000000000000000000000066485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4")
+      ~expected:"48e82c9b82c88cb9fc2a5cff9e7c41bc4255ff6bd3814538c9b130877c07e4cf";
   ]
 
 let to_ok_or_error = function Ok _ -> Ok () | Error _ as e -> e
@@ -133,12 +102,13 @@ let to_ok_or_error = function Ok _ -> Ok () | Error _ as e -> e
 let point_validation =
   let test ~name ~x ~y ~expected =
     let scalar =
-      match P256.Dh.secret_of_cs (Cstruct.of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f") with
+      match P256.Dh.secret_of_octets (of_hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f") with
       | Ok (p, _) -> p
       | _ -> assert false
     in
     let point =
-      Cstruct.concat [ Cstruct.of_hex "04"; Hex.to_cstruct x; Hex.to_cstruct y ]
+      let s04 = String.make 1 '\004' in
+      s04 ^ x ^ y
     in
     ( name,
       `Quick,
@@ -147,39 +117,28 @@ let point_validation =
         |> to_ok_or_error
         |> Alcotest.check Testable.ok_or_error __LOC__ expected )
   in
-  let zero = `Hex (String.make 64 '0') in
-  let sb =
-    `Hex "66485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4"
+  let zero = String.make 32 '\000' in
+  let sb = of_hex "66485c780e2f83d72433bd5d84a06bb6541c2af31dae871728bf856a174f93f4"
   in
   [
     test ~name:"Ok"
-      ~x:
-        (`Hex
-          "62d5bd3372af75fe85a040715d0f502428e07046868b0bfdfa61d731afe44f26")
-      ~y:
-        (`Hex
-          "ac333a93a9e70a81cd5a95b5bf8d13990eb741c8c38872b4a07d275a014e30cf")
+      ~x:(of_hex "62d5bd3372af75fe85a040715d0f502428e07046868b0bfdfa61d731afe44f26")
+      ~y:(of_hex "ac333a93a9e70a81cd5a95b5bf8d13990eb741c8c38872b4a07d275a014e30cf")
       ~expected:(Ok ());
     test ~name:"P=0"
-      ~x:
-        (`Hex
-          "0000000000000000000000000000000000000000000000000000000000000000")
-      ~y:
-        (`Hex
-          "0000000000000000000000000000000000000000000000000000000000000000")
+      ~x:(of_hex "0000000000000000000000000000000000000000000000000000000000000000")
+      ~y:(of_hex "0000000000000000000000000000000000000000000000000000000000000000")
       ~expected:(Error `Not_on_curve);
     test ~name:"(0, sqrt(b))" ~x:zero ~y:sb ~expected:(Ok ());
     test ~name:"out of range"
-      ~x:
-        (`Hex
-          "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF")
+      ~x:(of_hex "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF")
       ~y:sb
       ~expected:(Error `Invalid_range);
   ]
 
 let scalar_validation =
   let ign_sec hex =
-    match P256.Dh.secret_of_cs (Cstruct.of_hex hex) with
+    match P256.Dh.secret_of_octets (of_hex hex) with
     | Ok _ -> Ok ()
     | Error _ as e -> e
   in
@@ -202,78 +161,54 @@ let scalar_validation =
   ]
 
 let ecdsa_gen () =
-  let d = Cstruct.of_hex "C477F9F6 5C22CCE2 0657FAA5 B2D1D812 2336F851 A508A1ED 04E479C3 4985BF96" in
+  let d = of_hex "C477F9F6 5C22CCE2 0657FAA5 B2D1D812 2336F851 A508A1ED 04E479C3 4985BF96" in
   let p = match
-      P256.Dsa.pub_of_cstruct
-        (Cstruct.of_hex {|04
-                        B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
-                        3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
+      P256.Dsa.pub_of_octets
+        (of_hex {|04
+                  B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
+                  3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
     with
     | Ok a -> a
     | Error _ -> assert false
   in
-  let pub = match P256.Dsa.priv_of_cstruct d with
+  let pub = match P256.Dsa.priv_of_octets d with
     | Ok p -> P256.Dsa.pub_of_priv p
     | Error _ -> Alcotest.fail "couldn't decode private key"
   in
   let pub_eq a b =
-    Cstruct.equal (P256.Dsa.pub_to_cstruct a) (P256.Dsa.pub_to_cstruct b)
+    String.equal (P256.Dsa.pub_to_octets a) (P256.Dsa.pub_to_octets b)
   in
   Alcotest.(check bool __LOC__ true (pub_eq pub p))
 
 let ecdsa_sign () =
-  let d = Cstruct.of_hex "C477F9F6 5C22CCE2 0657FAA5 B2D1D812 2336F851 A508A1ED 04E479C3 4985BF96"
-  and k = Cstruct.of_hex "7A1A7E52 797FC8CA AA435D2A 4DACE391 58504BF2 04FBE19F 14DBB427 FAEE50AE"
-  and e = Cstruct.of_hex "A41A41A1 2A799548 211C410C 65D8133A FDE34D28 BDD542E4 B680CF28 99C8A8C4"
+  let d = of_hex "C477F9F6 5C22CCE2 0657FAA5 B2D1D812 2336F851 A508A1ED 04E479C3 4985BF96"
+  and k = of_hex "7A1A7E52 797FC8CA AA435D2A 4DACE391 58504BF2 04FBE19F 14DBB427 FAEE50AE"
+  and e = of_hex "A41A41A1 2A799548 211C410C 65D8133A FDE34D28 BDD542E4 B680CF28 99C8A8C4"
   in
-  let r = Cstruct.of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
-  and s = Cstruct.of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
+  let r = of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
+  and s = of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
   in
-  let key = match P256.Dsa.priv_of_cstruct d with
+  let key = match P256.Dsa.priv_of_octets d with
     | Ok p -> p
     | Error _ -> Alcotest.fail "couldn't decode private key"
   in
   let (r', s') = P256.Dsa.sign ~key ~k e in
-  Alcotest.(check bool __LOC__ true (Cstruct.equal r r' && Cstruct.equal s s'));
-  let d' = Cstruct.(shift (append (create 10) d) 10)
-  and k' = Cstruct.(shift (append (create 12) k) 12)
-  and e' = Cstruct.(shift (append (create 16) e) 16)
-  in
-  let key = match P256.Dsa.priv_of_cstruct d' with
-    | Ok p -> p
-    | Error _ -> Alcotest.fail "couldn't decode private key"
-  in
-  let (r', s') = P256.Dsa.sign ~key ~k:k' e' in
-  Alcotest.(check bool __LOC__ true (Cstruct.equal r r' && Cstruct.equal s s'))
+  Alcotest.(check bool __LOC__ true (String.equal r r' && String.equal s s'))
 
 let ecdsa_verify () =
   let key =
-    match P256.Dsa.pub_of_cstruct
-            (Cstruct.of_hex {|04
-                        B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
-                        3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
+    match P256.Dsa.pub_of_octets
+            (of_hex {|04
+                      B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
+                      3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|})
     with
     | Ok a -> a
     | Error _ -> assert false
-  and e = Cstruct.of_hex "A41A41A1 2A799548 211C410C 65D8133A FDE34D28 BDD542E4 B680CF28 99C8A8C4"
-  and r = Cstruct.of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
-  and s = Cstruct.of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
+  and e = of_hex "A41A41A1 2A799548 211C410C 65D8133A FDE34D28 BDD542E4 B680CF28 99C8A8C4"
+  and r = of_hex "2B42F576 D07F4165 FF65D1F3 B1500F81 E44C316F 1F0B3EF5 7325B69A CA46104F"
+  and s = of_hex "DC42C212 2D6392CD 3E3A993A 89502A81 98C1886F E69D262C 4B329BDB 6B63FAF1"
   in
-  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r, s) e));
-  let key =
-    match P256.Dsa.pub_of_cstruct
-            Cstruct.(shift (of_hex {|0000000004
-                        B7E08AFD FE94BAD3 F1DC8C73 4798BA1C 62B3A0AD 1E9EA2A3 8201CD08 89BC7A19
-                        3603F747 959DBF7A 4BB226E4 19287290 63ADC7AE 43529E61 B563BBC6 06CC5E09|}) 4)
-    with
-    | Ok a -> a
-    | Error _ -> assert false
-  in
-  let e' = Cstruct.(shift (append (create 3) e) 3)
-  and r' = Cstruct.(shift (append (create 6) r) 6)
-  and s' = Cstruct.(shift (append (create 9) s) 9)
-  in
-  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r', s') e'))
+  Alcotest.(check bool __LOC__ true (P256.Dsa.verify ~key (r, s) e))
 
 let ecdsa = [
   (* from https://csrc.nist.rip/groups/ST/toolkit/documents/Examples/ECDSA_Prime.pdf *)
@@ -285,51 +220,50 @@ let ecdsa = [
 let ecdsa_rfc6979_p256 =
   (* A.2.5 - P 256 *)
   let priv, pub =
-    let data = Cstruct.of_hex "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721" in
-    match P256.Dsa.priv_of_cstruct data with
+    let data = of_hex "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721" in
+    match P256.Dsa.priv_of_octets data with
     | Ok p -> p, P256.Dsa.pub_of_priv p
     | Error _ -> assert false
   in
   let pub_rfc () =
-    let fst = Cstruct.create 1 in
-    Cstruct.set_uint8 fst 0 4;
-    let ux = Cstruct.of_hex "60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6"
-    and uy = Cstruct.of_hex "7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299"
+    let fst = String.make 1 '\004' in
+    let ux = of_hex "60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6"
+    and uy = of_hex "7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299"
     in
-    match P256.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P256.Dsa.pub_of_octets (fst ^ ux ^ uy) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal (P256.Dsa.pub_to_cstruct pub) (P256.Dsa.pub_to_cstruct p)
+        String.equal (P256.Dsa.pub_to_octets pub) (P256.Dsa.pub_to_octets p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
   in
   let pub_key_compression () =
     let _, pub = P256.Dsa.generate () in
-    let compressed = P256.Dsa.pub_to_cstruct ~compress:true pub in
-    let decompressed = P256.Dsa.pub_of_cstruct compressed in
+    let compressed = P256.Dsa.pub_to_octets ~compress:true pub in
+    let decompressed = P256.Dsa.pub_of_octets compressed in
     let comparison = match decompressed with
       | Ok decompressed ->
-        let cstruct1 = (P256.Dsa.pub_to_cstruct pub) in
-        let cstruct2 = (P256.Dsa.pub_to_cstruct decompressed) in
-        Cstruct.equal cstruct1 cstruct2
+        let p1 = P256.Dsa.pub_to_octets pub in
+        let p2 = P256.Dsa.pub_to_octets decompressed in
+        String.equal p1 p2
       | Error _ -> false in
     Alcotest.(check bool __LOC__ true comparison)
   in
   let case hash ~message ~k ~r ~s () =
     let msg =
       let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
-      Cstruct.sub h 0 (min (Cstruct.length h) 32)
-    and k = Cstruct.of_hex k
+      Cstruct.to_string (Cstruct.sub h 0 (min (Cstruct.length h) 32))
+    and k = of_hex k
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
       let module K = P256.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
-    Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
+    Alcotest.(check bool __LOC__ true (String.equal k k'));
     let sig_eq (r', s') =
-      Cstruct.equal (Cstruct.of_hex r) r' && Cstruct.equal (Cstruct.of_hex s) s'
+      String.equal (of_hex r) r' && String.equal (of_hex s) s'
     in
     let sig' = P256.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
@@ -383,34 +317,33 @@ let ecdsa_rfc6979_p256 =
 let ecdsa_rfc6979_p384 =
   (* A.2.6 - P 384 *)
   let priv, pub =
-    let data = Cstruct.of_hex "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D896D5724E4C70A825F872C9EA60D2EDF5" in
-    match P384.Dsa.priv_of_cstruct data with
+    let data = of_hex "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D896D5724E4C70A825F872C9EA60D2EDF5" in
+    match P384.Dsa.priv_of_octets data with
     | Ok p -> p, P384.Dsa.pub_of_priv p
     | Error _ -> assert false
   in
   let pub_rfc () =
-    let fst = Cstruct.create 1 in
-    Cstruct.set_uint8 fst 0 4;
-    let ux = Cstruct.of_hex "EC3A4E415B4E19A4568618029F427FA5DA9A8BC4AE92E02E06AAE5286B300C64DEF8F0EA9055866064A254515480BC13"
-    and uy = Cstruct.of_hex "8015D9B72D7D57244EA8EF9AC0C621896708A59367F9DFB9F54CA84B3F1C9DB1288B231C3AE0D4FE7344FD2533264720"
+    let fst = String.make 1 '\004' in
+    let ux = of_hex "EC3A4E415B4E19A4568618029F427FA5DA9A8BC4AE92E02E06AAE5286B300C64DEF8F0EA9055866064A254515480BC13"
+    and uy = of_hex "8015D9B72D7D57244EA8EF9AC0C621896708A59367F9DFB9F54CA84B3F1C9DB1288B231C3AE0D4FE7344FD2533264720"
     in
-    match P384.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P384.Dsa.pub_of_octets (fst ^ ux ^ uy) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal (P384.Dsa.pub_to_cstruct pub) (P384.Dsa.pub_to_cstruct p)
+        String.equal (P384.Dsa.pub_to_octets pub) (P384.Dsa.pub_to_octets p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
   in
   let pub_key_compression () =
     let _, pub = P384.Dsa.generate () in
-    let compressed = P384.Dsa.pub_to_cstruct ~compress:true pub in
-    let decompressed = P384.Dsa.pub_of_cstruct compressed in
+    let compressed = P384.Dsa.pub_to_octets ~compress:true pub in
+    let decompressed = P384.Dsa.pub_of_octets compressed in
     let comparison = match decompressed with
       | Ok decompressed ->
-        let cstruct1 = (P384.Dsa.pub_to_cstruct pub) in
-        let cstruct2 = (P384.Dsa.pub_to_cstruct decompressed) in
-        Cstruct.equal cstruct1 cstruct2
+        let p1 = P384.Dsa.pub_to_octets pub in
+        let p2 = P384.Dsa.pub_to_octets decompressed in
+        String.equal p1 p2
       | Error _ -> false
     in
     Alcotest.(check bool __LOC__ true comparison)
@@ -418,17 +351,17 @@ let ecdsa_rfc6979_p384 =
   let case hash ~message ~k ~r ~s () =
     let msg =
       let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string message) in
-      Cstruct.sub h 0 (min (Cstruct.length h) 48)
-    and k = Cstruct.of_hex k
+      Cstruct.to_string (Cstruct.sub h 0 (min (Cstruct.length h) 48))
+    and k = of_hex k
     in
     let k' =
       let module H = (val (Mirage_crypto.Hash.module_of hash)) in
       let module K = P384.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
-    Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
+    Alcotest.(check bool __LOC__ true (String.equal k k'));
     let sig_eq (r', s') =
-      Cstruct.equal (Cstruct.of_hex r) r' && Cstruct.equal (Cstruct.of_hex s) s'
+      String.equal (of_hex r) r' && String.equal (of_hex s) s'
     in
     let sig' = P384.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
@@ -520,20 +453,19 @@ let ecdsa_rfc6979_p384 =
 
 let ecdsa_rfc6979_p521 =
   (* A.2.7 - P 521 *)
-  let of_h b = Cstruct.of_hex ((String.make 1 '0') ^ b) in
+  let of_h b = of_hex ((String.make 1 '0') ^ b) in
   let priv, pub =
     let data = of_h
         "0FAD06DAA62BA3B25D2FB40133DA757205DE67F5BB0018FEE8C86E1B68C7E75C
          AA896EB32F1F47C70855836A6D16FCC1466F6D8FBEC67DB89EC0C08B0E996B83
          538"
     in
-    match P521.Dsa.priv_of_cstruct data with
+    match P521.Dsa.priv_of_octets data with
     | Ok p -> p, P521.Dsa.pub_of_priv p
     | Error _ -> assert false
   in
   let pub_rfc () =
-    let fst = Cstruct.create 1 in
-    Cstruct.set_uint8 fst 0 4;
+    let fst = String.make 1 '\004' in
     let ux = of_h
         "1894550D0785932E00EAA23B694F213F8C3121F86DC97A04E5A7167DB4E5BCD3
          71123D46E45DB6B5D5370A7F20FB633155D38FFA16D2BD761DCAC474B9A2F502
@@ -543,29 +475,29 @@ let ecdsa_rfc6979_p521 =
          8A0DB25741B5B34A828008B22ACC23F924FAAFBD4D33F81EA66956DFEAA2BFDF
          CF5"
     in
-    match P521.Dsa.pub_of_cstruct (Cstruct.concat [ fst ; ux ; uy ]) with
+    match P521.Dsa.pub_of_octets (fst ^ ux ^ uy) with
     | Ok p ->
       let pub_eq =
-        Cstruct.equal (P521.Dsa.pub_to_cstruct pub) (P521.Dsa.pub_to_cstruct p)
+        String.equal (P521.Dsa.pub_to_octets pub) (P521.Dsa.pub_to_octets p)
       in
       Alcotest.(check bool __LOC__ true pub_eq)
     | Error _ -> Alcotest.fail "bad public key"
   in
   let pub_key_compression () =
     let _, pub = P521.Dsa.generate () in
-    let compressed = P521.Dsa.pub_to_cstruct ~compress:true pub in
-    let decompressed = P521.Dsa.pub_of_cstruct compressed in
+    let compressed = P521.Dsa.pub_to_octets ~compress:true pub in
+    let decompressed = P521.Dsa.pub_of_octets compressed in
     let comparison = match decompressed with
       | Ok decompressed ->
-        let cstruct1 = (P521.Dsa.pub_to_cstruct pub) in
-        let cstruct2 = (P521.Dsa.pub_to_cstruct decompressed) in
-        Cstruct.equal cstruct1 cstruct2
+        let p1 = P521.Dsa.pub_to_octets pub in
+        let p2 = P521.Dsa.pub_to_octets decompressed in
+        String.equal p1 p2
       | Error _ -> false
     in
     Alcotest.(check bool __LOC__ true comparison)
   in
   let case hash ~message ~k ~r ~s () =
-    let msg = Mirage_crypto.Hash.digest hash (Cstruct.of_string message)
+    let msg = Cstruct.to_string (Mirage_crypto.Hash.digest hash (Cstruct.of_string message))
     and k = of_h k
     in
     let k' =
@@ -573,9 +505,9 @@ let ecdsa_rfc6979_p521 =
       let module K = P521.Dsa.K_gen (H) in
       K.generate ~key:priv msg
     in
-    Alcotest.(check bool __LOC__ true (Cstruct.equal k k'));
+    Alcotest.(check bool __LOC__ true (String.equal k k'));
     let sig_eq (r', s') =
-      Cstruct.equal (of_h r) r' && Cstruct.equal (of_h s) s'
+      String.equal (of_h r) r' && String.equal (of_h s) s'
     in
     let sig' = P521.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
@@ -699,68 +631,58 @@ let ecdsa_rfc6979_p521 =
 
 let x25519 () =
   (* RFC 7748, 6.1 *)
-  let a = Cstruct.of_hex "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"
-  and apub = Cstruct.of_hex "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"
-  and b = Cstruct.of_hex "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb"
-  and bpub = Cstruct.of_hex "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"
-  and shared = Cstruct.of_hex "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"
+  let a = of_hex "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"
+  and apub = of_hex "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"
+  and b = of_hex "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb"
+  and bpub = of_hex "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"
+  and shared = of_hex "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"
   in
-  let of_cs cs = match X25519.secret_of_cs cs with
+  let of_octets cs = match X25519.secret_of_octets cs with
     | Ok (a, b) -> a, b
     | Error _ -> Alcotest.fail "couldn't decode secret"
   in
-  let apriv, apub' = of_cs a in
-  Alcotest.(check bool __LOC__ true (Cstruct.equal apub apub'));
-  let bpriv, bpub' = of_cs b in
-  Alcotest.(check bool __LOC__ true (Cstruct.equal bpub bpub'));
+  let apriv, apub' = of_octets a in
+  Alcotest.(check bool __LOC__ true (String.equal apub apub'));
+  let bpriv, bpub' = of_octets b in
+  Alcotest.(check bool __LOC__ true (String.equal bpub bpub'));
   (match X25519.key_exchange apriv bpub with
    | Ok shared' ->
-     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
+     Alcotest.(check bool __LOC__ true (String.equal shared shared'))
    | Error e ->
      Alcotest.failf "X25519 key exchange apriv bpub failed %a" pp_error e);
-  (match X25519.key_exchange bpriv apub with
-   | Ok shared' ->
-     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
-   | Error e ->
-     Alcotest.failf "X25519 key exchange bpriv apub failed %a" pp_error e);
-  let apub' = Cstruct.(shift (append (create 32) apub) 32)
-  and b' = Cstruct.(shift (append (create 10) b) 10)
-  in
-  let bpriv', _ = of_cs b' in
-  (match X25519.key_exchange bpriv' apub' with
-   | Ok shared' ->
-     Alcotest.(check bool __LOC__ true (Cstruct.equal shared shared'))
-   | Error e ->
-     Alcotest.failf "X25519 key exchange bpriv' apub' failed %a" pp_error e)
+  match X25519.key_exchange bpriv apub with
+  | Ok shared' ->
+    Alcotest.(check bool __LOC__ true (String.equal shared shared'))
+  | Error e ->
+    Alcotest.failf "X25519 key exchange bpriv apub failed %a" pp_error e
 
 let ed25519 =
-  let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal in
   let test secret public msg signature =
     Alcotest.(
-      check cs "public key is ok" (Ed25519.pub_to_cstruct public)
-        Ed25519.(pub_to_cstruct (pub_of_priv secret)));
-    Alcotest.(check cs "signature is ok" signature (Ed25519.sign ~key:secret msg));
+      check string "public key is ok" (Ed25519.pub_to_octets public)
+        Ed25519.(pub_to_octets (pub_of_priv secret)));
+    Alcotest.(check string "signature is ok" signature (Ed25519.sign ~key:secret msg));
     Alcotest.(check bool "verify is ok" true
                 (Ed25519.verify ~key:public signature ~msg))
   in
   let case i ~secret ~public ~msg ~signature =
     "RFC 8032 " ^ string_of_int i, `Quick, fun () ->
       let s =
-        match Ed25519.priv_of_cstruct (Cstruct.of_hex secret) with
+        match Ed25519.priv_of_octets (of_hex secret) with
         | Ok p ->
-          Alcotest.(check cs "private key encoding is good"
-                      (Cstruct.of_hex secret) (Ed25519.priv_to_cstruct p));
+          Alcotest.(check string "private key encoding is good"
+                      (of_hex secret) (Ed25519.priv_to_octets p));
           p
         | Error _ -> Alcotest.fail "failed to decode private key"
       and p =
-        match Ed25519.pub_of_cstruct (Cstruct.of_hex public) with
+        match Ed25519.pub_of_octets (of_hex public) with
         | Ok p ->
-          Alcotest.(check cs "public key encoding is good"
-                      (Cstruct.of_hex public) (Ed25519.pub_to_cstruct p));
+          Alcotest.(check string "public key encoding is good"
+                      (of_hex public) (Ed25519.pub_to_octets p));
           p
         | Error _ -> Alcotest.fail "failed to decode public key"
-      and m = Cstruct.of_hex msg
-      and si = Cstruct.of_hex signature
+      and m = of_hex msg
+      and si = of_hex signature
       in
       test s p m si
   in
@@ -904,54 +826,8 @@ let ed25519 =
      |};
   ]
 
-let ed25519_cs_with_offs () =
-  let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal in
-  let test secret public msg signature =
-    Alcotest.(
-      check cs "public key is ok" (Ed25519.pub_to_cstruct public)
-        Ed25519.(pub_to_cstruct (pub_of_priv secret)));
-    Alcotest.(check cs "signature is ok" signature (Ed25519.sign ~key:secret msg));
-    Alcotest.(check bool "verify is ok" true
-                (Ed25519.verify ~key:public signature ~msg))
-  in
-  let case ~secret ~public ~msg ~signature =
-    let s =
-      match Ed25519.priv_of_cstruct Cstruct.(shift (of_hex secret) 1) with
-      | Ok p ->
-        Alcotest.(check cs "private key encoding is good"
-                    Cstruct.(shift (of_hex secret) 1)
-                    (Ed25519.priv_to_cstruct p));
-        p
-      | Error _ -> Alcotest.fail "failed to decode private key"
-    and p =
-      match Ed25519.pub_of_cstruct Cstruct.(shift (of_hex public) 2) with
-      | Ok p ->
-        Alcotest.(check cs "public key encoding is good"
-                    Cstruct.(shift (of_hex public) 2)
-                    (Ed25519.pub_to_cstruct p));
-        p
-      | Error _ -> Alcotest.fail "failed to decode public key"
-    and m = Cstruct.(shift (of_hex msg) 3)
-    and si = Cstruct.(shift (of_hex signature) 4)
-    in
-    test s p m si
-  in
-  case
-    ~secret:
-      "00 9d61b19deffd5a60ba844af492ec2cc4 4449c5697b326919703bac031cae7f60"
-    ~public:
-      "0000 d75a980182b10ab7d54bfed3c964073a 0ee172f3daa62325af021a68f707511a"
-    ~msg:"000000"
-    ~signature:
-      {|00000000
-        e5564300c360ac729086e2cc806e828a
-        84877f1eb8e5d974d873e06522490155
-        5fb8821590a33bacc61e39701cf9b46b
-        d25bf5f0595bbe24655141438e7a100b
-      |}
-
 let p521_regression () =
-  let key = Cstruct.of_hex
+  let key = of_hex
 "04 01 e4 f8 8a 40 3d fe  2f 65 a0 20 50 01 9b 87
 86 2c 30 2f 64 58 de 68  63 ab 92 72 88 04 c6 20
 7b 6f 9a 52 95 2d ff c7  80 df 50 44 b1 c4 91 e3
@@ -961,25 +837,25 @@ dd 25 0e 00 95 6e 19 fb  7f b7 ce 47 5a 59 01 5f
 35 5c bb a1 b5 74 f4 47  a3 4c 0a f0 5f 6d 68 47
 85 0f e9 79 74 23 e8 75  47 6e 2b e5 ea 1b 0a 36
 b9 c3 94 ca b0"
-  and data = Cstruct.of_hex
+  and data = of_hex
 "a8 98 57 b9 3f 58 02 c7  9a 37 e2 d7 89 d8 0b f4
 2d 84 c2 24 7c 7f ff 5f  7b 65 c5 17 cf 79 7d 36
 ff d3 9d 47 5e 68 90 57  f1 61 48 18 04 c3 fe ee
 59 b2 15 2d 75 8b 9a 3c  52 60 96 5c 52 a8 55 9c"
-  and sigr = Cstruct.of_hex
+  and sigr = of_hex
 "3a 2c 99 0b 61 a1 da 06  20 bf 6c fe 1f d3 f8 2a
 cb f1 e5 0f 78 11 61 58  22 e4 a0 5f 18 81 8d 98
 f8 7a ca 8b f8 f8 cc b8  95 f7 6f 03 54 1b 66 6e
 cf c5 cb f1 7b 48 82 d2  c3 0e 0e 1b b4 ad e6 a4
 5c"
-  and sigs = Cstruct.of_hex
+  and sigs = of_hex
 "01 7b 8c 82 a5 aa 80 c5  ee 23 0f 91 55 89 a7 b0
 3c 46 7f 56 ff b4 52 89  52 99 59 1e 5e b7 f2 c1
 df f8 a0 4f d3 dd 1d f0  07 78 3a 2f 29 d6 61 61
 55 dc 3b be 14 82 93 75  c2 0d be 7e ca 50 e4 3c
 98 88"
   in
-  match P521.Dsa.pub_of_cstruct key with
+  match P521.Dsa.pub_of_octets key with
   | Ok key ->
     Alcotest.check Alcotest.bool "regression 1" true
       (P521.Dsa.verify ~key (sigr, sigs) data)
@@ -999,6 +875,5 @@ let () =
       ("ECDSA RFC 6979 P521", ecdsa_rfc6979_p521);
       ("X25519", [ "RFC 7748", `Quick, x25519 ]);
       ("ED25519", ed25519);
-      ("ED25519 with offsets", [ "one", `Quick, ed25519_cs_with_offs ]);
       ("ECDSA P521 regression", [ "regreesion1", `Quick, p521_regression ]);
     ]

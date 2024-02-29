@@ -31,15 +31,15 @@ module type Dh = sig
   type secret
   (** Type for private keys. *)
 
-  val secret_of_cs : ?compress:bool -> Cstruct.t ->
-    (secret * Cstruct.t, error) result
-  (** [secret_of_cs ~compress secret] decodes the provided buffer as {!secret}.
-      If [compress] is provided and [true] (defaults to [false]), the shared
-      part will be compressed. May result in an error if the buffer had an
-      invalid length or was not in bounds. *)
+  val secret_of_octets : ?compress:bool -> string ->
+    (secret * string, error) result
+  (** [secret_of_octets ~compress secret] decodes the provided buffer as
+      {!secret}.  If [compress] is provided and [true] (defaults to [false]),
+      the shared part will be compressed. May result in an error if the buffer
+      had an invalid length or was not in bounds. *)
 
   val gen_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit ->
-    secret * Cstruct.t
+    secret * string
   (** [gen_key ~compress ~g ()] generates a private and a public key for
       Ephemeral Diffie-Hellman. If [compress] is provided and [true] (defaults
       to [false]), the shared part will be compressed. The returned key pair
@@ -49,7 +49,7 @@ module type Dh = sig
       than the group order meaning the public key cannot be the point at
       inifinity. *)
 
-  val key_exchange : secret -> Cstruct.t -> (Cstruct.t, error) result
+  val key_exchange : secret -> string -> (string, error) result
   (** [key_exchange secret received_public_key] performs Diffie-Hellman key
       exchange using your secret and the data received from the other party.
       Returns the shared secret or an error if the received data is wrongly
@@ -77,19 +77,19 @@ module type Dsa = sig
 
   (** {2 Serialisation} *)
 
-  val priv_of_cstruct : Cstruct.t -> (priv, error) result
-  (** [priv_of_cstruct cs] decodes a private key from the buffer [cs]. If the
+  val priv_of_octets : string -> (priv, error) result
+  (** [priv_of_octets buf] decodes a private key from the buffer [buf]. If the
       provided data is invalid, an error is returned. *)
 
-  val priv_to_cstruct : priv -> Cstruct.t
-  (** [priv_to_cstruct p] encode the private key [p] to a buffer. *)
+  val priv_to_octets : priv -> string
+  (** [priv_to_octets p] encode the private key [p] to a buffer. *)
 
-  val pub_of_cstruct : Cstruct.t -> (pub, error) result
-  (** [pub_of_cstruct cs] decodes a public key from the buffer [cs]. If the
+  val pub_of_octets : string -> (pub, error) result
+  (** [pub_of_octets buf] decodes a public key from the buffer [buf]. If the
       provided data is invalid, an error is returned. *)
 
-  val pub_to_cstruct : ?compress:bool -> pub -> Cstruct.t
-  (** [pub_to_cstruct ~compress p] encodes the public key [p] into a buffer.
+  val pub_to_octets : ?compress:bool -> pub -> string
+  (** [pub_to_octets ~compress p] encodes the public key [p] into a buffer.
       If [compress] is provided and [true] (default [false]), the compressed
       representation is returned. *)
 
@@ -105,7 +105,7 @@ module type Dsa = sig
 
   (** {2 Cryptographic operations} *)
 
-  val sign : key:priv -> ?k:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  val sign : key:priv -> ?k:string -> string -> string * string
   (** [sign ~key ~k digest] signs the message [digest] using the private
       [key]. The [digest] is not processed further - it should be the hash of
       the message to sign. If [k] is not provided, it is computed using the
@@ -121,7 +121,7 @@ module type Dsa = sig
       @raise Invalid_argument if [k] is not suitable or not in range.
       @raise Message_too_long if the bit size of [msg] exceeds the curve. *)
 
-  val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
+  val verify : key:pub -> string * string -> string -> bool
   (** [verify ~key (r, s) digest] verifies the signature [r, s] on the message
       [digest] with the public [key]. The return value is [true] if verification
       was successful, [false] otherwise. If the message has more bits than the
@@ -131,7 +131,7 @@ module type Dsa = sig
       compliant [k]-generator for that hash. *)
   module K_gen (H : Mirage_crypto.Hash.S) : sig
 
-    val generate : key:priv -> Cstruct.t -> Cstruct.t
+    val generate : key:priv -> string -> string
     (** [generate ~key digest] deterministically takes the given private key
         and message digest to a [k] suitable for seeding the signing process. *)
   end
@@ -180,19 +180,19 @@ module Ed25519 : sig
 
   (** {2 Serialisation} *)
 
-  val priv_of_cstruct : Cstruct.t -> (priv, error) result
-  (** [priv_of_cstruct cs] decodes a private key from the buffer [cs]. If the
+  val priv_of_octets : string -> (priv, error) result
+  (** [priv_of_octets buf] decodes a private key from the buffer [buf]. If the
       provided data is invalid, an error is returned. *)
 
-  val priv_to_cstruct : priv -> Cstruct.t
-  (** [priv_to_cstruct p] encode the private key [p] to a buffer. *)
+  val priv_to_octets : priv -> string
+  (** [priv_to_octets p] encode the private key [p] to a buffer. *)
 
-  val pub_of_cstruct : Cstruct.t -> (pub, error) result
-  (** [pub_of_cstruct cs] decodes a public key from the buffer [cs]. If the
+  val pub_of_octets : string -> (pub, error) result
+  (** [pub_of_octets buf] decodes a public key from the buffer [buf]. If the
       provided data is invalid, an error is returned. *)
 
-  val pub_to_cstruct : pub -> Cstruct.t
-  (** [pub_to_cstruct p] encodes the public key [p] into a buffer. *)
+  val pub_to_octets : pub -> string
+  (** [pub_to_octets p] encodes the public key [p] into a buffer. *)
 
   (** {2 Deriving the public key} *)
 
@@ -206,11 +206,11 @@ module Ed25519 : sig
 
   (** {2 Cryptographic operations} *)
 
-  val sign : key:priv -> Cstruct.t -> Cstruct.t
+  val sign : key:priv -> string -> string
   (** [sign ~key msg] signs the message [msg] using the private [key]. The
       result is the concatenation of [r] and [s], as specified in RFC 8032. *)
 
-  val verify : key:pub -> Cstruct.t -> msg:Cstruct.t -> bool
+  val verify : key:pub -> string -> msg:string -> bool
   (** [verify ~key signature msg] verifies the [signature] on the message
       [msg] with the public [key]. The return value is [true] if verification
       was successful, [false] otherwise. *)
