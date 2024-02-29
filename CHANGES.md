@@ -6,6 +6,7 @@
 * mirage-crypto-pk: s-expression conversions for private and public keys (Dh,
   Dsa, Rsa) have been removed. You can use PKCS8 for encoding and decoding
   `X509.{Private,Public}_key.{en,de}code_{der,pem}` (#208 @hannesm)
+* mirage-crypto-ec: remove NIST P224 support (#209 @hannesm @Firobe)
 
 ### Bugfixes
 
