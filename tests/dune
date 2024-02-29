@@ -59,9 +59,7 @@
 (test
  (name test_ec_wycheproof)
  (modules test_ec_wycheproof)
- (deps ecdh_secp224r1_test.json ecdsa_secp224r1_sha224_test.json
-   ecdsa_secp224r1_sha256_test.json ecdsa_secp224r1_sha512_test.json
-   ecdh_secp256r1_test.json ecdsa_secp256r1_sha256_test.json
+ (deps ecdh_secp256r1_test.json ecdsa_secp256r1_sha256_test.json
    ecdsa_secp256r1_sha512_test.json ecdh_secp384r1_test.json
    ecdsa_secp384r1_sha384_test.json ecdsa_secp384r1_sha512_test.json
    ecdh_secp521r1_test.json ecdsa_secp521r1_sha512_test.json

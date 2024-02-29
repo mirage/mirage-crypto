@@ -801,56 +801,6 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
   end
 end
 
-module P224 : Dh_dsa = struct
-  module Params = struct
-    let a = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFE"
-    let b = "\xB4\x05\x0A\x85\x0C\x04\xB3\xAB\xF5\x41\x32\x56\x50\x44\xB0\xB7\xD7\xBF\xD8\xBA\x27\x0B\x39\x43\x23\x55\xFF\xB4"
-    let g_x = "\xB7\x0E\x0C\xBD\x6B\xB4\xBF\x7F\x32\x13\x90\xB9\x4A\x03\xC1\xD3\x56\xC2\x11\x22\x34\x32\x80\xD6\x11\x5C\x1D\x21"
-    let g_y = "\xBD\x37\x63\x88\xB5\xF7\x23\xFB\x4C\x22\xDF\xE6\xCD\x43\x75\xA0\x5A\x07\x47\x64\x44\xD5\x81\x99\x85\x00\x7E\x34"
-    let p = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
-    let n = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\xA2\xE0\xB8\xF0\x3E\x13\xDD\x29\x45\x5C\x5C\x2A\x3D"
-    let pident = ""
-    let byte_length = 28
-    let fe_length = if Sys.word_size == 64 then 32 else 28 (* TODO: is this congruent with C code? *)
-    let first_byte_bits = None
-  end
-
-  module Foreign = struct
-    external mul : out_field_element -> field_element -> field_element -> unit = "mc_p224_mul" [@@noalloc]
-    external sub : out_field_element -> field_element -> field_element -> unit = "mc_p224_sub" [@@noalloc]
-    external add : out_field_element -> field_element -> field_element -> unit = "mc_p224_add" [@@noalloc]
-    external to_montgomery : out_field_element -> field_element -> unit = "mc_p224_to_montgomery" [@@noalloc]
-    external from_octets : out_field_element -> string -> unit = "mc_p224_from_bytes" [@@noalloc]
-    external set_one : out_field_element -> unit = "mc_p224_set_one" [@@noalloc]
-    external nz : field_element -> bool = "mc_p224_nz" [@@noalloc]
-    external sqr : out_field_element -> field_element -> unit = "mc_p224_sqr" [@@noalloc]
-    external from_montgomery : out_field_element -> field_element -> unit = "mc_p224_from_montgomery" [@@noalloc]
-    external to_octets : bytes -> field_element -> unit = "mc_p224_to_bytes" [@@noalloc]
-    external inv : out_field_element -> field_element -> unit = "mc_p224_inv" [@@noalloc]
-    external select_c : out_field_element -> bool -> field_element -> field_element -> unit = "mc_p224_select" [@@noalloc]
-    external double_c : out_point -> point -> unit = "mc_p224_point_double" [@@noalloc]
-    external add_c : out_point -> point -> point -> unit = "mc_p224_point_add" [@@noalloc]
-    external scalar_mult_base_c : out_point -> string -> unit = "mc_p224_scalar_mult_base" [@@noalloc]
-  end
-
-  module Foreign_n = struct
-    external mul : out_field_element -> field_element -> field_element -> unit = "mc_np224_mul" [@@noalloc]
-    external add : out_field_element -> field_element -> field_element -> unit = "mc_np224_add" [@@noalloc]
-    external inv : out_field_element -> field_element -> unit = "mc_np224_inv" [@@noalloc]
-    external one : out_field_element -> unit = "mc_np224_one" [@@noalloc]
-    external from_bytes : out_field_element -> string -> unit = "mc_np224_from_bytes" [@@noalloc]
-    external to_bytes : bytes -> field_element -> unit = "mc_np224_to_bytes" [@@noalloc]
-    external from_montgomery : out_field_element -> field_element -> unit = "mc_np224_from_montgomery" [@@noalloc]
-    external to_montgomery : out_field_element -> field_element -> unit = "mc_np224_to_montgomery" [@@noalloc]
-  end
-
-  module P = Make_point(Params)(Foreign)
-  module S = Make_scalar(Params)(P)
-  module Dh = Make_dh(Params)(P)(S)
-  module Fn = Make_Fn(Params)(Foreign_n)
-  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA256)
-end
-
 module P256 : Dh_dsa  = struct
   module Params = struct
     let a = "\xFF\xFF\xFF\xFF\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC"
