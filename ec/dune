@@ -1,7 +1,7 @@
 (library
  (name mirage_crypto_ec)
  (public_name mirage-crypto-ec)
- (libraries cstruct eqaf mirage-crypto mirage-crypto-rng)
+ (libraries eqaf mirage-crypto mirage-crypto-rng)
  (foreign_stubs
   (language c)
   (names p256_stubs np256_stubs p384_stubs np384_stubs p521_stubs np521_stubs

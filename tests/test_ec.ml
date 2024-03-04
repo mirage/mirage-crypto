@@ -1,11 +1,10 @@
 open Mirage_crypto_ec
+open Test_common
 
 module Testable = struct
   let ok_or_error =
     Alcotest.result Alcotest.unit (Alcotest.testable pp_error ( = ))
 end
-
-let of_hex = Mirage_crypto.Uncommon.of_hex
 
 let pp_hex_le fmt buf =
   let n = String.length buf in
