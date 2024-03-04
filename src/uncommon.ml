@@ -18,6 +18,15 @@ type 'a iter = ('a -> unit) -> unit
 let iter2 a b   f = f a; f b
 let iter3 a b c f = f a; f b; f c
 
+let xor_into src dst n =
+  Native.xor_into_bytes src 0 dst 0 n
+
+let xor a b =
+  assert (String.length a = String.length b);
+  let b' = Bytes.copy (Bytes.unsafe_of_string b) in
+  xor_into a b' (Bytes.length b');
+  Bytes.unsafe_to_string b'
+
 module Cs = struct
 
   open Cstruct
@@ -38,19 +47,6 @@ module Cs = struct
     let len = imin (length cs1) (length cs2) in
     let cs  = clone ~len cs2 in
     ( xor_into cs1 cs len ; cs )
-
-  let is_prefix cs0 cs = cs0.len <= cs.len && equal cs0 (sub cs 0 cs0.len)
-
-  let set_msb bits cs =
-    if bits > 0 then
-      let n = length cs in
-      let rec go width = function
-        | i when i = n     -> ()
-        | i when width < 8 ->
-            set_uint8 cs i (get_uint8 cs i lor (0xff lsl (8 - width)))
-        | i ->
-            set_uint8 cs i 0xff ; go (width - 8) (succ i) in
-      go bits 0
 
   let split3 cs l1 l2 =
     let l12 = l1 + l2 in
@@ -78,25 +74,4 @@ module Cs = struct
   let b x =
     let cs = Cstruct.create_unsafe 1 in ( set_uint8 cs 0 x ; cs )
 
-  let rec shift_left_inplace cs = function
-    | 0 -> ()
-    | bits when bits mod 8 = 0 ->
-        let off = bits / 8 in
-        blit cs off cs 0 (cs.len - off) ;
-        memset (shift cs (cs.len - off)) 0x00
-    | bits when bits < 8 ->
-        let foo = 8 - bits in
-        for i = 0 to cs.len - 2 do
-          let b1 = get_uint8 cs i
-          and b2 = get_uint8 cs (i + 1) in
-          set_uint8 cs i ((b1 lsl bits) lor (b2 lsr foo))
-        done ;
-        set_uint8 cs (cs.len - 1) @@ get_uint8 cs (cs.len - 1) lsl bits
-    | bits ->
-        shift_left_inplace cs (8 * (bits / 8)) ;
-        shift_left_inplace cs (bits mod 8)
-
-  let (lsl) cs bits =
-    let cs' = clone cs in
-    shift_left_inplace cs' bits ; cs'
 end

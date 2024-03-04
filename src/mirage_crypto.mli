@@ -42,15 +42,9 @@ module Uncommon : sig
 
     val clone  : ?len:int -> Cstruct.t -> Cstruct.t
 
-    val (lsl) : Cstruct.t -> int -> Cstruct.t
-
     val b : int -> Cstruct.t
 
     val of_bytes : int list -> Cstruct.t
-
-    val set_msb : int -> Cstruct.t -> unit
-
-    val is_prefix : Cstruct.t -> Cstruct.t -> bool
 
     val split3 : Cstruct.t -> int -> int -> Cstruct.t * Cstruct.t * Cstruct.t
   end
@@ -59,6 +53,8 @@ module Uncommon : sig
   val imax : int -> int -> int
   val iter2 : 'a -> 'a -> ('a -> unit) -> unit
   val iter3 : 'a -> 'a -> 'a -> ('a -> unit) -> unit
+
+  val xor : string -> string -> string
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
   val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a

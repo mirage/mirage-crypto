@@ -94,7 +94,7 @@ module Rsa : sig
 
   (** {1 The RSA transformation} *)
 
-  type 'a or_digest = [ `Message of 'a | `Digest of Mirage_crypto.Hash.digest ]
+  type 'a or_digest = [ `Message of 'a | `Digest of string ]
   (** Either an ['a] or its digest, according to some hash algorithm. *)
 
   type mask = [ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ]
@@ -109,7 +109,7 @@ module Rsa : sig
          the sane option.}
       {- [`Yes_with g] uses random masking with the generator [g].}} *)
 
-  val encrypt : key:pub  -> Cstruct.t -> Cstruct.t
+  val encrypt : key:pub -> string -> string
   (** [encrypt key message] is the encrypted [message].
 
       @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key})
@@ -117,7 +117,7 @@ module Rsa : sig
       @raise Invalid_argument if [message] is [0x00] or [0x01]. *)
 
   val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
-    Cstruct.t -> Cstruct.t
+    string -> string
   (** [decrypt ~crt_hardening ~mask key ciphertext] is the decrypted
       [ciphertext], left-padded with [0x00] up to [key] size.
 
@@ -157,21 +157,21 @@ module Rsa : sig
       key size is [priv_bits key / 8], rounded up. *)
   module PKCS1 : sig
 
-    val encrypt : ?g:Mirage_crypto_rng.g -> key:pub -> Cstruct.t -> Cstruct.t
+    val encrypt : ?g:Mirage_crypto_rng.g -> key:pub -> string -> string
     (** [encrypt g key message] is a PKCS1-padded (type 2) and encrypted
         [message].
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
     val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
-      Cstruct.t -> Cstruct.t option
+      string -> string option
     (** [decrypt ~crt_hardening ~mask ~key ciphertext] is [Some message] if
         the [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
         operation, or [None] otherwise. [crt_hardening] defaults to
         [false]. *)
 
     val sig_encode : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
-      Cstruct.t -> Cstruct.t
+      string -> string
     (** [sig_encode ~crt_hardening ~mask ~key message] is the PKCS1-padded
         (type 1) [message] signed by the [key]. [crt_hardening] defaults to
         [true] and verifies that the computed signature is correct.
@@ -182,7 +182,7 @@ module Rsa : sig
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val sig_decode : key:pub -> Cstruct.t -> Cstruct.t option
+    val sig_decode : key:pub -> string -> string option
     (** [sig_decode key signature] is [Some message] when the [signature]
         was produced with the given [key] as per {{!sig_encode}sig_encode}, or
         [None] *)
@@ -191,8 +191,8 @@ module Rsa : sig
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
     val sign : ?crt_hardening:bool -> ?mask:mask ->
-      hash:Mirage_crypto.Hash.hash -> key:priv -> Cstruct.t or_digest ->
-      Cstruct.t
+      hash:Mirage_crypto.Hash.hash -> key:priv -> string or_digest ->
+      string
     (** [sign ~crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
         signature of [message], signed by the [key], using the hash function
         [hash]. This is the full signature, with the ASN-encoded message digest
@@ -206,7 +206,7 @@ module Rsa : sig
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
 
     val verify : hashp:(Mirage_crypto.Hash.hash -> bool) -> key:pub ->
-      signature:Cstruct.t -> Cstruct.t or_digest -> bool
+      signature:string -> string or_digest -> bool
     (** [verify ~hashp ~key ~signature message] checks that [signature] is the
         PKCS 1.5 signature of the [message] under the given [key].
 
@@ -229,15 +229,15 @@ module Rsa : sig
       [hlen] is the hash length. *)
   module OAEP (H : Mirage_crypto.Hash.S) : sig
 
-    val encrypt : ?g:Mirage_crypto_rng.g -> ?label:Cstruct.t -> key:pub ->
-      Cstruct.t -> Cstruct.t
+    val encrypt : ?g:Mirage_crypto_rng.g -> ?label:string -> key:pub ->
+      string -> string
     (** [encrypt ~g ~label ~key message] is {b OAEP}-padded and encrypted
         [message], using the optional [label].
 
         @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
-    val decrypt : ?crt_hardening:bool -> ?mask:mask -> ?label:Cstruct.t ->
-      key:priv -> Cstruct.t -> Cstruct.t option
+    val decrypt : ?crt_hardening:bool -> ?mask:mask -> ?label:string ->
+      key:priv -> string -> string option
     (** [decrypt ~crt_hardening ~mask ~label ~key ciphertext] is
         [Some message] if the [ciphertext] was produced by the corresponding
         {{!encrypt}encrypt} operation, or [None] otherwise. [crt_hardening]
@@ -256,7 +256,7 @@ module Rsa : sig
   module PSS (H: Mirage_crypto.Hash.S) : sig
 
     val sign : ?g:Mirage_crypto_rng.g -> ?crt_hardening:bool ->
-      ?mask:mask -> ?slen:int -> key:priv -> Cstruct.t or_digest -> Cstruct.t
+      ?mask:mask -> ?slen:int -> key:priv -> string or_digest -> string
     (** [sign ~g ~crt_hardening ~mask ~slen ~key message] the [PSS]-padded
         digest of [message], signed with the [key]. [crt_hardening] defaults
         to [false].
@@ -270,7 +270,7 @@ module Rsa : sig
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
 
-    val verify : ?slen:int -> key:pub -> signature:Cstruct.t -> Cstruct.t or_digest -> bool
+    val verify : ?slen:int -> key:pub -> signature:string -> string or_digest -> bool
     (** [verify ~slen ~key ~signature message] checks whether [signature] is a
         valid {b PSS} signature of the [message] under the given [key].
 
@@ -343,8 +343,8 @@ module Dsa : sig
       @raise Invalid_argument if [size] is (`Exactly (l, n)), and either [l] or
       [n] is ridiculously small. *)
 
-  val sign : ?mask:mask -> ?k:Z.t -> key:priv -> Cstruct.t -> Cstruct.t * Cstruct.t
-  (** [sign ~mask ~k ~key digest] is the signature, a pair of {!Cstruct.t}s
+  val sign : ?mask:mask -> ?k:Z.t -> key:priv -> string -> string * string
+  (** [sign ~mask ~k ~key digest] is the signature, a pair of strings
       representing [r] and [s] in big-endian.
 
       [digest] is the full digest of the actual message.
@@ -355,11 +355,11 @@ module Dsa : sig
       @raise Invalid_argument if [k] is unsuitable (leading to r or s being 0).
  *)
 
-  val verify : key:pub -> Cstruct.t * Cstruct.t -> Cstruct.t -> bool
+  val verify : key:pub -> string * string -> string -> bool
   (** [verify ~key (r, s) digest] verifies that the pair [(r, s)] is the signature
       of [digest], the message digest, under the private counterpart to [key]. *)
 
-  val massage : key:pub -> Cstruct.t -> Cstruct.t
+  val massage : key:pub -> string -> string
   (** [massage key digest] is the numeric value of [digest] taken modulo [q] and
       represented in the leftmost [bits(q)] bits of the result.
 
@@ -375,7 +375,7 @@ module Dsa : sig
       compliant [k]-generator for that hash. *)
   module K_gen (H : Mirage_crypto.Hash.S) : sig
 
-    val generate : key:priv -> Cstruct.t -> Z.t
+    val generate : key:priv -> string -> Z.t
     (** [generate key digest] deterministically takes the given private key and
         message digest to a [k] suitable for seeding the signing process. *)
   end
@@ -412,20 +412,20 @@ module Dh : sig
   val modulus_size : group -> bits
   (** Bit size of the modulus. *)
 
-  val key_of_secret : group -> s:Cstruct.t -> secret * Cstruct.t
+  val key_of_secret : group -> s:string -> secret * string
   (** [key_of_secret group s] is the {!secret} and the corresponding public
       key which use [s] as the secret exponent.
 
       @raise Invalid_key if [s] is degenerate. *)
 
-  val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:bits -> group -> secret * Cstruct.t
+  val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:bits -> group -> secret * string
   (** Generate a random {!secret} and the corresponding public key.
       [bits] is the exact bit-size of {!secret} and defaults to a value
       dependent on the {!type-group}'s [p].
 
       {b Note} The process might diverge when [bits] is extremely small. *)
 
-  val shared : secret -> Cstruct.t -> Cstruct.t option
+  val shared : secret -> string -> string option
   (** [shared secret public] is [Some shared_key] given a
       a previously generated {!secret} (which specifies the [group])
       and the other party's public key.
@@ -477,27 +477,27 @@ module Dh : sig
   end
 end
 
-(** {b Z} Convert Z to big endian Cstruct.t and generate random Z values. *)
+(** {b Z} Convert Z to big endian string and generate random Z values. *)
 module Z_extra : sig
-  (** {1 Conversion to and from Cstruct.t} *)
+  (** {1 Conversion to and from string} *)
 
-  val of_cstruct_be : ?bits:bits -> Cstruct.t -> Z.t
-  (** [of_cstruct_be ~bits cs] interprets the bit pattern of [cs] as a
+  val of_octets_be : ?bits:bits -> string -> Z.t
+  (** [of_octets_be ~bits buf] interprets the bit pattern of [buf] as a
       {{!Z.t}[t]} in big-endian.
 
-      If [~bits] is not given, the operation considers the entire [cs],
-      otherwise the initial [min ~bits (bit-length cs)] bits of [cs].
+      If [~bits] is not given, the operation considers the entire [buf],
+      otherwise the initial [min ~bits (bit-length buf)] bits of [buf].
 
-      Assuming [n] is the number of bits to extract, the [n]-bit in [cs] is
+      Assuming [n] is the number of bits to extract, the [n]-bit in [buf] is
       always the least significant bit of the result. Therefore:
       {ul
       {- if the bit size [k] of [t] is larger than [n], [k - n] most
          significant bits in the result are [0]; and}
       {- if [k] is smaller than [n], the result contains [k] last of the [n]
-         first bits of [cs].}} *)
+         first bits of [buf].}} *)
 
-  val to_cstruct_be : ?size:int -> Z.t -> Cstruct.t
-  (** [to_cstruct_be ~size t] is the big-endian representation of [t].
+  val to_octets_be : ?size:int -> Z.t -> string
+  (** [to_octets_be ~size t] is the big-endian representation of [t].
 
       If [~size] is not given, it defaults to the minimal number of bytes
       needed to represent [t], which is [bits t / 8] rounded up.
@@ -506,10 +506,10 @@ module Z_extra : sig
       If the size is larger than needed, the output is padded with zero bits.
       If it is smaller, the high bits in [t] are dropped. *)
 
-  val into_cstruct_be : Z.t -> Cstruct.t -> unit
-  (** [into_cstruct_be t cs] writes the big-endian representation of [t] into
-      [cs]. It behaves like {{!to_cstruct_be}[to_cstruct_be]}, with [~size]
-      spanning the entire [cs]. *)
+  val into_octets_be : Z.t -> bytes -> unit
+  (** [into_octets_be t buf] writes the big-endian representation of [t] into
+      [buf]. It behaves like {{!to_octets_be}[to_octets_be]}, with [~size]
+      spanning the entire [buf]. *)
 
   (** {1 Random generation} *)
 
