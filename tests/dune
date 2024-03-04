@@ -52,8 +52,7 @@
 (test
  (name test_ec)
  (modules test_ec)
- (libraries alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng.unix
-   hex)
+ (libraries test_common alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng.unix)
  (package mirage-crypto-ec))
 
 (test
