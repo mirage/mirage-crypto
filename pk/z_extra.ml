@@ -2,61 +2,70 @@ open Mirage_crypto.Uncommon
 
 let bit_bound z = Z.size z * 64
 
-let of_cstruct_be ?bits cs =
-  let open Cstruct in
-  let open BE in
+(* revise once OCaml 4.13 is the lower bound *)
+let string_get_int64_be buf idx =
+  Bytes.get_int64_be (Bytes.unsafe_of_string buf) idx
+
+let string_get_int32_be buf idx =
+  Bytes.get_int32_be (Bytes.unsafe_of_string buf) idx
+
+let string_get_uint16_be buf idx =
+  Bytes.get_uint16_be (Bytes.unsafe_of_string buf) idx
+
+let string_get_uint8 buf idx =
+  Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
+
+let of_octets_be ?bits buf =
   let rec loop acc i = function
     | b when b >= 64 ->
-      let x = get_uint64 cs i in
-      let x = Z.of_int64 Int64.(shift_right_logical x 8) in
+      let x = string_get_int64_be buf i in
+      let x = Z.of_int64_unsigned Int64.(shift_right_logical x 8) in
       loop Z.(x + acc lsl 56) (i + 7) (b - 56)
     | b when b >= 32 ->
-      let x = get_uint32 cs i in
-      let x = Z.of_int32 Int32.(shift_right_logical x 8) in
+      let x = string_get_int32_be buf i in
+      let x = Z.of_int32_unsigned Int32.(shift_right_logical x 8) in
       loop Z.(x + acc lsl 24) (i + 3) (b - 24)
     | b when b >= 16 ->
-      let x = Z.of_int (get_uint16 cs i) in
+      let x = Z.of_int (string_get_uint16_be buf i) in
       loop Z.(x + acc lsl 16) (i + 2) (b - 16)
     | b when b >= 8  ->
-      let x = Z.of_int (get_uint8 cs i) in
+      let x = Z.of_int (string_get_uint8 buf i) in
       loop Z.(x + acc lsl 8 ) (i + 1) (b - 8 )
     | b when b > 0   ->
-      let x = get_uint8 cs i and b' = 8 - b in
+      let x = string_get_uint8 buf i and b' = 8 - b in
       Z.(of_int x asr b' + acc lsl b)
     | _              -> acc in
   loop Z.zero 0 @@ match bits with
-  | None   -> Cstruct.length cs * 8
-  | Some b -> imin b (Cstruct.length cs * 8)
+  | None   -> String.length buf * 8
+  | Some b -> imin b (String.length buf * 8)
 
 let byte1 = Z.of_int64 0xffL
 and byte2 = Z.of_int64 0xffffL
 and byte3 = Z.of_int64 0xffffffL
 and byte7 = Z.of_int64 0xffffffffffffffL
 
-let into_cstruct_be n cs =
-  let open Cstruct in
-  let open BE in
+let into_octets_be n buf =
   let rec write n = function
     | i when i >= 7 ->
-      set_uint64 cs (i - 7) Z.(to_int64 (n land byte7)) ;
+      Bytes.set_int64_be buf (i - 7) Z.(to_int64_unsigned (n land byte7)) ;
       write Z.(n asr 56) (i - 7)
     | i when i >= 3 ->
-      set_uint32 cs (i - 3) Z.(to_int32 (n land byte3)) ;
+      Bytes.set_int32_be buf (i - 3) Z.(to_int32_unsigned (n land byte3)) ;
       write Z.(n asr 24) (i - 3)
     | i when i >= 1 ->
-      set_uint16 cs (i - 1) Z.(to_int (n land byte2)) ;
+      Bytes.set_uint16_be buf (i - 1) Z.(to_int (n land byte2)) ;
       write Z.(n asr 16) (i - 2)
-    | 0 -> set_uint8 cs 0 Z.(to_int (n land byte1)) ;
+    | 0 -> Bytes.set_uint8 buf 0 Z.(to_int (n land byte1)) ;
     | _ -> ()
   in
-  write n (length cs - 1)
+  write n (Bytes.length buf - 1)
 
-let to_cstruct_be ?size n =
-  let cs = Cstruct.create_unsafe @@ match size with
+let to_octets_be ?size n =
+  let buf = Bytes.create @@ match size with
     | Some s -> imax 0 s
     | None   -> Z.numbits n // 8 in
-  ( into_cstruct_be n cs ; cs )
-
+  into_octets_be n buf;
+  Bytes.unsafe_to_string buf
 
 (* Handbook of Applied Cryptography, Table 4.4:
  * Miller-Rabin rounds for composite probability <= 1/2^80. *)
@@ -90,22 +99,36 @@ let gen ?g n =
     let batch  =
       if Mirage_crypto_rng.strict g then octets else 2 * octets // bs * bs
     in
-    let rec attempt cs =
-      if cs.Cstruct.len >= octets then
-        let x = of_cstruct_be ~bits cs in
-        if x < n then x else attempt (Cstruct.shift cs octets)
-      else attempt (Mirage_crypto_rng.generate ?g batch) in
-    attempt (Mirage_crypto_rng.generate ?g batch)
+    let rec attempt buf =
+      if String.length buf >= octets then
+        let x = of_octets_be ~bits buf in
+        if x < n then x else attempt (String.sub buf octets (String.length buf - octets))
+      else attempt (Cstruct.to_string (Mirage_crypto_rng.generate ?g batch)) in
+    attempt (Cstruct.to_string (Mirage_crypto_rng.generate ?g batch))
 
 let rec gen_r ?g a b =
   if Mirage_crypto_rng.strict g then
     let x = gen ?g b in if x < a then gen_r ?g a b else x
   else Z.(a + gen ?g (b - a))
 
+
+let set_msb bits buf =
+  if bits > 0 then
+    let n = Bytes.length buf in
+    let rec go width = function
+      | i when i = n     -> ()
+      | i when width < 8 ->
+        Bytes.set_uint8 buf i (Bytes.get_uint8 buf i lor (0xff lsl (8 - width)))
+      | i ->
+        Bytes.set_uint8 buf i 0xff ;
+        go (width - 8) (succ i)
+    in
+    go bits 0
+
 let gen_bits ?g ?(msb = 0) bits =
-  let res = Mirage_crypto_rng.generate ?g (bits // 8) in
-  Cs.set_msb msb res ;
-  of_cstruct_be ~bits res
+  let res = Cstruct.to_bytes (Mirage_crypto_rng.generate ?g (bits // 8)) in
+  set_msb msb res ;
+  of_octets_be ~bits (Bytes.unsafe_to_string res)
 
 (* Invalid combinations of ~bits and ~msb will loop forever, but there is no
  * way to quickly determine upfront whether there are any primes in the

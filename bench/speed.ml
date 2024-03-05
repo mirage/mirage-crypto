@@ -87,15 +87,15 @@ let rsa_1024 =
   in
   match Mirage_crypto_pk.Rsa.priv_of_primes ~e ~p ~q with Ok r -> r | _ -> assert false
 
-let enc_1024 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_1024) msg)
+let enc_1024 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_1024) msg_str)
 
 let pkcs1_sig_1024 () =
-  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_1024 (`Message msg)
+  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_1024 (`Message msg_str)
 
 let pkcs1_enc_1024 () =
-  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_1024) msg)
+  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_1024) msg_str)
 
-let pss_sig_1024 () = PSS.sign ~key:rsa_1024 (`Message msg)
+let pss_sig_1024 () = PSS.sign ~key:rsa_1024 (`Message msg_str)
 
 let rsa_2048 =
   let p = Z.of_string "146881832325800831419400417618624202055588545997890787121932184528831630537012732415698782899346395306540669232648045731896347007978622067056705527305566180903122107927148832001099595387953189273726394573803912262323600581299712943797238366745329534148223987933536186022708693674753193534229263584177098260169"
@@ -104,15 +104,15 @@ let rsa_2048 =
   in
   match Mirage_crypto_pk.Rsa.priv_of_primes ~e ~p ~q with Ok r -> r | _ -> assert false
 
-let enc_2048 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_2048) msg)
+let enc_2048 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_2048) msg_str)
 
 let pkcs1_sig_2048 () =
-  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_2048 (`Message msg)
+  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_2048 (`Message msg_str)
 
 let pkcs1_enc_2048 () =
-  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_2048) msg)
+  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_2048) msg_str)
 
-let pss_sig_2048 () = PSS.sign ~key:rsa_2048 (`Message msg)
+let pss_sig_2048 () = PSS.sign ~key:rsa_2048 (`Message msg_str)
 
 let rsa_4096 =
   let p = Z.of_string "30773596934476715066776070065844902670036493980016387964275170019397018472432997910667589359581914549510631424565206701540136804180560112829236103459317928059975099687383138310206374921731816027058152009810073337617754052401932141110921176212810704858018214605862299356217860547747262170495777126218319842708093667844701139914958775637423731967187071886349669479192453619522943080948061657926138418380417577129184420732857906610804965319661598089231703183044642635889126023201809407430354992888247464125783088294095728916671050049684448794153783082653555256735912037270303014887722063417225893745458164718800442738569"
@@ -121,15 +121,15 @@ let rsa_4096 =
   in
   match Mirage_crypto_pk.Rsa.priv_of_primes ~e ~p ~q with Ok r -> r | _ -> assert false
 
-let enc_4096 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_4096) msg)
+let enc_4096 = Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv rsa_4096) msg_str)
 
 let pkcs1_sig_4096 () =
-  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_4096 (`Message msg)
+  Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key:rsa_4096 (`Message msg_str)
 
 let pkcs1_enc_4096 () =
-  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_4096) msg)
+  Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv rsa_4096) msg_str)
 
-let pss_sig_4096 () = PSS.sign ~key:rsa_4096 (`Message msg)
+let pss_sig_4096 () = PSS.sign ~key:rsa_4096 (`Message msg_str)
 
 let dsa_1024 =
   let p = Z.of_string "115320471016337933377056549329182706825658339080795846324118938187917903660539570102468495091957028599543345588517799627361082806070282899880721557018345825086927289316756283826093243695405203187016738458545513419551779925532261196890562077023934735570005318513791942265699098088390517334916527653326493928799"
@@ -140,7 +140,7 @@ let dsa_1024 =
   in
   match Mirage_crypto_pk.Dsa.priv ~fips:true ~p ~q ~gg ~x ~y () with Ok p -> p | _ -> assert false
 
-let dsa_sig_1024 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_1024 msg
+let dsa_sig_1024 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_1024 msg_str
 
 let dsa_2048 =
   let p = Z.of_string "27787495469795504213817302334103600594688179071059183073859876165757248559489321478170600304273914000462158587756787453177210321379060448141559798652196363556897576291878245650614903612762833777567911000834171168229784178643222849655095281437320492725855855778320111645629834980350492228611813830302209080760811887894272862901026864911346096471199762409562102789142939773632891860019140618313962854554152891445175391927591825205548689170996430765723064763763481336517107917261869303217480777161449935319930795628114622197586510378927239068257979584784079128534248603619156372913573809491691986354447396965646770535701"
@@ -151,7 +151,7 @@ let dsa_2048 =
   in
   match Mirage_crypto_pk.Dsa.priv ~fips:true ~p ~q ~gg ~x ~y () with Ok p -> p | _ -> assert false
 
-let dsa_sig_2048 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_2048 msg
+let dsa_sig_2048 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_2048 msg_str
 
 let dsa_3072 =
   let p = Z.of_string "4944862491052787177238323499959371418651354629231656321315236369672827559263545931134286049323485061071828187289578269594065783019111035804017538871324004047710342711620233110167493989997579634523303899794913823240058891327833786211541568251787338957336540247816021098378292806006955851897646808403078979142749428669072523191276645021175423303816467433407072660616741824124536840773744646488191896772232795413707995397140064396495425700133866462410490239713815308709711960470201906326732033816522202617817869465691798938486540955726912350768931476362143768721380759395525951947017232778140349423557015356082357043807910825817719748257213281893007933859227824276579765323175836008193865064772817200047353825332039369252224256435661514851653526942065285711420907389170574343434449883875510985495078384130667046036846831401643151166834922210257258578675547742596423035828159461629721005113634334227074529533688136165903014911127"
@@ -162,7 +162,7 @@ let dsa_3072 =
   in
   match Mirage_crypto_pk.Dsa.priv ~fips:true ~p ~q ~gg ~x ~y () with Ok p -> p | _ -> assert false
 
-let dsa_sig_3072 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_3072 msg
+let dsa_sig_3072 () = Mirage_crypto_pk.Dsa.sign ~key:dsa_3072 msg_str
 
 let dh_groups =
   ["oakley5 (1536)",Mirage_crypto_pk.Dh.Group.oakley_5;
@@ -176,7 +176,7 @@ let dh_secrets =
   List.map2 (fun (n, group) s ->
       (n, group), Mirage_crypto_pk.Dh.key_of_secret group ~s)
     dh_groups
-    (List.map (fun s -> Z.of_string s |> Mirage_crypto_pk.Z_extra.to_cstruct_be)
+    (List.map (fun s -> Z.of_string s |> Mirage_crypto_pk.Z_extra.to_octets_be)
        [
          "31271182055444024732867835946284871743952969208281694762833912267184" ;
          "27594341083884344999714422172371027333192426063917478556668524561591" ;
@@ -241,7 +241,7 @@ let benchmarks = [
         string_of_int [1024;2048;4096]) ;
 
   bm "rsa-encrypt" (fun name ->
-      count name (fun key -> Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv key) msg))
+      count name (fun key -> Mirage_crypto_pk.Rsa.(encrypt ~key:(pub_of_priv key) msg_str))
         (fun k -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024;rsa_2048;rsa_4096]) ;
 
@@ -251,7 +251,7 @@ let benchmarks = [
         [rsa_1024,enc_1024 ; rsa_2048,enc_2048 ; rsa_4096,enc_4096]) ;
 
   bm "rsa-pkcs1-encrypt" (fun name ->
-      count name (fun key -> Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv key) msg))
+      count name (fun key -> Mirage_crypto_pk.Rsa.(PKCS1.encrypt ~key:(pub_of_priv key) msg_str))
         (fun k -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024;rsa_2048;rsa_4096]) ;
 
@@ -261,24 +261,24 @@ let benchmarks = [
         [rsa_1024,pkcs1_enc_1024 () ; rsa_2048,pkcs1_enc_2048 () ; rsa_4096,pkcs1_enc_4096 ()]) ;
 
   bm "rsa-pkcs1-sign" (fun name ->
-      count name (fun key -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key (`Message msg))
+      count name (fun key -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key (`Message msg_str))
         (fun k -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024;rsa_2048;rsa_4096]) ;
 
   bm "rsa-pkcs1-verify" (fun name ->
       count name (fun (key, signature) ->
-          Mirage_crypto_pk.Rsa.(PKCS1.verify ~hashp:(fun _ -> true) ~key:(pub_of_priv key) ~signature (`Message msg)))
+          Mirage_crypto_pk.Rsa.(PKCS1.verify ~hashp:(fun _ -> true) ~key:(pub_of_priv key) ~signature (`Message msg_str)))
         (fun (k, _) -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024,pkcs1_sig_1024 () ; rsa_2048,pkcs1_sig_2048 () ; rsa_4096,pkcs1_sig_4096 ()]) ;
 
   bm "rsa-pss-sign" (fun name ->
-      count name (fun key -> PSS.sign ~key (`Message msg))
+      count name (fun key -> PSS.sign ~key (`Message msg_str))
         (fun k -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024;rsa_2048;rsa_4096]) ;
 
   bm "rsa-pss-verify" (fun name ->
       count name (fun (key, signature) ->
-          PSS.verify ~key:(Mirage_crypto_pk.Rsa.pub_of_priv key) ~signature (`Message msg))
+          PSS.verify ~key:(Mirage_crypto_pk.Rsa.pub_of_priv key) ~signature (`Message msg_str))
         (fun (k, _) -> string_of_int (Mirage_crypto_pk.Rsa.priv_bits k))
         [rsa_1024,pss_sig_1024 () ; rsa_2048,pss_sig_2048 () ; rsa_4096,pss_sig_4096 ()]) ;
 
@@ -288,13 +288,13 @@ let benchmarks = [
         [`Fips1024;`Fips2048;`Fips3072]);
 
   bm "dsa-sign" (fun name ->
-      count name (fun key -> Mirage_crypto_pk.Dsa.sign ~key msg)
+      count name (fun key -> Mirage_crypto_pk.Dsa.sign ~key msg_str)
         (fun k -> string_of_int (Z.numbits k.p))
         [dsa_1024;dsa_2048;dsa_3072]);
 
   bm "dsa-verify" (fun name ->
       count name (fun (key, signature) ->
-          Mirage_crypto_pk.Dsa.(verify ~key:(pub_of_priv key) signature msg))
+          Mirage_crypto_pk.Dsa.(verify ~key:(pub_of_priv key) signature msg_str))
         (fun (k, _) -> string_of_int (Z.numbits k.p))
         [dsa_1024,dsa_sig_1024 () ; dsa_2048,dsa_sig_2048 () ; dsa_3072,dsa_sig_3072 ()]);
 

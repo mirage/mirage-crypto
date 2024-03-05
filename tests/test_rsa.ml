@@ -32,7 +32,7 @@ module Null = struct
 end
 
 let random_is seed =
-  Mirage_crypto_rng.create ~seed (module Null)
+  Mirage_crypto_rng.create ~seed:(Cstruct.of_string seed) (module Null)
 
 let gen_rsa ~bits =
   let e     = Z.(if bits < 24 then ~$3 else ~$0x10001) in
@@ -89,12 +89,12 @@ let rsa_selftest ~bits n =
       Cstruct.(set_uint8 cs i (get_uint8 cs i lor 2));
       cs in
     let key = gen_rsa ~bits in
-    let enc = Rsa.(encrypt ~key:(pub_of_priv key) msg) in
+    let enc = Rsa.(encrypt ~key:(pub_of_priv key) (Cstruct.to_string msg)) in
     let dec = Rsa.(decrypt ~key enc) in
 
-    assert_cs_equal
+    assert_str_equal
       ~msg:Printf.(sprintf "failed decryption with")
-      msg dec
+      (Cstruct.to_string msg) dec
 
 let show_key_size key =
   Printf.sprintf "(%d bits)" (Rsa.priv_bits key)
@@ -107,34 +107,34 @@ let pkcs_message_for_bits bits =
 let rsa_pkcs1_encode_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = pkcs_message_for_bits bits in
+    and msg = Cstruct.to_string (pkcs_message_for_bits bits) in
     let sgn = Rsa.PKCS1.sig_encode ~key msg in
     match Rsa.(PKCS1.sig_decode ~key:(pub_of_priv key) sgn) with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
-    | Some dec -> assert_cs_equal msg dec
+    | Some dec -> assert_str_equal msg dec
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_pkcs1_sign_selftest n =
   let open Hash.SHA1 in
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits:(Rsa.PKCS1.min_key `SHA1)
-    and msg = Mirage_crypto_rng.generate 47 in
+    and msg = Cstruct.to_string (Mirage_crypto_rng.generate 47) in
     let pkey = Rsa.pub_of_priv key in
     assert_bool "invert 1" Rsa.PKCS1.(
       verify ~key:pkey ~hashp:any (`Message msg)
-        ~signature:(sign ~hash:`SHA1 ~key (`Digest (digest msg))) );
+        ~signature:(sign ~hash:`SHA1 ~key (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))) );
     assert_bool "invert 2" Rsa.PKCS1.(
-      verify ~key:pkey ~hashp:any (`Digest (digest msg))
+      verify ~key:pkey ~hashp:any (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))
         ~signature:(sign ~hash:`SHA1 ~key (`Message msg)) )
 
 let rsa_pkcs1_encrypt_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = pkcs_message_for_bits bits in
+    and msg = Cstruct.to_string (pkcs_message_for_bits bits) in
     let enc = Rsa.(PKCS1.encrypt ~key:(pub_of_priv key) msg) in
     match Rsa.PKCS1.decrypt ~key enc with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
-    | Some dec -> assert_cs_equal msg dec
+    | Some dec -> assert_str_equal msg dec
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_oaep_encrypt_selftest ~bits n =
@@ -143,23 +143,23 @@ let rsa_oaep_encrypt_selftest ~bits n =
     let module H = (val (Hash.module_of (sample hashes))) in
     let module OAEP = Rsa.OAEP (H) in
     let key = gen_rsa ~bits
-    and msg = Mirage_crypto_rng.generate (bits // 8 - 2 * H.digest_size - 2) in
+    and msg = Cstruct.to_string (Mirage_crypto_rng.generate (bits // 8 - 2 * H.digest_size - 2)) in
     let enc = OAEP.encrypt ~key:(Rsa.pub_of_priv key) msg in
     match OAEP.decrypt ~key enc with
     | None     -> assert_failure "unpad failure"
-    | Some dec -> assert_cs_equal msg dec ~msg:"recovery failure"
+    | Some dec -> assert_str_equal msg dec ~msg:"recovery failure"
 
 let rsa_pss_sign_selftest ~bits n =
   let module Pss_sha1 = Rsa.PSS (Hash.SHA1) in
   let open Hash.SHA1 in
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = Mirage_crypto_rng.generate 1024 in
+    and msg = Cstruct.to_string (Mirage_crypto_rng.generate 1024) in
     let pkey = Rsa.pub_of_priv key in
     Pss_sha1.(verify ~key:pkey (`Message msg)
-                ~signature:(sign ~key (`Digest (digest msg))))
+                ~signature:(sign ~key (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))))
       |> assert_bool "invert 1" ;
-    Pss_sha1.(verify ~key:pkey (`Digest (digest msg))
+    Pss_sha1.(verify ~key:pkey (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))
                ~signature:(Pss_sha1.sign ~key (`Message msg)))
       |> assert_bool "invert 2"
 
@@ -175,10 +175,10 @@ let rsa_pkcs1_cases =
   in
 
   let case ~hash ~msg ~sgn = test_case @@ fun _ ->
-    let msg = vx msg and sgn = vx sgn in
+    let msg = vx_str msg and sgn = vx_str sgn in
     let key, public = key () in
     Rsa.(PKCS1.sign ~hash ~key (`Message msg))
-      |> assert_cs_equal ~msg:"recomputing sig:" sgn ;
+      |> assert_str_equal ~msg:"recomputing sig:" sgn ;
     Rsa.(PKCS1.verify ~hashp:any ~key:public ~signature:sgn (`Message msg))
       |> assert_bool "sig verification" in
 
@@ -228,11 +228,11 @@ let rsa_pss_cases =
   let case ~hash ~msg ~sgn = test_case @@ fun _ ->
     let module H = (val (Hash.module_of hash)) in
     let module Pss = Rsa.PSS (H) in
-    let msg = vx msg and sgn = vx sgn and salt = vx salt in
+    let msg = vx_str msg and sgn = vx_str sgn and salt = vx_str salt in
     let key, public = key () in
-    let slen = Cstruct.length salt in
+    let slen = String.length salt in
     Pss.sign ~g:(random_is salt) ~slen ~mask:`No ~key (`Message msg)
-      |> assert_cs_equal ~msg:"recomputing sig:" sgn ;
+      |> assert_str_equal ~msg:"recomputing sig:" sgn ;
     Pss.verify ~key:public ~slen ~signature:sgn (`Message msg)
       |> assert_bool "sig verification" in
 

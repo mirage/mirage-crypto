@@ -57,9 +57,11 @@ let assert_cs_equal ?msg =
   assert_equal ~cmp:Cstruct.equal ?msg
     ~pp_diff:(pp_diff Cstruct.hexdump_pp)
 
+let pp_octets pp ppf (a, b) =
+  pp Cstruct.hexdump_pp ppf (Cstruct.of_string a, Cstruct.of_string b)
+
 let assert_str_equal ?msg =
-  assert_equal ~cmp:String.equal ?msg
-    ~pp_diff:(fun ppf (a, b) -> pp_diff Cstruct.hexdump_pp ppf (Cstruct.of_string a, Cstruct.of_string b))
+  assert_equal ~cmp:String.equal ?msg ~pp_diff:(pp_octets pp_diff)
 
 let iter_list xs f = List.iter f xs
 

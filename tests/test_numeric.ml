@@ -8,16 +8,16 @@ open Test_common
 let n_encode_decode_selftest ~typ ~bound n =
   typ ^ "selftest" >:: times ~n @@ fun _ ->
     let r = Z_extra.gen bound in
-    let s = Z_extra.(of_cstruct_be @@ to_cstruct_be r)
-    and t = Z_extra.(of_cstruct_be @@ to_cstruct_be ~size:24 r) in
+    let s = Z_extra.(of_octets_be @@ to_octets_be r)
+    and t = Z_extra.(of_octets_be @@ to_octets_be ~size:24 r) in
     assert_equal r s;
     assert_equal r t
 
 let n_decode_reencode_selftest ~typ ~bytes n =
   typ ^ " selftest" >:: times ~n @@ fun _ ->
-    let cs  = Mirage_crypto_rng.generate bytes in
-    let cs' = Z_extra.(to_cstruct_be ~size:bytes @@ of_cstruct_be cs) in
-    assert_cs_equal cs cs'
+    let cs  = Cstruct.to_string (Mirage_crypto_rng.generate bytes) in
+    let cs' = Z_extra.(to_octets_be ~size:bytes @@ of_octets_be cs) in
+    assert_str_equal cs cs'
 
 let random_n_selftest ~typ n bounds =
   typ ^ " selftest" >::: (

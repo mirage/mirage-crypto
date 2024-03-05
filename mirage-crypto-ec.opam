@@ -27,7 +27,6 @@ bug-reports: "https://github.com/mirage/mirage-crypto/issues"
 depends: [
   "dune" {>= "2.7"}
   "ocaml" {>= "4.08.0"}
-  "cstruct" {>= "6.0.0"}
   "dune-configurator"
   "eqaf" {>= "0.7"}
   "mirage-crypto" {=version}

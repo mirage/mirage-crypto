@@ -7,20 +7,20 @@ and three = Z.(~$3)
 
 (* A constant-time [find_uint8] with a default value. *)
 let ct_find_uint8 ~default ?off ~f cs =
-  let res = Eqaf_cstruct.find_uint8 ?off ~f cs in
+  let res = Eqaf.find_uint8 ?off ~f cs in
   Eqaf.select_int (res + 1) default res
 
 let (&.) f g = fun h -> f (g h)
 
 module Hash = Mirage_crypto.Hash
 
-type 'a or_digest = [ `Message of 'a | `Digest of Hash.digest ]
+type 'a or_digest = [ `Message of 'a | `Digest of string ]
 
 module Digest_or (H : Hash.S) = struct
   let digest_or = function
-    | `Message msg   -> H.digest msg
+    | `Message msg   -> Cstruct.to_string (H.digest (Cstruct.of_string msg))
     | `Digest digest ->
-        let n = digest.Cstruct.len and m = H.digest_size in
+        let n = String.length digest and m = H.digest_size in
         if n = m then digest else
           invalid_arg "(`Digest _): %d bytes, expecting %d" n m
 end
@@ -197,15 +197,18 @@ let (encrypt_z, decrypt_z) =
     | `Yes_with g -> decrypt_blinded_unsafe ~crt_hardening ~g ~key msg )
 
 let reformat out f msg =
-  Z_extra.(of_cstruct_be msg |> f |> to_cstruct_be ~size:(out // 8))
+  Z_extra.(of_octets_be msg |> f |> to_octets_be ~size:(out // 8))
 
 let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 
 let decrypt ?(crt_hardening=false) ?(mask=`Yes) ~key =
   reformat (priv_bits key) (decrypt_z ~crt_hardening ~mask ~key)
 
-let b   = Cs.b
-let cat = Cstruct.concat
+let b x = String.make 1 (char_of_int x)
+
+(* OCaml 4.13 *)
+let string_get_uint8 buf idx =
+  Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
 
 let (bx00, bx01) = (b 0x00, b 0x01)
 
@@ -213,41 +216,35 @@ module PKCS1 = struct
 
   let min_pad = 8
 
-  open Cstruct
-
   (* XXX Generalize this into `Rng.samplev` or something. *)
   let generate_with ?g ~f n =
-    let cs = create n
+    let buf = Bytes.create n
     and k  = let b = Mirage_crypto_rng.block g in (n // b * b) in
     let rec go nonce i j =
-      if i = n then cs else
-      if j = k then go Mirage_crypto_rng.(generate ?g k) i 0 else
-      match get_uint8 nonce j with
-      | b when f b -> set_uint8 cs i b ; go nonce (succ i) (succ j)
+      if i = n then Bytes.unsafe_to_string buf else
+      if j = k then go (Cstruct.to_string Mirage_crypto_rng.(generate ?g k)) i 0 else
+      match string_get_uint8 nonce j with
+      | b when f b -> Bytes.set_uint8 buf i b ; go nonce (succ i) (succ j)
       | _          -> go nonce i (succ j) in
-    go Mirage_crypto_rng.(generate ?g k) 0 0
+    go (Cstruct.to_string Mirage_crypto_rng.(generate ?g k)) 0 0
 
   let pad ~mark ~padding k msg =
-    let pad = padding (k - length msg - 3 |> imax min_pad) in
-    cat [ bx00 ; b mark ; pad ; bx00 ; msg ]
+    let pad = padding (k - String.length msg - 3 |> imax min_pad) in
+    String.concat "" [ bx00 ; b mark ; pad ; bx00 ; msg ]
 
-  let unpad ~mark ~is_pad cs =
+  let unpad ~mark ~is_pad buf =
     let f = not &. is_pad in
-    let i = ct_find_uint8 ~default:2 ~off:2 ~f cs in
-    let c1 = get_uint8 cs 0 = 0x00
-    and c2 = get_uint8 cs 1 = mark
-    and c3 = get_uint8 cs i = 0x00
+    let i = ct_find_uint8 ~default:2 ~off:2 ~f buf in
+    let c1 = string_get_uint8 buf 0 = 0x00
+    and c2 = string_get_uint8 buf 1 = mark
+    and c3 = string_get_uint8 buf i = 0x00
     and c4 = min_pad <= i - 2 in
     if c1 && c2 && c3 && c4 then
-      Some (sub cs (i + 1) (length cs - i - 1))
+      Some (String.sub buf (i + 1) (String.length buf - i - 1))
     else None
 
   let pad_01    =
-    let padding size =
-      let buf = Cstruct.create size in
-      Cstruct.memset buf 0xff;
-      buf
-    in
+    let padding size = String.make size '\xff' in
     pad ~mark:0x01 ~padding
   let pad_02 ?g = pad ~mark:0x02 ~padding:(generate_with ?g ~f:((<>) 0x00))
 
@@ -257,10 +254,10 @@ module PKCS1 = struct
   let padded pad transform keybits msg =
     let n = keybits // 8 in
     let p = pad n msg in
-    if length p = n then transform p else raise Insufficient_key
+    if String.length p = n then transform p else raise Insufficient_key
 
   let unpadded unpad transform keybits msg =
-    if length msg = keybits // 8 then
+    if String.length msg = keybits // 8 then
       try unpad (transform msg) with Insufficient_key -> None
     else None
 
@@ -276,7 +273,7 @@ module PKCS1 = struct
   let decrypt ?(crt_hardening = false) ?mask ~key msg =
     unpadded unpad_02 (decrypt ~crt_hardening ?mask ~key) (priv_bits key) msg
 
-  let asns = List.(combine Hash.hashes &. map of_string) [
+  let asns = List.combine Hash.hashes [
     "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10"     (* md5 *)
   ; "\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"                 (* sha1 *)
   ; "\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04\x05\x00\x04\x1c" (* sha224 *)
@@ -287,10 +284,15 @@ module PKCS1 = struct
 
   let asn_of_hash hash = try List.assoc hash asns with Not_found -> assert false
 
-  let detect msg = List.find_opt (fun (_, asn) -> Cs.is_prefix asn msg) asns
+  (* OCaml 4.13 contains starts_with *)
+  let is_prefix asn msg =
+    String.length msg >= String.length asn &&
+    String.equal asn (String.sub msg 0 (String.length asn))
+
+  let detect msg = List.find_opt (fun (_, asn) -> is_prefix asn msg) asns
 
   let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
-    let msg' = Cs.(asn_of_hash hash <+> digest_or ~hash msg) in
+    let msg' = asn_of_hash hash ^ digest_or ~hash msg in
     sig_encode ~crt_hardening ?mask ~key msg'
 
   let verify ~hashp ~key ~signature msg =
@@ -298,13 +300,13 @@ module PKCS1 = struct
     and (>>|) = Fun.flip Option.map
     in
     Option.value
-      (sig_decode ~key signature >>= fun cs ->
-       detect cs >>| fun (hash, asn) ->
-       hashp hash && Eqaf_cstruct.equal Cs.(asn <+> digest_or ~hash msg) cs)
+      (sig_decode ~key signature >>= fun buf ->
+       detect buf >>| fun (hash, asn) ->
+       hashp hash && Eqaf.equal (asn ^ digest_or ~hash msg) buf)
       ~default:false
 
   let min_key hash =
-    (length (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1
+    (String.length (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1
 end
 
 module MGF1 (H : Hash.S) = struct
@@ -317,17 +319,18 @@ module MGF1 (H : Hash.S) = struct
   (* Assumes len < 2^32 * H.digest_size. *)
   let mgf ~seed len =
     let rec go acc c = function
-      | 0 -> Cstruct.sub (cat (List.rev acc)) 0 len
-      | n -> let h = H.digesti (iter2 seed (repr c)) in
+      | 0 -> Bytes.sub (Bytes.concat Bytes.empty (List.rev acc)) 0 len
+      | n -> let h = Cstruct.to_bytes (H.digesti (iter2 (Cstruct.of_string seed) (repr c))) in
              go (h :: acc) Int32.(succ c) (pred n) in
     go [] 0l (len // H.digest_size)
 
-  let mask ~seed cs = Cs.xor (mgf ~seed (Cstruct.length cs)) cs
+  let mask ~seed buf =
+    let mgf_data = mgf ~seed (String.length buf) in
+    xor_into buf mgf_data (String.length buf);
+    mgf_data
 end
 
 module OAEP (H : Hash.S) = struct
-
-  open Cstruct
 
   module MGF = MGF1 (H)
 
@@ -335,31 +338,34 @@ module OAEP (H : Hash.S) = struct
 
   let max_msg_bytes k = k - 2 * hlen - 2
 
-  let eme_oaep_encode ?g ?(label = Cstruct.empty) k msg =
-    let seed  = Mirage_crypto_rng.generate ?g hlen
-    and pad   = Cstruct.create (max_msg_bytes k - length msg) in
-    let db    = cat [ H.digest label ; pad ; bx01 ; msg ] in
-    let mdb   = MGF.mask ~seed db in
-    let mseed = MGF.mask ~seed:mdb seed in
-    cat [ bx00 ; mseed ; mdb ]
+  let eme_oaep_encode ?g ?(label = "") k msg =
+    let seed  = Cstruct.to_string (Mirage_crypto_rng.generate ?g hlen)
+    and pad   = String.make (max_msg_bytes k - String.length msg) '\x00' in
+    let db    = String.concat "" [ Cstruct.to_string (H.digest (Cstruct.of_string label)) ; pad ; bx01 ; msg ] in
+    let mdb   = Bytes.unsafe_to_string (MGF.mask ~seed db) in
+    let mseed = Bytes.unsafe_to_string (MGF.mask ~seed:mdb seed) in
+    String.concat "" [ bx00 ; mseed ; mdb ]
 
-  let eme_oaep_decode ?(label = Cstruct.empty) msg =
-    let (b0, ms, mdb) = Cs.split3 msg 1 hlen in
-    let db = MGF.mask ~seed:(MGF.mask ~seed:mdb ms) mdb in
+  let eme_oaep_decode ?(label = "") msg =
+    let b0 = String.sub msg 0 1
+    and ms = String.sub msg 1 hlen
+    and mdb = String.sub msg (1 + hlen) (String.length msg - 1 - hlen)
+    in
+    let db = Bytes.unsafe_to_string (MGF.mask ~seed:(Bytes.unsafe_to_string (MGF.mask ~seed:mdb ms)) mdb) in
     let i  = ct_find_uint8 ~default:0 ~off:hlen ~f:((<>) 0x00) db in
-    let c1 = Eqaf_cstruct.equal (sub db 0 hlen) H.(digest label)
-    and c2 = get_uint8 b0 0 = 0x00
-    and c3 = get_uint8 db i = 0x01 in
-    if c1 && c2 && c3 then Some (shift db (i + 1)) else None
+    let c1 = Eqaf.equal (String.sub db 0 hlen) (Cstruct.to_string H.(digest (Cstruct.of_string label)))
+    and c2 = string_get_uint8 b0 0 = 0x00
+    and c3 = string_get_uint8 db i = 0x01 in
+    if c1 && c2 && c3 then Some (String.sub db (i + 1) (String.length db - i - 1)) else None
 
   let encrypt ?g ?label ~key msg =
     let k = pub_bits key // 8 in
-    if length msg > max_msg_bytes k then raise Insufficient_key
+    if String.length msg > max_msg_bytes k then raise Insufficient_key
     else encrypt ~key @@ eme_oaep_encode ?g ?label k msg
 
   let decrypt ?(crt_hardening = false) ?mask ?label ~key em =
     let k = priv_bits key // 8 in
-    if length em <> k || max_msg_bytes k < 0 then None else
+    if String.length em <> k || max_msg_bytes k < 0 then None else
       try eme_oaep_decode ?label @@ decrypt ~crt_hardening ?mask ~key em
       with Insufficient_key -> None
 
@@ -371,9 +377,6 @@ module OAEP (H : Hash.S) = struct
 end
 
 module PSS (H: Hash.S) = struct
-
-  open Cstruct
-
   module MGF = MGF1 (H)
   module H1  = Digest_or (H)
 
@@ -385,29 +388,33 @@ module PSS (H: Hash.S) = struct
 
   let zero_8 = Cstruct.create 8
 
-  let digest ~salt msg = H.digesti @@ iter3 zero_8 (H1.digest_or msg) salt
+  let digest ~salt msg = H.digesti @@ iter3 zero_8 (Cstruct.of_string (H1.digest_or msg)) salt
 
   let emsa_pss_encode ?g slen emlen msg =
     let n    = emlen // 8
     and salt = Mirage_crypto_rng.generate ?g slen in
     let h    = digest ~salt msg in
-    let db   = cat [ Cstruct.create (n - slen - hlen - 2) ; bx01 ; salt ] in
-    let mdb  = MGF.mask ~seed:h db in
-    set_uint8 mdb 0 @@ get_uint8 mdb 0 land b0mask emlen ;
-    cat [ mdb ; h ; bxbc ]
+    let db   = String.concat "" [ String.make (n - slen - hlen - 2) '\x00' ; bx01 ; Cstruct.to_string salt ] in
+    let mdb  = MGF.mask ~seed:(Cstruct.to_string h) db in
+    Bytes.set_uint8 mdb 0 @@ Bytes.get_uint8 mdb 0 land b0mask emlen ;
+    String.concat "" [ Bytes.unsafe_to_string mdb ; Cstruct.to_string h ; bxbc ]
 
   let emsa_pss_verify slen emlen em msg =
-    let (mdb, h, bxx) = Cs.split3 em (em.len - hlen - 1) hlen in
+    let mdb = String.sub em 0 (String.length em - hlen - 1)
+    and h = String.sub em (String.length em - hlen - 1) hlen
+    and bxx = string_get_uint8 em (String.length em - 1)
+    in
     let db   = MGF.mask ~seed:h mdb in
-    set_uint8 db 0 (get_uint8 db 0 land b0mask emlen) ;
-    let salt = shift db (length db - slen) in
-    let h'   = digest ~salt msg
+    Bytes.set_uint8 db 0 (Bytes.get_uint8 db 0 land b0mask emlen) ;
+    let db   = Bytes.unsafe_to_string db in
+    let salt = String.sub db (String.length db - slen) slen in
+    let h'   = Cstruct.to_string (digest ~salt:(Cstruct.of_string salt) msg)
     and i    = ct_find_uint8 ~default:0 ~f:((<>) 0x00) db in
-    let c1 = lnot (b0mask emlen) land get_uint8 mdb 0 = 0x00
-    and c2 = i = em.len - hlen - slen - 2
-    and c3 = get_uint8 db  i = 0x01
-    and c4 = get_uint8 bxx 0 = 0xbc
-    and c5 = Eqaf_cstruct.equal h h' in
+    let c1 = lnot (b0mask emlen) land string_get_uint8 mdb 0 = 0x00
+    and c2 = i = String.length em - hlen - slen - 2
+    and c3 = string_get_uint8 db  i = 0x01
+    and c4 = bxx = 0xbc
+    and c5 = Eqaf.equal h h' in
     c1 && c2 && c3 && c4 && c5
 
   let sufficient_key ~slen kbits =
@@ -422,10 +429,11 @@ module PSS (H: Hash.S) = struct
 
   let verify ?(slen = hlen) ~key ~signature msg =
     let b = pub_bits key
-    and s = length signature in
+    and s = String.length signature in
     s = b // 8 && sufficient_key ~slen b && try
       let em = encrypt ~key signature in
-      emsa_pss_verify (imax 0 slen) (b - 1) (shift em (s - (b - 1) // 8)) msg
+      let to_see = s - (b - 1) // 8 in
+      emsa_pss_verify (imax 0 slen) (b - 1) (String.sub em to_see (String.length em - to_see)) msg
     with Insufficient_key -> false
 
 end
