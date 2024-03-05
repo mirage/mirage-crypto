@@ -402,7 +402,7 @@ module PSS (H: Hash.S) = struct
   let emsa_pss_verify slen emlen em msg =
     let mdb = String.sub em 0 (String.length em - hlen - 1)
     and h = String.sub em (String.length em - hlen - 1) hlen
-    and bxx = String.sub em (String.length em - 1) 1
+    and bxx = string_get_uint8 em (String.length em - 1)
     in
     let db   = MGF.mask ~seed:h mdb in
     Bytes.set_uint8 db 0 (Bytes.get_uint8 db 0 land b0mask emlen) ;
@@ -413,7 +413,7 @@ module PSS (H: Hash.S) = struct
     let c1 = lnot (b0mask emlen) land string_get_uint8 mdb 0 = 0x00
     and c2 = i = String.length em - hlen - slen - 2
     and c3 = string_get_uint8 db  i = 0x01
-    and c4 = string_get_uint8 bxx 0 = 0xbc
+    and c4 = bxx = 0xbc
     and c5 = Eqaf.equal h h' in
     c1 && c2 && c3 && c4 && c5
 
