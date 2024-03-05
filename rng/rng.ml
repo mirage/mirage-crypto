@@ -38,9 +38,9 @@ module type Generator = sig
   type g
   val block      : int
   val create     : ?time:(unit -> int64) -> unit -> g
-  val generate   : g:g -> int -> Cstruct.t
-  val reseed     : g:g -> Cstruct.t -> unit
-  val accumulate : g:g -> source -> [`Acc of Cstruct.t -> unit]
+  val generate   : g:g -> int -> string
+  val reseed     : g:g -> string -> unit
+  val accumulate : g:g -> source -> [`Acc of string -> unit]
   val seeded     : g:g -> bool
   val pools      : int
 end

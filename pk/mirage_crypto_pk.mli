@@ -187,11 +187,14 @@ module Rsa : sig
         was produced with the given [key] as per {{!sig_encode}sig_encode}, or
         [None] *)
 
-    val min_key : Mirage_crypto.Hash.hash -> bits
+    type hash = [ `MD5 | `SHA1 | `SHA224 | `SHA256 | `SHA384 | `SHA512 ]
+    (** The type of supported hash algorithms. *)
+
+    val min_key : hash -> bits
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
     val sign : ?crt_hardening:bool -> ?mask:mask ->
-      hash:Mirage_crypto.Hash.hash -> key:priv -> string or_digest ->
+      hash:hash -> key:priv -> string or_digest ->
       string
     (** [sign ~crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
         signature of [message], signed by the [key], using the hash function
@@ -205,7 +208,7 @@ module Rsa : sig
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
 
-    val verify : hashp:(Mirage_crypto.Hash.hash -> bool) -> key:pub ->
+    val verify : hashp:(hash -> bool) -> key:pub ->
       signature:string -> string or_digest -> bool
     (** [verify ~hashp ~key ~signature message] checks that [signature] is the
         PKCS 1.5 signature of the [message] under the given [key].
@@ -227,7 +230,7 @@ module Rsa : sig
 
       Keys must have a minimum of [2 + 2 * hlen + len(message)] bytes, where
       [hlen] is the hash length. *)
-  module OAEP (H : Mirage_crypto.Hash.S) : sig
+  module OAEP (H : Digestif.S) : sig
 
     val encrypt : ?g:Mirage_crypto_rng.g -> ?label:string -> key:pub ->
       string -> string
@@ -253,7 +256,7 @@ module Rsa : sig
 
       Keys must have a minimum of [2 + hlen + slen] bytes, where [hlen] is the
       hash length and [slen] is the seed length. *)
-  module PSS (H: Mirage_crypto.Hash.S) : sig
+  module PSS (H: Digestif.S) : sig
 
     val sign : ?g:Mirage_crypto_rng.g -> ?crt_hardening:bool ->
       ?mask:mask -> ?slen:int -> key:priv -> string or_digest -> string
@@ -373,7 +376,7 @@ module Dsa : sig
 
   (** [K_gen] can be instantiated over a hashing module to obtain an RFC6979
       compliant [k]-generator for that hash. *)
-  module K_gen (H : Mirage_crypto.Hash.S) : sig
+  module K_gen (H : Digestif.S) : sig
 
     val generate : key:priv -> string -> Z.t
     (** [generate key digest] deterministically takes the given private key and

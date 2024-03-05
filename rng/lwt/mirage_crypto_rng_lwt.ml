@@ -19,7 +19,7 @@ let getrandom_task delta source =
     let idx = ref 0 in
     let f () =
       incr idx;
-      Cstruct.sub random (per_pool * (pred !idx)) per_pool
+      String.sub random (per_pool * (pred !idx)) per_pool
     in
     Entropy.feed_pools None source f
   in
@@ -55,7 +55,7 @@ let initialize (type a) ?g ?(sleep = Duration.of_sec 1) (rng : a generator) =
       let init =
         Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ]
       in
-      List.mapi (fun i f -> f i) init |> Cstruct.concat
+      List.mapi (fun i f -> f i) init |> String.concat ""
     in
     let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns rng in
     set_default_generator rng;

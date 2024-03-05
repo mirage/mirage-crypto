@@ -10,23 +10,17 @@
  (package mirage-crypto)
  (modules test_base test_cipher test_hash test_hmac test_symmetric_runner))
 
-(library
- (name test_common_random)
- (libraries randomconv mirage-crypto-rng)
- (modules test_common_random)
- (optional))
-
 (test
  (name test_random_runner)
- (libraries test_common test_common_random mirage-crypto mirage-crypto-rng
-   mirage-crypto-rng.unix ounit2)
+ (libraries test_common mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix
+   randomconv ounit2)
  (package mirage-crypto-rng)
  (modules test_random_runner))
 
 (test
  (name test_pk_runner)
- (libraries test_common test_common_random mirage-crypto-pk
-   mirage-crypto-rng.unix ounit2)
+ (libraries test_common mirage-crypto-pk mirage-crypto-rng.unix randomconv
+   ounit2)
  (package mirage-crypto-pk)
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
 

@@ -5,26 +5,27 @@ open Mirage_crypto
 open Mirage_crypto_pk
 
 open Test_common
-open Test_common_random
 
 let vz = Z.of_string_base 16
 
 module Null = struct
 
-  type g = Cstruct.t ref
+  type g = string ref
 
   let block = 1
 
-  let create ?time:_ () = ref Cstruct.empty
+  let create ?time:_ () = ref ""
 
   let generate ~g n =
     try
-      let (a, b) = Cstruct.split !g n in ( g := b ; a )
+      let (a, b) = String.sub !g 0 n, String.sub !g n (String.length !g - n) in
+      g := b;
+      a
     with Invalid_argument _ -> raise Mirage_crypto_rng.Unseeded_generator
 
-  let reseed ~g cs = g := Cs.(!g <+> cs)
+  let reseed ~g buf = g := !g ^ buf
 
-  let seeded ~g = Cstruct.length !g > 0
+  let seeded ~g = String.length !g > 0
 
   let accumulate ~g _source = `Acc (reseed ~g)
 
@@ -32,7 +33,7 @@ module Null = struct
 end
 
 let random_is seed =
-  Mirage_crypto_rng.create ~seed:(Cstruct.of_string seed) (module Null)
+  Mirage_crypto_rng.create ~seed:seed (module Null)
 
 let gen_rsa ~bits =
   let e     = Z.(if bits < 24 then ~$3 else ~$0x10001) in
@@ -85,16 +86,18 @@ let rsa_selftest ~bits n =
       let size = bits // 8 in
       let cs = Mirage_crypto_rng.generate size
       and i  = 1 + Randomconv.int ~bound:(pred size) Mirage_crypto_rng.generate in
-      Cstruct.set_uint8 cs 0 0;
-      Cstruct.(set_uint8 cs i (get_uint8 cs i lor 2));
-      cs in
+      let cs = Bytes.unsafe_of_string cs in
+      Bytes.set_uint8 cs 0 0;
+      Bytes.(set_uint8 cs i (get_uint8 cs i lor 2));
+      Bytes.unsafe_to_string cs
+    in
     let key = gen_rsa ~bits in
-    let enc = Rsa.(encrypt ~key:(pub_of_priv key) (Cstruct.to_string msg)) in
+    let enc = Rsa.(encrypt ~key:(pub_of_priv key) msg) in
     let dec = Rsa.(decrypt ~key enc) in
 
     assert_str_equal
       ~msg:Printf.(sprintf "failed decryption with")
-      (Cstruct.to_string msg) dec
+      msg dec
 
 let show_key_size key =
   Printf.sprintf "(%d bits)" (Rsa.priv_bits key)
@@ -107,7 +110,7 @@ let pkcs_message_for_bits bits =
 let rsa_pkcs1_encode_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = Cstruct.to_string (pkcs_message_for_bits bits) in
+    and msg = pkcs_message_for_bits bits in
     let sgn = Rsa.PKCS1.sig_encode ~key msg in
     match Rsa.(PKCS1.sig_decode ~key:(pub_of_priv key) sgn) with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
@@ -118,7 +121,7 @@ let rsa_pkcs1_sign_selftest n =
   let open Hash.SHA1 in
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits:(Rsa.PKCS1.min_key `SHA1)
-    and msg = Cstruct.to_string (Mirage_crypto_rng.generate 47) in
+    and msg = Mirage_crypto_rng.generate 47 in
     let pkey = Rsa.pub_of_priv key in
     assert_bool "invert 1" Rsa.PKCS1.(
       verify ~key:pkey ~hashp:any (`Message msg)
@@ -130,7 +133,7 @@ let rsa_pkcs1_sign_selftest n =
 let rsa_pkcs1_encrypt_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = Cstruct.to_string (pkcs_message_for_bits bits) in
+    and msg = pkcs_message_for_bits bits in
     let enc = Rsa.(PKCS1.encrypt ~key:(pub_of_priv key) msg) in
     match Rsa.PKCS1.decrypt ~key enc with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
@@ -138,30 +141,51 @@ let rsa_pkcs1_encrypt_selftest ~bits n =
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_oaep_encrypt_selftest ~bits n =
-  let hashes = [| `MD5; `SHA1; `SHA224; `SHA256 |] in
+  let module OAEP_MD5 = Rsa.OAEP (Digestif.MD5) in
+  let module OAEP_SHA1 = Rsa.OAEP (Digestif.SHA1) in
+  let module OAEP_SHA224 = Rsa.OAEP (Digestif.SHA224) in
+  let module OAEP_SHA256 = Rsa.OAEP (Digestif.SHA256) in
+  let module OAEP_SHA384 = Rsa.OAEP (Digestif.SHA384) in
   "selftest" >:: times ~n @@ fun _ ->
-    let module H = (val (Hash.module_of (sample hashes))) in
-    let module OAEP = Rsa.OAEP (H) in
-    let key = gen_rsa ~bits
-    and msg = Cstruct.to_string (Mirage_crypto_rng.generate (bits // 8 - 2 * H.digest_size - 2)) in
-    let enc = OAEP.encrypt ~key:(Rsa.pub_of_priv key) msg in
-    match OAEP.decrypt ~key enc with
-    | None     -> assert_failure "unpad failure"
-    | Some dec -> assert_str_equal msg dec ~msg:"recovery failure"
+    let key = gen_rsa ~bits in
+    let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.MD5.digest_size - 2) in
+    let enc = OAEP_MD5.encrypt ~key:(Rsa.pub_of_priv key) msg in
+    (match OAEP_MD5.decrypt ~key enc with
+     | None     -> assert_failure "unpad failure"
+     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+    let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA1.digest_size - 2) in
+    let enc = OAEP_SHA1.encrypt ~key:(Rsa.pub_of_priv key) msg in
+    (match OAEP_SHA1.decrypt ~key enc with
+     | None     -> assert_failure "unpad failure"
+     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+    let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA224.digest_size - 2) in
+    let enc = OAEP_SHA224.encrypt ~key:(Rsa.pub_of_priv key) msg in
+    (match OAEP_SHA224.decrypt ~key enc with
+     | None     -> assert_failure "unpad failure"
+     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+    let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA256.digest_size - 2) in
+    let enc = OAEP_SHA256.encrypt ~key:(Rsa.pub_of_priv key) msg in
+    (match OAEP_SHA256.decrypt ~key enc with
+     | None     -> assert_failure "unpad failure"
+     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+    let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA384.digest_size - 2) in
+    let enc = OAEP_SHA384.encrypt ~key:(Rsa.pub_of_priv key) msg in
+    (match OAEP_SHA384.decrypt ~key enc with
+     | None     -> assert_failure "unpad failure"
+     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure")
 
 let rsa_pss_sign_selftest ~bits n =
-  let module Pss_sha1 = Rsa.PSS (Hash.SHA1) in
-  let open Hash.SHA1 in
+  let module Pss_sha1 = Rsa.PSS (Digestif.SHA1) in
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits
-    and msg = Cstruct.to_string (Mirage_crypto_rng.generate 1024) in
+    and msg = Mirage_crypto_rng.generate 1024 in
     let pkey = Rsa.pub_of_priv key in
-    Pss_sha1.(verify ~key:pkey (`Message msg)
-                ~signature:(sign ~key (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))))
-      |> assert_bool "invert 1" ;
-    Pss_sha1.(verify ~key:pkey (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))
-               ~signature:(Pss_sha1.sign ~key (`Message msg)))
-      |> assert_bool "invert 2"
+    let dgst = Digestif.SHA1.(digest_string msg |> to_raw_string) in
+    let signature = Pss_sha1.sign ~key (`Digest dgst) in
+    Pss_sha1.(verify ~key:pkey (`Message msg) ~signature) |> assert_bool "invert 1" ;
+    Pss_sha1.(verify ~key:pkey (`Digest dgst)
+                ~signature:(Pss_sha1.sign ~key (`Message msg)))
+    |> assert_bool "invert 2"
 
 let rsa_pkcs1_cases =
   let key () =
@@ -225,8 +249,8 @@ let rsa_pss_cases =
   and salt = "6f2841166a64471d4f0b8ed0dbb7db32161da13b"
   in
 
-  let case ~hash ~msg ~sgn = test_case @@ fun _ ->
-    let module H = (val (Hash.module_of hash)) in
+  let case (type a) ~(hash : a Digestif.hash) ~msg ~sgn = test_case @@ fun _ ->
+    let module H = (val Digestif.module_of hash) in
     let module Pss = Rsa.PSS (H) in
     let msg = vx_str msg and sgn = vx_str sgn and salt = vx_str salt in
     let key, public = key () in
@@ -238,27 +262,27 @@ let rsa_pss_cases =
 
   "FIPS 186-2 Test Vectors (1024 bits)" >::: [
 
-    case ~hash:`SHA1
+    case ~hash:Digestif.sha1
     ~msg:"1248f62a4389f42f7b4bb131053d6c88a994db2075b912ccbe3ea7dc611714f14e075c104858f2f6e6cfd6abdedf015a821d03608bf4eba3169a6725ec422cd9069498b5515a9608ae7cc30e3d2ecfc1db6825f3e996ce9a5092926bc1cf61aa42d7f240e6f7aa0edb38bf81aa929d66bb5d890018088458720d72d569247b0c"
     ~sgn:"682cf53c1145d22a50caa9eb1a9ba70670c5915e0fdfde6457a765de2a8fe12de9794172a78d14e668d498acedad616504bb1764d094607070080592c3a69c343d982bd77865873d35e24822caf43443cc10249af6a1e26ef344f28b9ef6f14e09ad839748e5148bcceb0fd2aa63709cb48975cbf9c7b49abc66a1dc6cb5b31a"
 
-  ; case ~hash:`SHA1
+  ; case ~hash:Digestif.sha1
     ~msg:"9968809a557bb4f892039ff2b6a0efcd06523624bc3b9ad359a7cf143c4942e874c797b9d37a563d436fe19d5db1aad738caa2617f87f50fc7fcf4361fc85212e89a9465e7f4c361982f64c8c5c0aa5258b9e94f6e934e8dac2ace7cd6095c909de85fe7b973632c384d0ebb165556050d28f236aee70e16b13a432d8a94c62b"
     ~sgn:"8f5ea7037367e0db75670504085790acd6d97d96f51e76df916a0c2e4cd66e1ab51c4cd8e2c3e4ef781f638ad65dc49c8d6d7f6930f80b6ae199ea283a8924925a50edab79bb3f34861ffa8b2f96fdf9f8cad3d3f8f025478c81f316da61b0d6a7f71b9068efdfb33c21983a922f4669280d8e84f963ff885ef56dd3f50381db"
 
-  ; case ~hash:`SHA224
+  ; case ~hash:Digestif.sha224
     ~msg:"1248f62a4389f42f7b4bb131053d6c88a994db2075b912ccbe3ea7dc611714f14e075c104858f2f6e6cfd6abdedf015a821d03608bf4eba3169a6725ec422cd9069498b5515a9608ae7cc30e3d2ecfc1db6825f3e996ce9a5092926bc1cf61aa42d7f240e6f7aa0edb38bf81aa929d66bb5d890018088458720d72d569247b0c"
     ~sgn:"53d859c9f10abf1c00284a4b55bf2bd84d8e313b4f3c35b8dec7bc3afe39b9b8a155418ead1931895769ce2340be2091f2385bbcf10d9e92bcf5d0e2960d10e792e7d865c64e50d19ffa13e52817d7d8d8db34392c2374a2e9b69184f92a4ad9b1b8bae99ca614d204b65a438e38dbbfc8c7cc44ed5677af70ce6c4f951f0244"
 
-  ; case ~hash:`SHA256
+  ; case ~hash:Digestif.sha256
     ~msg:"1248f62a4389f42f7b4bb131053d6c88a994db2075b912ccbe3ea7dc611714f14e075c104858f2f6e6cfd6abdedf015a821d03608bf4eba3169a6725ec422cd9069498b5515a9608ae7cc30e3d2ecfc1db6825f3e996ce9a5092926bc1cf61aa42d7f240e6f7aa0edb38bf81aa929d66bb5d890018088458720d72d569247b0c"
     ~sgn:"7b1d37278e549898d4084e2210c4a9961edfe7b5963550cca1904248c8681513539017820f0e9bd074b9f8a067b9fefff7f1fa20bf2d0c75015ff020b2210cc7f79034fedf68e8d44a007abf4dd82c26e8b00393723aea15abfbc22941c8cf79481718c008da713fb8f54cb3fca890bde1137314334b9b0a18515bfa48e5ccd0"
 
-  ; case ~hash:`SHA384
+  ; case ~hash:Digestif.sha384
     ~msg:"1248f62a4389f42f7b4bb131053d6c88a994db2075b912ccbe3ea7dc611714f14e075c104858f2f6e6cfd6abdedf015a821d03608bf4eba3169a6725ec422cd9069498b5515a9608ae7cc30e3d2ecfc1db6825f3e996ce9a5092926bc1cf61aa42d7f240e6f7aa0edb38bf81aa929d66bb5d890018088458720d72d569247b0c"
     ~sgn:"8f16c807bef3ed6f74ee7ff5c360a5428c6c2f105178b58ff7d073e566dad6e7718d3129c768cd5a9666de2b6c947177b45709dc7cd0f43b0ba6fc75578e1196acc15ca3afe4a78c144cb6885c1cc815f7f98925bc04ad2ff20fc1068b045d9450e2a1dcf5a161ceabba2b0b66c7354fdb80fa1d729e5f976387f24a697a7e56"
 
-  ; case ~hash:`SHA512
+  ; case ~hash:Digestif.sha512
     ~msg:"1248f62a4389f42f7b4bb131053d6c88a994db2075b912ccbe3ea7dc611714f14e075c104858f2f6e6cfd6abdedf015a821d03608bf4eba3169a6725ec422cd9069498b5515a9608ae7cc30e3d2ecfc1db6825f3e996ce9a5092926bc1cf61aa42d7f240e6f7aa0edb38bf81aa929d66bb5d890018088458720d72d569247b0c"
     ~sgn:"a833ba31634f8773e4fe6ea0c69e1a23766a939d34b32fc78b774b22e46a646c25e6e1062d234ed48b1aba0f830529ff6afc296cc8dc207bbc15391623beac5f6c3db557ca49d0e42c962de95b5ff548cff970f5c73f439cfe82d3907be60240f56b6a4259cc96dfd8fe02a0bfa26e0223f68214428fff0ae40162198cc5cbd1"
   ]

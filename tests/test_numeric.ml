@@ -15,7 +15,7 @@ let n_encode_decode_selftest ~typ ~bound n =
 
 let n_decode_reencode_selftest ~typ ~bytes n =
   typ ^ " selftest" >:: times ~n @@ fun _ ->
-    let cs  = Cstruct.to_string (Mirage_crypto_rng.generate bytes) in
+    let cs  = Mirage_crypto_rng.generate bytes in
     let cs' = Z_extra.(to_octets_be ~size:bytes @@ of_octets_be cs) in
     assert_str_equal cs cs'
 
