@@ -18,7 +18,6 @@ depends: [
   "dune-configurator" {>= "2.0.0"}
   "async" {>= "v0.14"}
   "logs"
-  "mirage-crypto" {=version}
   "mirage-crypto-rng" {=version}
 ]
 available: os != "win32"

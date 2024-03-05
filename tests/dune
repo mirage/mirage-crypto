@@ -46,7 +46,7 @@
 (test
  (name test_ec)
  (modules test_ec)
- (libraries test_common alcotest mirage-crypto mirage-crypto-ec mirage-crypto-rng.unix)
+ (libraries test_common alcotest mirage-crypto-ec mirage-crypto-rng.unix)
  (package mirage-crypto-ec))
 
 (test
@@ -57,7 +57,7 @@
    ecdsa_secp384r1_sha384_test.json ecdsa_secp384r1_sha512_test.json
    ecdh_secp521r1_test.json ecdsa_secp521r1_sha512_test.json
    x25519_test.json eddsa_test.json)
- (libraries alcotest mirage-crypto-ec wycheproof mirage-crypto)
+ (libraries alcotest mirage-crypto-ec wycheproof digestif)
  (package mirage-crypto-ec))
 
 (tests

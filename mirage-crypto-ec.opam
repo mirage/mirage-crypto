@@ -29,7 +29,6 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "dune-configurator"
   "eqaf" {>= "0.7"}
-  "mirage-crypto" {=version}
   "mirage-crypto-rng" {=version}
   "digestif" {>= "1.1.4"}
   "hex" {with-test}

@@ -17,7 +17,6 @@ depends: [
   "dune" {>= "2.7"}
   "duration"
   "logs"
-  "mirage-crypto" {=version}
   "mirage-crypto-rng" {=version}
   "mtime" {>= "1.0.0"}
   "lwt" {>= "4.0.0"}
