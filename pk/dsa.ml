@@ -150,9 +150,7 @@ let rec shift_left_inplace buf = function
     let off = bits / 8 in
     let to_blit = Bytes.length buf - off in
     Bytes.blit buf off buf 0 to_blit ;
-    for i = to_blit to Bytes.length buf - 1 do
-      Bytes.set_uint8 buf i 0x00
-    done
+    Bytes.unsafe_fill buf to_blit (Bytes.length buf - to_blit) '\x00'
   | bits when bits < 8 ->
     let foo = 8 - bits in
     for i = 0 to Bytes.length buf - 2 do
@@ -167,7 +165,7 @@ let rec shift_left_inplace buf = function
     shift_left_inplace buf (bits mod 8)
 
 let (lsl) buf bits =
-  let buf' = Bytes.copy (Bytes.unsafe_of_string buf) in
+  let buf' = Bytes.of_string buf in
   shift_left_inplace buf' bits;
   Bytes.unsafe_to_string buf'
 
