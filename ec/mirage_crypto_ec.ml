@@ -974,7 +974,7 @@ module Ed25519 = struct
     let h = Digestif.SHA512.(digest_string secret |> to_raw_string) in
     (* step 2 *)
     let s, rest =
-      Bytes.of_string (String.sub h 0 key_len),
+      Bytes.unsafe_of_string (String.sub h 0 key_len),
       String.sub h key_len (String.length h - key_len)
     in
     Bytes.set_uint8 s 0 ((Bytes.get_uint8 s 0) land 248);
