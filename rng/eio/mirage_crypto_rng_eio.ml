@@ -13,7 +13,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 let getrandom env i =
   let buf = Cstruct.create i in
   Eio.Flow.read_exact env#secure_random buf;
-  buf
+  Cstruct.to_string buf
 
 let getrandom_init env i =
   let data = getrandom env 128 in
@@ -32,7 +32,7 @@ let periodically_feed_entropy env delta source =
     let idx = ref 0 in
     let f () =
       incr idx;
-      Cstruct.sub random (per_pool * (pred !idx)) per_pool
+      String.sub random (per_pool * (pred !idx)) per_pool
     in
     Entropy.feed_pools None source f
   in
@@ -74,7 +74,7 @@ let run
           let seed =
             let init =
               Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init env ] in
-            List.mapi (fun i f -> f i) init |> Cstruct.concat
+            List.mapi (fun i f -> f i) init |> String.concat ""
           in
           let time () =
             Eio.Stdenv.mono_clock env |> Eio.Time.Mono.now |> Mtime.to_uint64_ns

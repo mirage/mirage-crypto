@@ -34,7 +34,7 @@ let periodically_collect_getrandom_entropy time_source span =
       let idx = ref 0 in
       let f () =
         incr idx;
-        Cstruct.sub random (per_pool * (pred !idx)) per_pool
+        String.sub random (per_pool * (pred !idx)) per_pool
       in
       Entropy.feed_pools None source f)
 
@@ -70,7 +70,7 @@ let initialize ?g ?time_source ?(sleep = Time_ns.Span.of_int_sec 1) generator =
       let init =
         Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ]
       in
-      List.mapi ~f:(fun i f -> f i) init |> Cstruct.concat
+      List.mapi ~f:(fun i f -> f i) init |> String.concat ""
     in
     let rng =
       create ?g ~seed ~time:(ns_since_epoch time_source) generator
