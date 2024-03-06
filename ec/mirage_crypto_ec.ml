@@ -628,7 +628,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
     let g ~key msg =
       let g = Mirage_crypto_rng.create ~strict:true drbg in
       Mirage_crypto_rng.reseed ~g
-        (String.concat "" [ S.to_octets key ; msg ]);
+        (S.to_octets key ^ msg);
       g
 
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
