@@ -202,13 +202,11 @@ let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 let decrypt ?(crt_hardening=false) ?(mask=`Yes) ~key =
   reformat (priv_bits key) (decrypt_z ~crt_hardening ~mask ~key)
 
-let b x = String.make 1 (char_of_int x)
-
 (* OCaml 4.13 *)
 let string_get_uint8 buf idx =
   Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
 
-let (bx00, bx01) = (b 0x00, b 0x01)
+let bx00, bx01 = "\x00", "\x01"
 
 module PKCS1 = struct
 
@@ -228,7 +226,7 @@ module PKCS1 = struct
 
   let pad ~mark ~padding k msg =
     let pad = padding (k - String.length msg - 3 |> imax min_pad) in
-    String.concat "" [ bx00 ; b mark ; pad ; bx00 ; msg ]
+    String.concat "" [ bx00 ; mark ; pad ; bx00 ; msg ]
 
   let unpad ~mark ~is_pad buf =
     let f = not &. is_pad in
@@ -243,8 +241,8 @@ module PKCS1 = struct
 
   let pad_01    =
     let padding size = String.make size '\xff' in
-    pad ~mark:0x01 ~padding
-  let pad_02 ?g = pad ~mark:0x02 ~padding:(generate_with ?g ~f:((<>) 0x00))
+    pad ~mark:"\x01" ~padding
+  let pad_02 ?g = pad ~mark:"\x02" ~padding:(generate_with ?g ~f:((<>) 0x00))
 
   let unpad_01 = unpad ~mark:0x01 ~is_pad:((=) 0xff)
   let unpad_02 = unpad ~mark:0x02 ~is_pad:((<>) 0x00)
@@ -428,7 +426,7 @@ module PSS (H: Digestif.S) = struct
 
   let hlen = H.digest_size
 
-  let bxbc = b 0xbc
+  let bxbc = "\xbc"
 
   let b0mask embits = 0xff lsr ((8 - embits mod 8) mod 8)
 
