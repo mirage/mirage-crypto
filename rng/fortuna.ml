@@ -119,6 +119,6 @@ let add ~g (source, _) ~pool data =
  *)
 let accumulate ~g source =
   let pool = ref 0 in
-  `Acc (fun cs ->
-    add ~g source ~pool:!pool cs ;
+  `Acc (fun buf ->
+    add ~g source ~pool:!pool buf ;
     incr pool)
