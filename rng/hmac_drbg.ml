@@ -7,9 +7,7 @@ module Make (H : Digestif.S) = struct
 
   let block = H.digest_size
 
-  let b x = String.make 1 (char_of_int x)
-
-  let (bx00, bx01) = b 0x00, b 0x01
+  let (bx00, bx01) = "\x00", "\x01"
 
   let k0 = String.make H.digest_size '\x00'
   and v0 = String.make H.digest_size '\x01'
