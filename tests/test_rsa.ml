@@ -83,12 +83,12 @@ let rsa_selftest ~bits n =
   "selftest" >:: times ~n @@ fun _ ->
     let msg =
       let size = bits // 8 in
-      let cs = Mirage_crypto_rng.generate size
-      and i  = 1 + Randomconv.int ~bound:(pred size) Mirage_crypto_rng.generate in
-      let cs = Bytes.unsafe_of_string cs in
-      Bytes.set_uint8 cs 0 0;
-      Bytes.(set_uint8 cs i (get_uint8 cs i lor 2));
-      Bytes.unsafe_to_string cs
+      let buf = Bytes.create size in
+      Mirage_crypto_rng.generate_into buf ~off:0 size;
+      let i  = 1 + Randomconv.int ~bound:(pred size) Mirage_crypto_rng.generate in
+      Bytes.set_uint8 buf 0 0;
+      Bytes.(set_uint8 buf i (get_uint8 buf i lor 2));
+      Bytes.unsafe_to_string buf
     in
     let key = gen_rsa ~bits in
     let enc = Rsa.(encrypt ~key:(pub_of_priv key) msg) in
