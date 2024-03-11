@@ -4,14 +4,44 @@ let pp_json = Yojson.Safe.pretty_print
 
 type hex = string [@@deriving eq]
 
-let pp_hex fmt s =
-  let (`Hex h) = Hex.of_string s in
-  Format.pp_print_string fmt h
+let pp_hex fmt buf =
+  let n = String.length buf in
+  let bbuf = Bytes.unsafe_of_string buf in
+  for i = n - 1 downto 0 do
+    let byte = Bytes.get_uint8 bbuf i in
+    Format.fprintf fmt "%02x" byte
+  done
+
+let hex_of_string s =
+  let fold f acc str =
+    let st = ref acc in
+    String.iter (fun c -> st := f !st c) str;
+    !st
+  and digit c =
+    match c with
+    | '0'..'9' -> int_of_char c - 0x30
+    | 'A'..'F' -> int_of_char c - 0x41 + 10
+    | 'a'..'f' -> int_of_char c - 0x61 + 10
+    | _ -> invalid_arg "bad character"
+  in
+  let out = Bytes.create (String.length s / 2) in
+  let _idx, leftover =
+    fold (fun (idx, leftover) c ->
+        let c = digit c in
+        match leftover with
+        | None -> idx, Some (c lsl 4)
+        | Some c' ->
+          Bytes.set_uint8 out idx (c' lor c);
+          succ idx, None)
+      (0, None) s
+  in
+  assert (leftover = None);
+  Bytes.unsafe_to_string out
 
 let hex_of_yojson json =
   let padded s = if String.length s mod 2 = 0 then s else "0" ^ s in
   match [%of_yojson: string] json with
-  | Ok s -> Ok (Hex.to_string (`Hex (padded s)))
+  | Ok s -> Ok (hex_of_string (padded s))
   | Error _ as e -> e
 
 type test_result = Valid | Acceptable | Invalid [@@deriving show]
