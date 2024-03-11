@@ -230,13 +230,13 @@ val unset_default_generator : unit -> unit
 (** [unset_default_generator ()] sets the default generator to [None]. *)
 (**/**)
 
-val generate : ?g:g -> int -> string
-(** Invoke {{!Generator.generate}generate} on [g] or
-    {{!generator}default generator}. *)
-
 val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
 (** Invoke {{!Generator.generate}generate} on [g] or
     {{!generator}default generator}. The offset [off] defaults to 0. *)
+
+val generate : ?g:g -> int -> string
+(** Invoke {generate_into} on [g] or {{!generator}default generator} and a
+    freshly allocated bytes buffer that is converted to a string. *)
 
 val block : g option -> int
 (** {{!Generator.block}Block} size of [g] or

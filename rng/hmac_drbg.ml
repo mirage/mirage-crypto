@@ -27,7 +27,7 @@ module Make (H : Digestif.S) = struct
   let generate_into ~g buf ~off len =
     if not g.seeded then raise Rng.Unseeded_generator ;
     let rec go off k v = function
-      | 0 -> v (* unlikely this happens *)
+      | 0 -> v
       | 1 ->
         let v = H.hmac_string ~key:k v |> H.to_raw_string in
         let len =
