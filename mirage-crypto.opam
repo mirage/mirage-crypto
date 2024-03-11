@@ -25,6 +25,5 @@ conflicts: [
   "result" {< "1.5"}
 ]
 description: """
-Mirage-crypto provides symmetric ciphers (DES, AES, RC4, ChaCha20/Poly1305), and
-hashes (MD5, SHA-1, SHA-2).
+Mirage-crypto provides symmetric ciphers (DES, AES, RC4, ChaCha20/Poly1305).
 """

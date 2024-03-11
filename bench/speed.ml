@@ -1,7 +1,6 @@
 open Mirage_crypto
 
 open Cipher_block
-open Hash
 
 module Time = struct
 
@@ -414,11 +413,6 @@ let benchmarks = [
     reseed ~g "abcd" ;
     throughput name (fun cs ->
         generate_into ~g big_b ~off:0 (Cstruct.length cs))) ;
-
-  bm "md5"    (fun name -> throughput name MD5.digest) ;
-  bm "sha1"   (fun name -> throughput name SHA1.digest) ;
-  bm "sha256" (fun name -> throughput name SHA256.digest) ;
-  bm "sha512" (fun name -> throughput name SHA512.digest) ;
 ]
 
 let help () =

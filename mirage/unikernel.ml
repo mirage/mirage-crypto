@@ -5,16 +5,6 @@ module Main (R : Mirage_random.S) = struct
                   (Mirage_crypto_rng.Entropy.sources ())) ;
     Logs.info (fun m -> m "64 byte random:@ %a" Cstruct.hexdump_pp
                   (R.generate 64)) ;
-    Logs.info (fun m -> m "MD5 of the empty string %a" Cstruct.hexdump_pp
-                  (Mirage_crypto.Hash.MD5.digest Cstruct.empty));
-    Logs.info (fun m -> m "SHA1 of the empty string %a" Cstruct.hexdump_pp
-                  (Mirage_crypto.Hash.SHA1.digest Cstruct.empty));
-    Logs.info (fun m -> m "SHA256 of the empty string %a" Cstruct.hexdump_pp
-                  (Mirage_crypto.Hash.SHA256.digest Cstruct.empty));
-    Logs.info (fun m -> m "SHA384 of the empty string %a" Cstruct.hexdump_pp
-                  (Mirage_crypto.Hash.SHA384.digest Cstruct.empty));
-    Logs.info (fun m -> m "SHA512 of the empty string %a" Cstruct.hexdump_pp
-                  (Mirage_crypto.Hash.SHA512.digest Cstruct.empty));
     let n = Cstruct.create 32 in
     let key = Mirage_crypto.Chacha20.of_secret n
     and nonce = Cstruct.create 12
