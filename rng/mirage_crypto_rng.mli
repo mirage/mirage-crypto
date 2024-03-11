@@ -236,7 +236,7 @@ val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
 
 val generate : ?g:g -> int -> string
 (** Invoke {generate_into} on [g] or {{!generator}default generator} and a
-    freshly allocated bytes buffer that is converted to a string. *)
+    freshly allocated string. *)
 
 val block : g option -> int
 (** {{!Generator.block}Block} size of [g] or
