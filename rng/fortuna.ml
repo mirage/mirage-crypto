@@ -4,13 +4,14 @@ open Mirage_crypto.Uncommon
 module AES_CTR = Cipher_block.AES.CTR
 
 module SHAd256 = struct
-  open Hash
+  open Digestif
   type t = SHA256.t
+  type ctx = SHA256.ctx
   let empty     = SHA256.empty
-  let get t     = SHA256.(get t |> digest)
-  let digest x  = SHA256.(digest x |> digest)
-  let digesti i = SHA256.(digesti i |> digest)
-  let feedi     = SHA256.feedi
+  let get t     = SHA256.(get t |> to_raw_string |> digest_string |> to_raw_string)
+  let digest x  = SHA256.(digest_string x |> to_raw_string |> digest_string |> to_raw_string)
+  let digesti i = SHA256.(digesti_string i |> to_raw_string |> digest_string |> to_raw_string)
+  let feedi     = SHA256.feedi_string
 end
 
 let block = 16
@@ -25,9 +26,9 @@ let pools = 32
 (* XXX Locking!! *)
 type g =
   { mutable ctr    : AES_CTR.ctr
-  ; mutable secret : Cstruct.t
+  ; mutable secret : string
   ; mutable key    : AES_CTR.key
-  ; pools          : SHAd256.t array
+  ; pools          : SHAd256.ctx array
   ; mutable pool0_size : int
   ; mutable reseed_count : int
   ; mutable last_reseed : int64
@@ -35,10 +36,10 @@ type g =
   }
 
 let create ?time () =
-  let k = Cstruct.create 32 in
+  let k = String.make 32 '\x00' in
   { ctr    = (0L, 0L)
   ; secret = k
-  ; key    = AES_CTR.of_secret k
+  ; key    = AES_CTR.of_secret (Cstruct.of_string k)
   ; pools  = Array.make pools SHAd256.empty
   ; pool0_size = 0
   ; reseed_count = 0
@@ -53,7 +54,7 @@ let seeded ~g =
 (* XXX We might want to erase the old key. *)
 let set_key ~g sec =
   g.secret <- sec ;
-  g.key    <- AES_CTR.of_secret sec
+  g.key    <- AES_CTR.of_secret (Cstruct.of_string sec)
 
 let reseedi ~g iter =
   set_key ~g @@ SHAd256.digesti (fun f -> f g.secret; iter f);
@@ -63,15 +64,14 @@ let iter1 a     f = f a
 
 let reseed ~g cs = reseedi ~g (iter1 cs)
 
-let generate_rekey ~g bytes =
-  let b  = bytes // block + 2 in
+let generate_rekey ~g buf ~off len =
+  let b  = len // block + 2 in
   let n  = b * block in
-  let r  = AES_CTR.stream ~key:g.key ~ctr:g.ctr n in
-  let r1 = Cstruct.sub r 0 bytes
-  and r2 = Cstruct.sub r (n - 32) 32 in
+  let r  = Cstruct.to_string (AES_CTR.stream ~key:g.key ~ctr:g.ctr n) in
+  Bytes.blit_string r 0 buf off len;
+  let r2 = String.sub r (n - 32) 32 in
   set_key ~g r2 ;
-  g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b);
-  r1
+  g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b)
 
 let add_pool_entropy g =
   if g.pool0_size > min_pool_size then
@@ -93,24 +93,27 @@ let add_pool_entropy g =
       done
     end
 
-let generate ~g bytes =
+let generate_into ~g buf ~off len =
   add_pool_entropy g;
   if not (seeded ~g) then raise Rng.Unseeded_generator ;
-  let rec chunk acc = function
-    | i when i <= 0 -> acc
-    | n -> let n' = imin n 0x10000 in
-           chunk (generate_rekey ~g n' :: acc) (n - n') in
-  Cstruct.concat @@ chunk [] bytes
+  let rec chunk off = function
+    | i when i <= 0 -> ()
+    | n ->
+      let n' = imin n 0x10000 in
+      generate_rekey ~g buf ~off n';
+      chunk (off + n') (n - n')
+  in
+  chunk off len
 
-let _buf = Cstruct.create_unsafe 2
+let _buf = Bytes.create 2
 
 let add ~g (source, _) ~pool data =
     let pool   = pool land (pools - 1)
     and source = source land 0xff in
-    Cstruct.set_uint8 _buf 0 source;
-    Cstruct.set_uint8 _buf 1 (Cstruct.length data);
-    g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 _buf data);
-    if pool = 0 then g.pool0_size <- g.pool0_size + Cstruct.length data
+    Bytes.set_uint8 _buf 0 source;
+    Bytes.set_uint8 _buf 1 (String.length data);
+    g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 (Bytes.unsafe_to_string _buf) data);
+    if pool = 0 then g.pool0_size <- g.pool0_size + String.length data
 
 (* XXX
  * Schneier recommends against using generator-imposed pool-seeding schedule
@@ -118,6 +121,6 @@ let add ~g (source, _) ~pool data =
  *)
 let accumulate ~g source =
   let pool = ref 0 in
-  `Acc (fun cs ->
-    add ~g source ~pool:!pool cs ;
+  `Acc (fun buf ->
+    add ~g source ~pool:!pool buf ;
     incr pool)

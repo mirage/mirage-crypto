@@ -268,8 +268,15 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
   let size = len curve in
   let msg =
-    let h = Mirage_crypto.Hash.digest hash (Cstruct.of_string tst.msg) in
-    Cstruct.to_string (Cstruct.sub h 0 (min size (Cstruct.length h)))
+    let dgst =
+      match hash with
+      | "SHA-256" -> Digestif.SHA256.(digest_string tst.msg |> to_raw_string)
+      | "SHA-384" -> Digestif.SHA384.(digest_string tst.msg |> to_raw_string)
+      | "SHA-512" -> Digestif.SHA512.(digest_string tst.msg |> to_raw_string)
+      | "SHA-224" -> Digestif.SHA224.(digest_string tst.msg |> to_raw_string)
+      | _ -> assert false
+    in
+    String.sub dgst 0 (min size (String.length dgst))
   in
   let verified (r,s) =
     match curve with
@@ -308,15 +315,8 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
     name, `Quick, f
 
 let to_ecdsa_tests (x : ecdsa_test_group) =
-  let hash = match x.sha with
-    | "SHA-256" -> `SHA256
-    | "SHA-384" -> `SHA384
-    | "SHA-512" -> `SHA512
-    | "SHA-224" -> `SHA224
-    | _ -> assert false
-  in
   List.map
-    (make_ecdsa_test x.key.curve x.key.uncompressed hash)
+    (make_ecdsa_test x.key.curve x.key.uncompressed x.sha)
     x.tests
 
 let ecdsa_tests file =

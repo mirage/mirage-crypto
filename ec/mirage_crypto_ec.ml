@@ -59,7 +59,7 @@ module type Dsa = sig
   val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
   val sign : key:priv -> ?k:string -> string -> string * string
   val verify : key:pub -> string * string -> string -> bool
-  module K_gen (H : Mirage_crypto.Hash.S) : sig
+  module K_gen (H : Digestif.S) : sig
     val generate : key:priv -> string -> string
   end
   module Precompute : sig
@@ -270,7 +270,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     | exception Invalid_argument _ -> None
     | false -> Some (Fe.from_be_octets buf)
 
-  (** Convert cstruct coordinates to a finite point ensuring:
+  (** Convert coordinates to a finite point ensuring:
       - x < p
       - y < p
       - y^2 = ax^3 + ax + b
@@ -507,7 +507,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Error _ as e -> e
 
   let rec generate_private_key ?g () =
-    let candidate = Cstruct.to_string (Mirage_crypto_rng.generate ?g Param.byte_length) in
+    let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
     match S.of_octets candidate with
     | Ok secret -> secret
     | Error _ -> generate_private_key ?g ()
@@ -594,7 +594,7 @@ module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
     b_uts tmp
 end
 
-module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mirage_crypto.Hash.S) = struct
+module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Digestif.S) = struct
   type priv = scalar
 
   let byte_length = Param.byte_length
@@ -621,20 +621,20 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
         Bytes.unsafe_to_string res )
 
   (* RFC 6979: compute a deterministic k *)
-  module K_gen (H : Mirage_crypto.Hash.S) = struct
+  module K_gen (H : Digestif.S) = struct
     let drbg : 'a Mirage_crypto_rng.generator =
       let module M = Mirage_crypto_rng.Hmac_drbg (H) in (module M)
 
     let g ~key msg =
       let g = Mirage_crypto_rng.create ~strict:true drbg in
       Mirage_crypto_rng.reseed ~g
-        (Cstruct.of_string (String.concat "" [ S.to_octets key ; msg ]));
+        (S.to_octets key ^ msg);
       g
 
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
     let gen g =
       let rec go () =
-        let r = Cstruct.to_string (Mirage_crypto_rng.generate ~g Param.byte_length) in
+        let r = Mirage_crypto_rng.generate ~g Param.byte_length in
         if S.is_in_range r then r else go ()
       in
       go ()
@@ -654,7 +654,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Mira
     (* FIPS 186-4 B 4.2 *)
     let d =
       let rec one () =
-        match S.of_octets (Cstruct.to_string (Mirage_crypto_rng.generate ?g Param.byte_length)) with
+        match S.of_octets (Mirage_crypto_rng.generate ?g Param.byte_length) with
         | Ok x -> x
         | Error _ -> one ()
       in
@@ -794,7 +794,7 @@ module P256 : Dh_dsa  = struct
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
-  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA256)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA256)
 end
 
 module P384 : Dh_dsa = struct
@@ -845,7 +845,7 @@ module P384 : Dh_dsa = struct
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
-  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA384)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA384)
 end
 
 module P521 : Dh_dsa = struct
@@ -897,7 +897,7 @@ module P521 : Dh_dsa = struct
   module S = Make_scalar(Params)(P)
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
-  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Mirage_crypto.Hash.SHA512)
+  module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA512)
 end
 
 module X25519 = struct
@@ -918,7 +918,7 @@ module X25519 = struct
   let public priv = scalar_mult priv basepoint
 
   let gen_key ?compress:_ ?g () =
-    let secret = Cstruct.to_string (Mirage_crypto_rng.generate ?g key_len) in
+    let secret = Mirage_crypto_rng.generate ?g key_len in
     secret, public secret
 
   let secret_of_octets ?compress:_ s =
@@ -971,10 +971,12 @@ module Ed25519 = struct
   let public secret =
     (* section 5.1.5 *)
     (* step 1 *)
-    let h = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string secret) in
+    let h = Digestif.SHA512.(digest_string secret |> to_raw_string) in
     (* step 2 *)
-    let s, rest = Cstruct.split h key_len in
-    let s, rest = Cstruct.to_bytes s, Cstruct.to_string rest in
+    let s, rest =
+      Bytes.unsafe_of_string (String.sub h 0 key_len),
+      String.sub h key_len (String.length h - key_len)
+    in
     Bytes.set_uint8 s 0 ((Bytes.get_uint8 s 0) land 248);
     Bytes.set_uint8 s 31 (((Bytes.get_uint8 s 31) land 127) lor 64);
     let s = Bytes.unsafe_to_string s in
@@ -1001,19 +1003,19 @@ module Ed25519 = struct
   let pub_to_octets pub = pub
 
   let generate ?g () =
-    let secret = Cstruct.to_string (Mirage_crypto_rng.generate ?g key_len) in
+    let secret = Mirage_crypto_rng.generate ?g key_len in
     secret, pub_of_priv secret
 
   let sign ~key msg =
     (* section 5.1.6 *)
     let pub, (s, prefix) = public key in
-    let r = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ prefix; msg ])) in
-    let r = Cstruct.to_bytes r in
+    let r = Digestif.SHA512.(digest_string (String.concat "" [ prefix; msg ]) |> to_raw_string) in
+    let r = Bytes.unsafe_of_string r in
     reduce_l r;
     let r = Bytes.unsafe_to_string r in
     let r_big = scalar_mult_base_to_bytes r in
-    let k = Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string (String.concat "" [ r_big; pub; msg])) in
-    let k = Cstruct.to_bytes k in
+    let k = Digestif.SHA512.(digest_string (String.concat "" [ r_big; pub; msg]) |> to_raw_string) in
+    let k = Bytes.unsafe_of_string k in
     reduce_l k;
     let k = Bytes.unsafe_to_string k in
     let s_out = muladd k s r in
@@ -1040,10 +1042,9 @@ module Ed25519 = struct
       in
       if s_smaller_l then begin
         let k =
-          let data_to_hash = String.concat "" [ r ; key ; msg ] in
-          Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string data_to_hash)
+          Digestif.SHA512.(digest_string (String.concat "" [ r ; key ; msg ]) |> to_raw_string)
         in
-        let k = Cstruct.to_bytes k in
+        let k = Bytes.unsafe_of_string k in
         reduce_l k;
         let k = Bytes.unsafe_to_string k in
         let success, r' = double_scalar_mult k key s in

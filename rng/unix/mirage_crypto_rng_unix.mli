@@ -10,4 +10,4 @@
 val initialize : ?g:'a -> 'a Mirage_crypto_rng.generator -> unit
 
 (** [getrandom size] returns a buffer of [size] filled with random bytes. *)
-val getrandom : int -> Cstruct.t
+val getrandom : int -> string

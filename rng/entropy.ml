@@ -70,14 +70,14 @@ let random preferred =
   | y::_ -> Some y
 
 let write_header source data =
-  Cstruct.set_uint8 data 0 source;
-  Cstruct.set_uint8 data 1 (Cstruct.length data - 2)
+  Bytes.set_uint8 data 0 source;
+  Bytes.set_uint8 data 1 (Bytes.length data - 2)
 
 let header source data =
-  let hdr = Cstruct.create 2 in
-  let buf = Cstruct.append hdr data in
-  write_header source buf;
-  buf
+  let hdr = Bytes.create (2 + String.length data) in
+  Bytes.unsafe_blit_string data 0 hdr 2 (String.length data);
+  write_header source hdr;
+  Bytes.unsafe_to_string hdr
 
 (* Note:
  * `bootstrap` is not a simple feedback loop. It attempts to exploit CPU-level
@@ -90,16 +90,16 @@ let whirlwind_bootstrap id =
   and inner_max = 1024
   and a         = ref 0
   in
-  let cs        = Cstruct.create (outer * 2 + 2) in
+  let buf       = Bytes.create (outer * 2 + 2) in
   for i = 0 to outer - 1 do
     let tsc = Cpu_native.cycles () in
-    Cstruct.LE.set_uint16 cs ((i + 1) * 2) tsc;
+    Bytes.set_uint16_le buf ((i + 1) * 2) tsc;
     for j = 1 to tsc mod inner_max do
       a := tsc / j - !a * i + 1
     done
   done;
-  write_header id cs;
-  cs
+  write_header id buf;
+  Bytes.unsafe_to_string buf
 
 let cpu_rng_bootstrap =
   match random `Rdseed with
@@ -108,10 +108,10 @@ let cpu_rng_bootstrap =
     let cpu_rng_bootstrap id =
       let r = cpu_rng insn () in
       if r = 0 then failwith "bad CPU RNG value";
-      let cs = Cstruct.create 10 in
-      Cstruct.LE.set_uint64 cs 2 (Int64.of_int r);
-      write_header id cs;
-      cs
+      let buf = Bytes.create 10 in
+      Bytes.set_int64_le buf 2 (Int64.of_int r);
+      write_header id buf;
+      Bytes.unsafe_to_string buf
     in
     Ok cpu_rng_bootstrap
 
@@ -122,11 +122,11 @@ let bootstrap id =
     try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
 
 let interrupt_hook () =
-  let buf = Cstruct.create 4 in
+  let buf = Bytes.create 4 in
   fun () ->
     let a = Cpu_native.cycles () in
-    Cstruct.LE.set_uint32 buf 0 (Int32.of_int a) ;
-    buf
+    Bytes.set_int32_le buf 0 (Int32.of_int a) ;
+    Bytes.unsafe_to_string buf
 
 let timer_accumulator g =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
@@ -152,10 +152,10 @@ let cpu_rng =
         let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
         register_source s
       in
-      let cs = Cstruct.create 8 in
+      let buf = Bytes.create 8 in
       let f () =
-        Cstruct.LE.set_uint64 cs 0 (Int64.of_int (randomf ()));
-        cs
+        Bytes.set_int64_le buf 0 (Int64.of_int (randomf ()));
+        Bytes.unsafe_to_string buf
       in
       fun () -> feed_pools g source f
     in

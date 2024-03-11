@@ -12,21 +12,19 @@ let ct_find_uint8 ~default ?off ~f cs =
 
 let (&.) f g = fun h -> f (g h)
 
-module Hash = Mirage_crypto.Hash
-
 type 'a or_digest = [ `Message of 'a | `Digest of string ]
 
-module Digest_or (H : Hash.S) = struct
+module Digest_or (H : Digestif.S) = struct
   let digest_or = function
-    | `Message msg   -> Cstruct.to_string (H.digest (Cstruct.of_string msg))
+    | `Message msg   -> H.(digest_string msg |> to_raw_string)
     | `Digest digest ->
         let n = String.length digest and m = H.digest_size in
         if n = m then digest else
           invalid_arg "(`Digest _): %d bytes, expecting %d" n m
 end
 
-let digest_or ~hash =
-  let module H = (val (Hash.module_of hash)) in
+let digest_or (type a) ~(hash : a Digestif.hash) =
+  let module H = (val Digestif.module_of hash) in
   let module D = Digest_or (H) in
   D.digest_or
 
@@ -204,13 +202,11 @@ let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 let decrypt ?(crt_hardening=false) ?(mask=`Yes) ~key =
   reformat (priv_bits key) (decrypt_z ~crt_hardening ~mask ~key)
 
-let b x = String.make 1 (char_of_int x)
-
 (* OCaml 4.13 *)
 let string_get_uint8 buf idx =
   Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
 
-let (bx00, bx01) = (b 0x00, b 0x01)
+let bx00, bx01 = "\x00", "\x01"
 
 module PKCS1 = struct
 
@@ -222,15 +218,15 @@ module PKCS1 = struct
     and k  = let b = Mirage_crypto_rng.block g in (n // b * b) in
     let rec go nonce i j =
       if i = n then Bytes.unsafe_to_string buf else
-      if j = k then go (Cstruct.to_string Mirage_crypto_rng.(generate ?g k)) i 0 else
+      if j = k then go Mirage_crypto_rng.(generate ?g k) i 0 else
       match string_get_uint8 nonce j with
       | b when f b -> Bytes.set_uint8 buf i b ; go nonce (succ i) (succ j)
       | _          -> go nonce i (succ j) in
-    go (Cstruct.to_string Mirage_crypto_rng.(generate ?g k)) 0 0
+    go Mirage_crypto_rng.(generate ?g k) 0 0
 
   let pad ~mark ~padding k msg =
     let pad = padding (k - String.length msg - 3 |> imax min_pad) in
-    String.concat "" [ bx00 ; b mark ; pad ; bx00 ; msg ]
+    String.concat "" [ bx00 ; mark ; pad ; bx00 ; msg ]
 
   let unpad ~mark ~is_pad buf =
     let f = not &. is_pad in
@@ -245,8 +241,8 @@ module PKCS1 = struct
 
   let pad_01    =
     let padding size = String.make size '\xff' in
-    pad ~mark:0x01 ~padding
-  let pad_02 ?g = pad ~mark:0x02 ~padding:(generate_with ?g ~f:((<>) 0x00))
+    pad ~mark:"\x01" ~padding
+  let pad_02 ?g = pad ~mark:"\x02" ~padding:(generate_with ?g ~f:((<>) 0x00))
 
   let unpad_01 = unpad ~mark:0x01 ~is_pad:((=) 0xff)
   let unpad_02 = unpad ~mark:0x02 ~is_pad:((<>) 0x00)
@@ -273,26 +269,74 @@ module PKCS1 = struct
   let decrypt ?(crt_hardening = false) ?mask ~key msg =
     unpadded unpad_02 (decrypt ~crt_hardening ?mask ~key) (priv_bits key) msg
 
-  let asns = List.combine Hash.hashes [
-    "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10"     (* md5 *)
-  ; "\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"                 (* sha1 *)
-  ; "\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04\x05\x00\x04\x1c" (* sha224 *)
-  ; "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20" (* sha256 *)
-  ; "\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30" (* sha384 *)
-  ; "\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40" (* sha512 *)
-  ]
-
-  let asn_of_hash hash = try List.assoc hash asns with Not_found -> assert false
-
   (* OCaml 4.13 contains starts_with *)
   let is_prefix asn msg =
     String.length msg >= String.length asn &&
     String.equal asn (String.sub msg 0 (String.length asn))
 
-  let detect msg = List.find_opt (fun (_, asn) -> is_prefix asn msg) asns
+  type hash = [ `MD5 | `SHA1 | `SHA224 | `SHA256 | `SHA384 | `SHA512 ]
+
+  let digestif_or = function
+    | `MD5 -> digest_or ~hash:Digestif.md5
+    | `SHA1 -> digest_or ~hash:Digestif.sha1
+    | `SHA224 -> digest_or ~hash:Digestif.sha224
+    | `SHA256 -> digest_or ~hash:Digestif.sha256
+    | `SHA384 -> digest_or ~hash:Digestif.sha384
+    | `SHA512 -> digest_or ~hash:Digestif.sha512
+
+  let digestif_size = function
+    | `MD5 ->
+      let module H = (val Digestif.module_of Digestif.md5) in
+      H.digest_size
+    | `SHA1 ->
+      let module H = (val Digestif.module_of Digestif.sha1) in
+      H.digest_size
+    | `SHA224 ->
+      let module H = (val Digestif.module_of Digestif.sha224) in
+      H.digest_size
+    | `SHA256 ->
+      let module H = (val Digestif.module_of Digestif.sha256) in
+      H.digest_size
+    | `SHA384 ->
+      let module H = (val Digestif.module_of Digestif.sha384) in
+      H.digest_size
+    | `SHA512 ->
+      let module H = (val Digestif.module_of Digestif.sha512) in
+      H.digest_size
+
+  let asn_of_hash, detect =
+    let md5 = "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10"
+    and sha1 = "\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"
+    and sha224 = "\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04\x05\x00\x04\x1c"
+    and sha256 = "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20"
+    and sha384 = "\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30"
+    and sha512 = "\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
+    in
+    (function
+      | `MD5 -> md5
+      | `SHA1 -> sha1
+      | `SHA224 -> sha224
+      | `SHA256 -> sha256
+      | `SHA384 -> sha384
+      | `SHA512 -> sha512),
+     (fun buf ->
+       if is_prefix md5 buf then
+         Some (`MD5, md5)
+       else if is_prefix sha1 buf then
+         Some (`SHA1, sha1)
+       else if is_prefix sha224 buf then
+         Some (`SHA224, sha224)
+       else if is_prefix sha256 buf then
+         Some (`SHA256, sha256)
+       else if is_prefix sha384 buf then
+         Some (`SHA384, sha384)
+       else if is_prefix sha512 buf then
+         Some (`SHA512, sha512)
+       else
+         None)
 
   let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
-    let msg' = asn_of_hash hash ^ digest_or ~hash msg in
+    let msg' = asn_of_hash hash ^ digestif_or hash msg in
     sig_encode ~crt_hardening ?mask ~key msg'
 
   let verify ~hashp ~key ~signature msg =
@@ -302,25 +346,25 @@ module PKCS1 = struct
     Option.value
       (sig_decode ~key signature >>= fun buf ->
        detect buf >>| fun (hash, asn) ->
-       hashp hash && Eqaf.equal (asn ^ digest_or ~hash msg) buf)
+       hashp hash && Eqaf.equal (asn ^ digestif_or hash msg) buf)
       ~default:false
 
   let min_key hash =
-    (String.length (asn_of_hash hash) + Hash.digest_size hash + min_pad + 2) * 8 + 1
+    (String.length (asn_of_hash hash) + digestif_size hash + min_pad + 2) * 8 + 1
 end
 
-module MGF1 (H : Hash.S) = struct
+module MGF1 (H : Digestif.S) = struct
 
+  let _buf = Bytes.create 4
   let repr n =
-    let cs = Cstruct.create_unsafe 4 in
-    Cstruct.BE.set_uint32 cs 0 n;
-    cs
+    Bytes.set_int32_be _buf 0 n;
+    Bytes.unsafe_to_string _buf
 
   (* Assumes len < 2^32 * H.digest_size. *)
   let mgf ~seed len =
     let rec go acc c = function
       | 0 -> Bytes.sub (Bytes.concat Bytes.empty (List.rev acc)) 0 len
-      | n -> let h = Cstruct.to_bytes (H.digesti (iter2 (Cstruct.of_string seed) (repr c))) in
+      | n -> let h = Bytes.unsafe_of_string H.(digesti_string (iter2 seed (repr c)) |> to_raw_string) in
              go (h :: acc) Int32.(succ c) (pred n) in
     go [] 0l (len // H.digest_size)
 
@@ -330,7 +374,7 @@ module MGF1 (H : Hash.S) = struct
     mgf_data
 end
 
-module OAEP (H : Hash.S) = struct
+module OAEP (H : Digestif.S) = struct
 
   module MGF = MGF1 (H)
 
@@ -339,9 +383,9 @@ module OAEP (H : Hash.S) = struct
   let max_msg_bytes k = k - 2 * hlen - 2
 
   let eme_oaep_encode ?g ?(label = "") k msg =
-    let seed  = Cstruct.to_string (Mirage_crypto_rng.generate ?g hlen)
+    let seed  = Mirage_crypto_rng.generate ?g hlen
     and pad   = String.make (max_msg_bytes k - String.length msg) '\x00' in
-    let db    = String.concat "" [ Cstruct.to_string (H.digest (Cstruct.of_string label)) ; pad ; bx01 ; msg ] in
+    let db    = String.concat "" [ H.(digest_string label |> to_raw_string) ; pad ; bx01 ; msg ] in
     let mdb   = Bytes.unsafe_to_string (MGF.mask ~seed db) in
     let mseed = Bytes.unsafe_to_string (MGF.mask ~seed:mdb seed) in
     String.concat "" [ bx00 ; mseed ; mdb ]
@@ -353,7 +397,7 @@ module OAEP (H : Hash.S) = struct
     in
     let db = Bytes.unsafe_to_string (MGF.mask ~seed:(Bytes.unsafe_to_string (MGF.mask ~seed:mdb ms)) mdb) in
     let i  = ct_find_uint8 ~default:0 ~off:hlen ~f:((<>) 0x00) db in
-    let c1 = Eqaf.equal (String.sub db 0 hlen) (Cstruct.to_string H.(digest (Cstruct.of_string label)))
+    let c1 = Eqaf.equal (String.sub db 0 hlen) H.(digest_string label |> to_raw_string)
     and c2 = string_get_uint8 b0 0 = 0x00
     and c3 = string_get_uint8 db i = 0x01 in
     if c1 && c2 && c3 then Some (String.sub db (i + 1) (String.length db - i - 1)) else None
@@ -376,28 +420,29 @@ module OAEP (H : Hash.S) = struct
   (* XXX expose seed for deterministic testing? *)
 end
 
-module PSS (H: Hash.S) = struct
+module PSS (H: Digestif.S) = struct
   module MGF = MGF1 (H)
   module H1  = Digest_or (H)
 
   let hlen = H.digest_size
 
-  let bxbc = b 0xbc
+  let bxbc = "\xbc"
 
   let b0mask embits = 0xff lsr ((8 - embits mod 8) mod 8)
 
-  let zero_8 = Cstruct.create 8
+  let zero_8 = String.make 8 '\x00'
 
-  let digest ~salt msg = H.digesti @@ iter3 zero_8 (Cstruct.of_string (H1.digest_or msg)) salt
+  let digest ~salt msg =
+    H.to_raw_string @@ H.digesti_string @@ iter3 zero_8 (H1.digest_or msg) salt
 
   let emsa_pss_encode ?g slen emlen msg =
     let n    = emlen // 8
     and salt = Mirage_crypto_rng.generate ?g slen in
     let h    = digest ~salt msg in
-    let db   = String.concat "" [ String.make (n - slen - hlen - 2) '\x00' ; bx01 ; Cstruct.to_string salt ] in
-    let mdb  = MGF.mask ~seed:(Cstruct.to_string h) db in
+    let db   = String.concat "" [ String.make (n - slen - hlen - 2) '\x00' ; bx01 ; salt ] in
+    let mdb  = MGF.mask ~seed:h db in
     Bytes.set_uint8 mdb 0 @@ Bytes.get_uint8 mdb 0 land b0mask emlen ;
-    String.concat "" [ Bytes.unsafe_to_string mdb ; Cstruct.to_string h ; bxbc ]
+    String.concat "" [ Bytes.unsafe_to_string mdb ; h ; bxbc ]
 
   let emsa_pss_verify slen emlen em msg =
     let mdb = String.sub em 0 (String.length em - hlen - 1)
@@ -408,7 +453,7 @@ module PSS (H: Hash.S) = struct
     Bytes.set_uint8 db 0 (Bytes.get_uint8 db 0 land b0mask emlen) ;
     let db   = Bytes.unsafe_to_string db in
     let salt = String.sub db (String.length db - slen) slen in
-    let h'   = Cstruct.to_string (digest ~salt:(Cstruct.of_string salt) msg)
+    let h'   = digest ~salt:salt msg
     and i    = ct_find_uint8 ~default:0 ~f:((<>) 0x00) db in
     let c1 = lnot (b0mask emlen) land string_get_uint8 mdb 0 = 0x00
     and c2 = i = String.length em - hlen - slen - 2

@@ -65,7 +65,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
          No_default_generator -> ());
       running := true;
       let seed =
-        List.mapi (fun i f -> f i) (bootstrap_functions ()) |> Cstruct.concat
+        List.mapi (fun i f -> f i) (bootstrap_functions ()) |> String.concat ""
       in
       let rng = create ?g ~seed ~time:M.elapsed_ns rng in
       set_default_generator rng;

@@ -36,13 +36,13 @@ let () = Printexc.register_printer (function
 
 module type Generator = sig
   type g
-  val block      : int
-  val create     : ?time:(unit -> int64) -> unit -> g
-  val generate   : g:g -> int -> Cstruct.t
-  val reseed     : g:g -> Cstruct.t -> unit
-  val accumulate : g:g -> source -> [`Acc of Cstruct.t -> unit]
-  val seeded     : g:g -> bool
-  val pools      : int
+  val block : int
+  val create : ?time:(unit -> int64) -> unit -> g
+  val generate_into : g:g -> bytes -> off:int -> int -> unit
+  val reseed : g:g -> string -> unit
+  val accumulate : g:g -> source -> [`Acc of string -> unit]
+  val seeded : g:g -> bool
+  val pools : int
 end
 
 type 'a generator = (module Generator with type g = 'a)
@@ -67,8 +67,15 @@ let default_generator () =
 
 let get = function Some g -> g | None -> default_generator ()
 
-let generate ?(g = default_generator ()) n =
-  let Generator (g, _, m) = g in let module M = (val m) in M.generate ~g n
+let generate_into ?(g = default_generator ()) b ?(off = 0) n =
+  let Generator (g, _, m) = g in
+  let module M = (val m) in
+  M.generate_into ~g b ~off n
+
+let generate ?g n =
+  let data = Bytes.create n in
+  generate_into ?g data ~off:0 n;
+  Bytes.unsafe_to_string data
 
 let reseed ?(g = default_generator ()) cs =
   let Generator (g, _, m) = g in let module M = (val m) in M.reseed ~g cs

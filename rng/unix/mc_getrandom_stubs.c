@@ -72,7 +72,7 @@ void raw_getrandom(uint8_t *data, uint32_t len) {
 #error "Retrieving random data not supported on this platform"
 #endif
 
-CAMLprim value mc_getrandom (value ba, value len) {
-  raw_getrandom((uint8_t*) Caml_ba_data_val(ba), Int_val(len));
+CAMLprim value mc_getrandom (value buf, value len) {
+  raw_getrandom(Bytes_val(buf), Int_val(len));
   return Val_unit;
 }

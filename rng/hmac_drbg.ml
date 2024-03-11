@@ -1,44 +1,49 @@
-module Make (H : Mirage_crypto.Hash.S) = struct
-
-  open Mirage_crypto.Uncommon
-
+module Make (H : Digestif.S) = struct
   type g =
-    { mutable k      : Cstruct.t
-    ; mutable v      : Cstruct.t
+    { mutable k      : string
+    ; mutable v      : string
     ; mutable seeded : bool
     }
 
   let block = H.digest_size
 
-  let (bx00, bx01) = Cs.(b 0x00, b 0x01)
+  let (bx00, bx01) = "\x00", "\x01"
 
-  let k0 = Cstruct.create H.digest_size (* fills k0 with 0s *)
-  and v0 =
-    let buf = Cstruct.create H.digest_size in
-    Cstruct.memset buf 0x01;
-    buf
+  let k0 = String.make H.digest_size '\x00'
+  and v0 = String.make H.digest_size '\x01'
 
   let create ?time:_ () = { k = k0 ; v = v0 ; seeded = false }
 
   let seeded ~g = g.seeded
 
-  let reseed ~g cs =
+  let reseed ~g buf =
     let (k, v) = (g.k, g.v) in
-    let k = H.hmac ~key:k @@ Cstruct.concat [v; bx00; cs] in
-    let v = H.hmac ~key:k v in
-    let k = H.hmac ~key:k @@ Cstruct.concat [v; bx01; cs] in
-    let v = H.hmac ~key:k v in
+    let k = H.hmac_string ~key:k @@ String.concat "" [v; bx00; buf] |> H.to_raw_string in
+    let v = H.hmac_string ~key:k v |> H.to_raw_string in
+    let k = H.hmac_string ~key:k @@ String.concat "" [v; bx01; buf] |> H.to_raw_string in
+    let v = H.hmac_string ~key:k v |> H.to_raw_string in
     g.k <- k ; g.v <- v ; g.seeded <- true
 
-  let generate ~g bytes =
+  let generate_into ~g buf ~off len =
     if not g.seeded then raise Rng.Unseeded_generator ;
-    let rec go acc k v = function
-      | 0 -> (v, Cstruct.concat @@ List.rev acc)
-      | i -> let v = H.hmac ~key:k v in go (v::acc) k v (pred i) in
-    let (v, cs) = go [] g.k g.v (bytes // H.digest_size) in
-    g.k <- H.hmac ~key:g.k Cs.(v <+> bx00);
-    g.v <- H.hmac ~key:g.k v;
-    Cstruct.sub cs 0 (imax 0 bytes)
+    let rec go off k v = function
+      | 0 -> v
+      | 1 ->
+        let v = H.hmac_string ~key:k v |> H.to_raw_string in
+        let len =
+          let rem = len mod H.digest_size in
+          if rem = 0 then H.digest_size else rem
+        in
+        Bytes.blit_string v 0 buf off len;
+        v
+      | i ->
+        let v = H.hmac_string ~key:k v |> H.to_raw_string in
+        Bytes.blit_string v 0 buf off H.digest_size;
+        go (off + H.digest_size) k v (pred i)
+    in
+    let v = go off g.k g.v Mirage_crypto.Uncommon.(len // H.digest_size) in
+    g.k <- H.hmac_string ~key:g.k (v ^ bx00) |> H.to_raw_string;
+    g.v <- H.hmac_string ~key:g.k v |> H.to_raw_string
 
   (* XXX *)
   let accumulate ~g:_ = invalid_arg "Implement Hmac_drbg.accumulate..."

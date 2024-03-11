@@ -23,7 +23,7 @@ let xor_into src dst n =
 
 let xor a b =
   assert (String.length a = String.length b);
-  let b' = Bytes.copy (Bytes.unsafe_of_string b) in
+  let b' = Bytes.of_string b in
   xor_into a b' (Bytes.length b');
   Bytes.unsafe_to_string b'
 

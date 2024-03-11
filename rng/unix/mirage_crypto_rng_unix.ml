@@ -3,14 +3,12 @@ open Mirage_crypto_rng
 let src = Logs.Src.create "mirage-crypto-rng.unix" ~doc:"Mirage crypto RNG Unix"
 module Log = (val Logs.src_log src : Logs.LOG)
 
-open Stdlib.Bigarray
-type buffer = (char, int8_unsigned_elt, c_layout) Array1.t
-external getrandom_buf : buffer -> int -> unit = "mc_getrandom"
+external getrandom_buf : bytes -> int -> unit = "mc_getrandom" [@@noalloc]
 
 let getrandom size =
-  let buf = Cstruct.create_unsafe size in
-  getrandom_buf buf.Cstruct.buffer size;
-  buf
+  let buf = Bytes.create size in
+  getrandom_buf buf size;
+  Bytes.unsafe_to_string buf
 
 let getrandom_init i =
   let data = getrandom 128 in
@@ -35,7 +33,7 @@ let initialize (type a) ?g (rng : a generator) =
       let init =
         Entropy.[ bootstrap ; whirlwind_bootstrap ; bootstrap ; getrandom_init ]
       in
-      List.mapi (fun i f -> f i) init |> Cstruct.concat
+      List.mapi (fun i f -> f i) init |> String.concat ""
     in
     let _ = Entropy.register_source "getrandom" in
     set_default_generator (create ?g ~seed rng)

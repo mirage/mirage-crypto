@@ -103,8 +103,8 @@ let gen ?g n =
       if String.length buf >= octets then
         let x = of_octets_be ~bits buf in
         if x < n then x else attempt (String.sub buf octets (String.length buf - octets))
-      else attempt (Cstruct.to_string (Mirage_crypto_rng.generate ?g batch)) in
-    attempt (Cstruct.to_string (Mirage_crypto_rng.generate ?g batch))
+      else attempt (Mirage_crypto_rng.generate ?g batch) in
+    attempt (Mirage_crypto_rng.generate ?g batch)
 
 let rec gen_r ?g a b =
   if Mirage_crypto_rng.strict g then
@@ -126,9 +126,11 @@ let set_msb bits buf =
     go bits 0
 
 let gen_bits ?g ?(msb = 0) bits =
-  let res = Cstruct.to_bytes (Mirage_crypto_rng.generate ?g (bits // 8)) in
-  set_msb msb res ;
-  of_octets_be ~bits (Bytes.unsafe_to_string res)
+  let bytelen = bits // 8 in
+  let buf = Bytes.create bytelen in
+  Mirage_crypto_rng.generate_into ?g buf ~off:0 bytelen;
+  set_msb msb buf ;
+  of_octets_be ~bits (Bytes.unsafe_to_string buf)
 
 (* Invalid combinations of ~bits and ~msb will loop forever, but there is no
  * way to quickly determine upfront whether there are any primes in the

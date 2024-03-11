@@ -7,15 +7,16 @@ module Printing_rng = struct
 
   let create ?time:_ () = ()
 
-  let generate ~g:_ _n = assert false
+  let generate_into ~g:_ _buf ~off:_ _len = assert false
 
   let reseed ~g:_ data =
-    Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp data
+    Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp (Cstruct.of_string data)
 
   let accumulate ~g:_ source =
     let print data =
       Format.printf "accumulate: (src: %a) %a@.%!"
-        Mirage_crypto_rng.Entropy.pp_source source Cstruct.hexdump_pp data
+        Mirage_crypto_rng.Entropy.pp_source source Cstruct.hexdump_pp
+        (Cstruct.of_string data)
     in
     `Acc print
 

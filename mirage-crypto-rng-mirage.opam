@@ -17,7 +17,6 @@ depends: [
   "dune" {>= "2.7"}
   "mirage-crypto-rng" {=version}
   "duration"
-  "cstruct" {>= "4.0.0"}
   "logs"
   "lwt" {>= "4.0.0"}
   "mirage-runtime" {>= "3.8.0"}

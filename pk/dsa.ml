@@ -82,7 +82,7 @@ let generate ?g size =
   { p; q; gg; x; y }
 
 
-module K_gen (H : Mirage_crypto.Hash.S) = struct
+module K_gen (H : Digestif.S) = struct
 
   let drbg : 'a Mirage_crypto_rng.generator =
     let module M = Mirage_crypto_rng.Hmac_drbg (H) in (module M)
@@ -90,14 +90,14 @@ module K_gen (H : Mirage_crypto.Hash.S) = struct
   let z_gen ~key:{ q; x; _ } z =
     let repr = Z_extra.to_octets_be ~size:(Z.numbits q // 8) in
     let g    = Mirage_crypto_rng.create ~strict:true drbg in
-    Mirage_crypto_rng.reseed ~g (Cstruct.of_string (repr x ^ repr Z.(z mod q)));
+    Mirage_crypto_rng.reseed ~g (repr x ^ repr Z.(z mod q));
     Z_extra.gen_r ~g Z.one q
 
   let generate ~key buf =
     z_gen ~key (Z_extra.of_octets_be ~bits:(Z.numbits key.q) buf)
 end
 
-module K_gen_sha256 = K_gen (Mirage_crypto.Hash.SHA256)
+module K_gen_sha256 = K_gen (Digestif.SHA256)
 
 let sign_z ?(mask = `Yes) ?k:k0 ~key:({ p; q; gg; x; _ } as key) z =
   let k = match k0 with Some k -> k | None -> K_gen_sha256.z_gen ~key z in

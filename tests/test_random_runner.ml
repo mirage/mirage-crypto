@@ -3,15 +3,20 @@ open OUnit2
 open Mirage_crypto
 
 open Test_common
-open Test_common_random
+
+let sample arr =
+  let ix =
+    Randomconv.int ~bound:(Array.length arr) Mirage_crypto_rng.generate
+  in
+  arr.(ix)
 
 (* randomized selfies *)
 
 let ecb_selftest (m : (module Cipher_block.S.ECB)) n =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
-    let data  = Mirage_crypto_rng.generate (C.block_size * 8)
-    and key   = C.of_secret @@ Mirage_crypto_rng.generate (sample C.key_sizes) in
+    let data  = Cstruct.of_string (Mirage_crypto_rng.generate (C.block_size * 8))
+    and key   = C.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample C.key_sizes)) in
     let data' =
       C.( data |> encrypt ~key |> encrypt ~key
                |> decrypt ~key |> decrypt ~key ) in
@@ -20,9 +25,9 @@ let ecb_selftest (m : (module Cipher_block.S.ECB)) n =
 let cbc_selftest (m : (module Cipher_block.S.CBC)) n  =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
-    let data = Mirage_crypto_rng.generate (C.block_size * 8)
-    and iv   = Mirage_crypto_rng.generate C.block_size
-    and key  = C.of_secret @@ Mirage_crypto_rng.generate (sample C.key_sizes) in
+    let data = Cstruct.of_string (Mirage_crypto_rng.generate (C.block_size * 8))
+    and iv   = Cstruct.of_string (Mirage_crypto_rng.generate C.block_size)
+    and key  = C.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample C.key_sizes)) in
     assert_cs_equal ~msg:"CBC e->e->d->d" data
       C.( data |> encrypt ~key ~iv |> encrypt ~key ~iv
                |> decrypt ~key ~iv |> decrypt ~key ~iv );
@@ -36,9 +41,9 @@ let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
   let module M = (val m) in
   let bs = M.block_size in
   "selftest" >:: times ~n @@ fun _ ->
-    let key  = M.of_secret @@ Mirage_crypto_rng.generate (sample M.key_sizes)
-    and ctr  = Mirage_crypto_rng.generate bs |> M.ctr_of_cstruct
-    and data = Mirage_crypto_rng.(generate @@ bs + Randomconv.int ~bound:(20 * bs) Mirage_crypto_rng.generate) in
+    let key  = M.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample M.key_sizes))
+    and ctr  = Mirage_crypto_rng.generate bs |> Cstruct.of_string |> M.ctr_of_cstruct
+    and data = Cstruct.of_string Mirage_crypto_rng.(generate @@ bs + Randomconv.int ~bound:(20 * bs) Mirage_crypto_rng.generate) in
     let enc = M.encrypt ~key ~ctr data in
     let dec = M.decrypt ~key ~ctr enc in
     assert_cs_equal ~msg:"CTR e->d" data dec;
@@ -51,11 +56,11 @@ let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
 let ctr_offsets (type c) ~zero (m : (module Cipher_block.S.CTR with type ctr = c)) n =
   let module M = (val m) in
   "offsets" >:: fun _ ->
-    let key = M.of_secret @@ Mirage_crypto_rng.generate M.key_sizes.(0) in
+    let key = M.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate M.key_sizes.(0)) in
     for i = 0 to n - 1 do
       let ctr = match i with
         | 0 -> M.add_ctr zero (-1L)
-        | _ -> Mirage_crypto_rng.generate M.block_size |> M.ctr_of_cstruct
+        | _ -> Mirage_crypto_rng.generate M.block_size |> Cstruct.of_string |> M.ctr_of_cstruct
       and gap = Randomconv.int ~bound:64 Mirage_crypto_rng.generate in
       let s1 = M.stream ~key ~ctr ((gap + 1) * M.block_size)
       and s2 = M.stream ~key ~ctr:(M.add_ctr ctr (Int64.of_int gap)) M.block_size in
@@ -69,14 +74,14 @@ let xor_selftest n =
     let n         = Randomconv.int ~bound:30 Mirage_crypto_rng.generate in
     let (x, y, z) = Mirage_crypto_rng.(generate n, generate n, generate n) in
 
-    let xyz  = Uncommon.Cs.(xor (xor x y) z)
-    and xyz' = Uncommon.Cs.(xor x (xor y z)) in
-    let x1   = Uncommon.Cs.(xor xyz (xor y z))
-    and x2   = Uncommon.Cs.(xor (xor z y) xyz) in
+    let xyz  = Uncommon.(xor (xor x y) z)
+    and xyz' = Uncommon.(xor x (xor y z)) in
+    let x1   = Uncommon.(xor xyz (xor y z))
+    and x2   = Uncommon.(xor (xor z y) xyz) in
 
-    assert_cs_equal ~msg:"assoc" xyz xyz' ;
-    assert_cs_equal ~msg:"invert" x x1 ;
-    assert_cs_equal ~msg:"commut" x1 x2
+    assert_str_equal ~msg:"assoc" xyz xyz' ;
+    assert_str_equal ~msg:"invert" x x1 ;
+    assert_str_equal ~msg:"commut" x1 x2
 
 let suite =
   "All" >::: [

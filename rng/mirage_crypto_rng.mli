@@ -92,7 +92,7 @@ module Entropy : sig
 
   (** {1 Bootstrap} *)
 
-  val whirlwind_bootstrap : int -> Cstruct.t
+  val whirlwind_bootstrap : int -> string
   (** [whirlwind_bootstrap id] exploits CPU-level data races which lead to
       execution-time variability. It returns 200 bytes random data prefixed
       by [id].
@@ -100,7 +100,7 @@ module Entropy : sig
       See {{:http://www.ieee-security.org/TC/SP2014/papers/Not-So-RandomNumbersinVirtualizedLinuxandtheWhirlwindRNG.pdf}}
       for further details. *)
 
-  val cpu_rng_bootstrap : (int -> Cstruct.t, [`Not_supported]) Result.t
+  val cpu_rng_bootstrap : (int -> string, [`Not_supported]) Result.t
   (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
       RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
       The [id] is used as prefix.
@@ -108,13 +108,13 @@ module Entropy : sig
       @raise Failure if no CPU RNG is available, or if it doesn't return a
       random value. *)
 
-  val bootstrap : int -> Cstruct.t
+  val bootstrap : int -> string
   (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or
       [whirlwind_bootstrap] if not. *)
 
   (** {1 Timer source} *)
 
-  val interrupt_hook : unit -> unit -> Cstruct.t
+  val interrupt_hook : unit -> unit -> string
   (** [interrupt_hook ()] collects lower bytes from the cycle counter, to be
       used for entropy collection in the event loop. *)
 
@@ -124,7 +124,7 @@ module Entropy : sig
 
   (** {1 Periodic pulled sources} *)
 
-  val feed_pools : g option -> source -> (unit -> Cstruct.t) -> unit
+  val feed_pools : g option -> source -> (unit -> string) -> unit
   (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
       [f] for each pool. *)
 
@@ -137,7 +137,7 @@ module Entropy : sig
   val id : source -> int
   (** [id source] is the identifier used for [source]. *)
 
-  val header : int -> Cstruct.t -> Cstruct.t
+  val header : int -> string -> string
   (** [header id data] constructs a unique header with [id], length of [data],
       and [data]. *)
   (**/**)
@@ -156,17 +156,20 @@ module type Generator = sig
   val create : ?time:(unit -> int64) -> unit -> g
   (** Create a new, unseeded {{!g}g}. *)
 
-  val generate : g:g -> int -> Cstruct.t
-  (** [generate ~g n] produces [n] uniformly distributed random bytes,
-      updating the state of [g]. *)
+  val generate_into : g:g -> bytes -> off:int -> int -> unit
+  (** [generate_into ~g buf ~off n] produces [n] uniformly distributed random
+      bytes into [buf] at offset [off], updating the state of [g].
 
-  val reseed : g:g -> Cstruct.t -> unit
+      @raise Invalid_argument if buffer is too small (it must be: Bytes.length buf - off >= n)
+  *)
+
+  val reseed : g:g -> string -> unit
   (** [reseed ~g bytes] directly updates [g]. Its new state depends both on
       [bytes] and the previous state.
 
       A generator is seded after a single application of [reseed]. *)
 
-  val accumulate : g:g -> Entropy.source -> [`Acc of Cstruct.t -> unit]
+  val accumulate : g:g -> Entropy.source -> [`Acc of string -> unit]
   (** [accumulate ~g] is a closure suitable for incrementally feeding
       small amounts of environmentally sourced entropy into [g].
 
@@ -192,9 +195,9 @@ module Fortuna : Generator
 
 (** {b HMAC_DRBG}: A NIST-specified RNG based on HMAC construction over the
     provided hash. *)
-module Hmac_drbg (H : Mirage_crypto.Hash.S) : Generator
+module Hmac_drbg (H : Digestif.S) : Generator
 
-val create : ?g:'a -> ?seed:Cstruct.t -> ?strict:bool ->
+val create : ?g:'a -> ?seed:string -> ?strict:bool ->
   ?time:(unit -> int64) -> 'a generator -> g
 (** [create ~g ~seed ~strict ~time module] uses a module conforming to the
     {{!Generator}Generator} signature to instantiate the generic generator
@@ -227,9 +230,13 @@ val unset_default_generator : unit -> unit
 (** [unset_default_generator ()] sets the default generator to [None]. *)
 (**/**)
 
-val generate : ?g:g -> int -> Cstruct.t
+val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
 (** Invoke {{!Generator.generate}generate} on [g] or
-    {{!generator}default generator}. *)
+    {{!generator}default generator}. The offset [off] defaults to 0. *)
+
+val generate : ?g:g -> int -> string
+(** Invoke {generate_into} on [g] or {{!generator}default generator} and a
+    freshly allocated string. *)
 
 val block : g option -> int
 (** {{!Generator.block}Block} size of [g] or
@@ -241,8 +248,8 @@ val block : g option -> int
  * connect the RNG with entropy-providing libraries and subject to change.
  * Client applications should not use them directly. *)
 
-val reseed     : ?g:g -> Cstruct.t -> unit
-val accumulate : g option -> Entropy.source -> [`Acc of Cstruct.t -> unit]
+val reseed     : ?g:g -> string -> unit
+val accumulate : g option -> Entropy.source -> [`Acc of string -> unit]
 val seeded     : g option -> bool
 val pools      : g option -> int
 val strict : g option -> bool
@@ -251,10 +258,10 @@ val strict : g option -> bool
 
 (** {1:rng_examples Examples}
 
-    Generating a random 13-byte {!Cstruct.t}:
+    Generating a random 13-byte string:
 {[let cs = Rng.generate 13]}
 
-    Generating a list of {!Cstruct.t}, passing down an optional {{!g}generator}:
+    Generating a list of string, passing down an optional {{!g}generator}:
 {[let rec f1 ?g ~n i =
   if i < 1 then [] else Rng.generate ?g n :: f1 ?g ~n (i - 1)]}
 

@@ -129,7 +129,7 @@ module type Dsa = sig
 
   (** [K_gen] can be instantiated over a hashing module to obtain an RFC6979
       compliant [k]-generator for that hash. *)
-  module K_gen (H : Mirage_crypto.Hash.S) : sig
+  module K_gen (H : Digestif.S) : sig
 
     val generate : key:priv -> string -> string
     (** [generate ~key digest] deterministically takes the given private key
