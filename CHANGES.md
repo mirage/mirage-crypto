@@ -3,9 +3,16 @@
 ### Breaking changes
 
 * mirage-crypto: Poly1305 interface now uses string (#203 @hannesm)
+* mirage-crypto: Hash module has been removed. Use digestif if you need hash
+  functions (#213 @hannesm)
 * mirage-crypto-pk: s-expression conversions for private and public keys (Dh,
   Dsa, Rsa) have been removed. You can use PKCS8 for encoding and decoding
   `X509.{Private,Public}_key.{en,de}code_{der,pem}` (#208 @hannesm)
+* mirage-crypto-pk: in the API, Cstruct.t is no longer present. Instead,
+  string is used (#211 @reynir @hannesm)
+* mirage-crypto-rng: the API uses string instead of Cstruct.t. A new function
+  `generate_into : ?g -> bytes -> ?off:int -> int -> unit` is provided
+  (#212 @hannesm @reynir)
 * mirage-crypto-ec: remove NIST P224 support (#209 @hannesm @Firobe)
 
 ### Bugfixes
