@@ -7,7 +7,7 @@ module Printing_rng = struct
 
   let create ?time:_ () = ()
 
-  let generate ~g:_ _n = assert false
+  let generate_into ~g:_ _buf ~off:_ _len = assert false
 
   let reseed ~g:_ data =
     Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp (Cstruct.of_string data)

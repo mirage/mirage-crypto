@@ -156,9 +156,12 @@ module type Generator = sig
   val create : ?time:(unit -> int64) -> unit -> g
   (** Create a new, unseeded {{!g}g}. *)
 
-  val generate : g:g -> int -> string
-  (** [generate ~g n] produces [n] uniformly distributed random bytes,
-      updating the state of [g]. *)
+  val generate_into : g:g -> bytes -> off:int -> int -> unit
+  (** [generate_into ~g buf ~off n] produces [n] uniformly distributed random
+      bytes into [buf] at offset [off], updating the state of [g].
+
+      @raise Invalid_argument if buffer is too small (it must be: Bytes.length buf - off >= n)
+  *)
 
   val reseed : g:g -> string -> unit
   (** [reseed ~g bytes] directly updates [g]. Its new state depends both on
@@ -230,6 +233,10 @@ val unset_default_generator : unit -> unit
 val generate : ?g:g -> int -> string
 (** Invoke {{!Generator.generate}generate} on [g] or
     {{!generator}default generator}. *)
+
+val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
+(** Invoke {{!Generator.generate}generate} on [g] or
+    {{!generator}default generator}. The offset [off] defaults to 0. *)
 
 val block : g option -> int
 (** {{!Generator.block}Block} size of [g] or

@@ -64,15 +64,14 @@ let iter1 a     f = f a
 
 let reseed ~g cs = reseedi ~g (iter1 cs)
 
-let generate_rekey ~g bytes =
-  let b  = bytes // block + 2 in
+let generate_rekey ~g buf ~off len =
+  let b  = len // block + 2 in
   let n  = b * block in
   let r  = Cstruct.to_string (AES_CTR.stream ~key:g.key ~ctr:g.ctr n) in
-  let r1 = String.sub r 0 bytes
-  and r2 = String.sub r (n - 32) 32 in
+  Bytes.blit_string r 0 buf off len;
+  let r2 = String.sub r (n - 32) 32 in
   set_key ~g r2 ;
-  g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b);
-  r1
+  g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b)
 
 let add_pool_entropy g =
   if g.pool0_size > min_pool_size then
@@ -94,14 +93,17 @@ let add_pool_entropy g =
       done
     end
 
-let generate ~g bytes =
+let generate_into ~g buf ~off len =
   add_pool_entropy g;
   if not (seeded ~g) then raise Rng.Unseeded_generator ;
-  let rec chunk acc = function
-    | i when i <= 0 -> acc
-    | n -> let n' = imin n 0x10000 in
-           chunk (generate_rekey ~g n' :: acc) (n - n') in
-  String.concat "" @@ chunk [] bytes
+  let rec chunk off = function
+    | i when i <= 0 -> ()
+    | n ->
+      let n' = imin n 0x10000 in
+      generate_rekey ~g buf ~off n';
+      chunk (off + n') (n - n')
+  in
+  chunk off len
 
 let _buf = Bytes.create 2
 

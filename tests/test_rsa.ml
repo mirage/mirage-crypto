@@ -16,11 +16,10 @@ module Null = struct
 
   let create ?time:_ () = ref ""
 
-  let generate ~g n =
+  let generate_into ~g buf ~off n =
     try
-      let (a, b) = String.sub !g 0 n, String.sub !g n (String.length !g - n) in
-      g := b;
-      a
+      Bytes.blit_string !g 0 buf off n;
+      g := String.sub !g n (String.length !g - n)
     with Invalid_argument _ -> raise Mirage_crypto_rng.Unseeded_generator
 
   let reseed ~g buf = g := !g ^ buf

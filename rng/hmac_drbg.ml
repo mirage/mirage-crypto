@@ -24,17 +24,26 @@ module Make (H : Digestif.S) = struct
     let v = H.hmac_string ~key:k v |> H.to_raw_string in
     g.k <- k ; g.v <- v ; g.seeded <- true
 
-  let generate ~g bytes =
+  let generate_into ~g buf ~off len =
     if not g.seeded then raise Rng.Unseeded_generator ;
-    let rec go acc k v = function
-      | 0 -> (v, String.concat "" @@ List.rev acc)
+    let rec go off k v = function
+      | 0 -> v (* unlikely this happens *)
+      | 1 ->
+        let v = H.hmac_string ~key:k v |> H.to_raw_string in
+        let len =
+          let rem = len mod H.digest_size in
+          if rem = 0 then H.digest_size else rem
+        in
+        Bytes.blit_string v 0 buf off len;
+        v
       | i ->
         let v = H.hmac_string ~key:k v |> H.to_raw_string in
-        go (v::acc) k v (pred i) in
-    let (v, buf) = go [] g.k g.v Mirage_crypto.Uncommon.(bytes // H.digest_size) in
+        Bytes.blit_string v 0 buf off H.digest_size;
+        go (off + H.digest_size) k v (pred i)
+    in
+    let v = go off g.k g.v Mirage_crypto.Uncommon.(len // H.digest_size) in
     g.k <- H.hmac_string ~key:g.k (v ^ bx00) |> H.to_raw_string;
-    g.v <- H.hmac_string ~key:g.k v |> H.to_raw_string;
-    String.sub buf 0 (Mirage_crypto.Uncommon.imax 0 bytes)
+    g.v <- H.hmac_string ~key:g.k v |> H.to_raw_string
 
   (* XXX *)
   let accumulate ~g:_ = invalid_arg "Implement Hmac_drbg.accumulate..."

@@ -27,6 +27,8 @@ let burn_period = 2.0
 let sizes = [16; 64; 256; 1024; 8192]
 (* let sizes = [16] *)
 
+let big_b = Bytes.create List.(hd (rev sizes))
+
 let burn f n =
   let cs = Cstruct.of_string (Mirage_crypto_rng.generate n) in
   let (t1, i1) =
@@ -410,7 +412,8 @@ let benchmarks = [
     let open Mirage_crypto_rng.Fortuna in
     let g = create () in
     reseed ~g "abcd" ;
-    throughput name (fun cs -> generate ~g (Cstruct.length cs))) ;
+    throughput name (fun cs ->
+        generate_into ~g big_b ~off:0 (Cstruct.length cs))) ;
 
   bm "md5"    (fun name -> throughput name MD5.digest) ;
   bm "sha1"   (fun name -> throughput name SHA1.digest) ;
