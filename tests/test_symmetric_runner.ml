@@ -17,8 +17,6 @@ let () =
 let suite =
   "All" >::: [
     "Basic" >::: Test_base.suite;
-    "Hash" >::: Test_hash.suite;
-    "Hmac" >::: Test_hmac.suite;
     "Cipher" >::: Test_cipher.suite;
   ]
 

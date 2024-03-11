@@ -8,7 +8,7 @@
  (name test_symmetric_runner)
  (libraries test_common mirage-crypto ounit2)
  (package mirage-crypto)
- (modules test_base test_cipher test_hash test_hmac test_symmetric_runner))
+ (modules test_base test_cipher test_symmetric_runner))
 
 (test
  (name test_random_runner)

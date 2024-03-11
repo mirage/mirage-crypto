@@ -1,7 +1,6 @@
 open OUnit2
 
 open Mirage_crypto.Uncommon
-open Mirage_crypto
 open Mirage_crypto_pk
 
 open Test_common
@@ -117,16 +116,16 @@ let rsa_pkcs1_encode_selftest ~bits n =
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_pkcs1_sign_selftest n =
-  let open Hash.SHA1 in
+  let open Digestif.SHA1 in
   "selftest" >:: times ~n @@ fun _ ->
     let key = gen_rsa ~bits:(Rsa.PKCS1.min_key `SHA1)
     and msg = Mirage_crypto_rng.generate 47 in
     let pkey = Rsa.pub_of_priv key in
     assert_bool "invert 1" Rsa.PKCS1.(
       verify ~key:pkey ~hashp:any (`Message msg)
-        ~signature:(sign ~hash:`SHA1 ~key (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))) );
+        ~signature:(sign ~hash:`SHA1 ~key (`Digest (digest_string msg |> to_raw_string))) );
     assert_bool "invert 2" Rsa.PKCS1.(
-      verify ~key:pkey ~hashp:any (`Digest (Cstruct.to_string (digest (Cstruct.of_string msg))))
+      verify ~key:pkey ~hashp:any (`Digest (digest_string msg |> to_raw_string))
         ~signature:(sign ~hash:`SHA1 ~key (`Message msg)) )
 
 let rsa_pkcs1_encrypt_selftest ~bits n =
