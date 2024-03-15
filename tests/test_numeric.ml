@@ -17,7 +17,7 @@ let n_decode_reencode_selftest ~typ ~bytes n =
   typ ^ " selftest" >:: times ~n @@ fun _ ->
     let cs  = Mirage_crypto_rng.generate bytes in
     let cs' = Z_extra.(to_octets_be ~size:bytes @@ of_octets_be cs) in
-    assert_str_equal cs cs'
+    assert_oct_equal cs cs'
 
 let random_n_selftest ~typ n bounds =
   typ ^ " selftest" >::: (

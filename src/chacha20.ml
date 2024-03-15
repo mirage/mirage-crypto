@@ -6,7 +6,7 @@ let block = 64
 
 type key = string
 
-let of_secret a = Cstruct.to_string a
+let of_secret a = a
 
 let chacha20_block state idx key_stream =
   Native.Chacha.round 10 state key_stream idx
@@ -89,33 +89,30 @@ let mac ~key ~adata ciphertext =
   in
   P.macl ~key [ adata ; pad16 adata ; ciphertext ; pad16 ciphertext ; len ]
 
-let authenticate_encrypt_tag ~key ~nonce ?(adata = Cstruct.empty) data =
-  let adata = Cstruct.to_string adata in
-  let nonce = Cstruct.to_string nonce in
-  let data = Cstruct.to_string data in
+let authenticate_encrypt_tag ~key ~nonce ?(adata = "") data =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   let ciphertext = crypt ~key ~nonce ~ctr:1L data in
   let mac = mac ~key:poly1305_key ~adata ciphertext in
-  Cstruct.of_string ciphertext, Cstruct.of_string mac
+  ciphertext, mac
 
 let authenticate_encrypt ~key ~nonce ?adata data =
   let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata data in
-  Cstruct.append cdata ctag
+  cdata ^ ctag
 
-let authenticate_decrypt_tag ~key ~nonce ?(adata = Cstruct.empty) ~tag data =
-  let adata = Cstruct.to_string adata in
-  let nonce = Cstruct.to_string nonce in
-  let data = Cstruct.to_string data in
+let authenticate_decrypt_tag ~key ~nonce ?(adata = "") ~tag data =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   let ctag = mac ~key:poly1305_key ~adata data in
   let plain = crypt ~key ~nonce ~ctr:1L data in
-  if Eqaf_cstruct.equal tag (Cstruct.of_string ctag) then Some (Cstruct.of_string plain) else None
+  if Eqaf.equal tag ctag then Some plain else None
 
 let authenticate_decrypt ~key ~nonce ?adata data =
-  if Cstruct.length data < P.mac_size then
+  if String.length data < P.mac_size then
     None
   else
-    let cipher, tag = Cstruct.split data (Cstruct.length data - P.mac_size) in
+    let cipher, tag =
+      let p = String.length data - P.mac_size in
+      String.sub data 0 p, String.sub data p P.mac_size
+    in
     authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
 
 let tag_size = P.mac_size

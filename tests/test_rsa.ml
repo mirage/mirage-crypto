@@ -93,7 +93,7 @@ let rsa_selftest ~bits n =
     let enc = Rsa.(encrypt ~key:(pub_of_priv key) msg) in
     let dec = Rsa.(decrypt ~key enc) in
 
-    assert_str_equal
+    assert_oct_equal
       ~msg:Printf.(sprintf "failed decryption with")
       msg dec
 
@@ -112,7 +112,7 @@ let rsa_pkcs1_encode_selftest ~bits n =
     let sgn = Rsa.PKCS1.sig_encode ~key msg in
     match Rsa.(PKCS1.sig_decode ~key:(pub_of_priv key) sgn) with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
-    | Some dec -> assert_str_equal msg dec
+    | Some dec -> assert_oct_equal msg dec
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_pkcs1_sign_selftest n =
@@ -135,7 +135,7 @@ let rsa_pkcs1_encrypt_selftest ~bits n =
     let enc = Rsa.(PKCS1.encrypt ~key:(pub_of_priv key) msg) in
     match Rsa.PKCS1.decrypt ~key enc with
     | None     -> assert_failure ("unpad failure " ^ show_key_size key)
-    | Some dec -> assert_str_equal msg dec
+    | Some dec -> assert_oct_equal msg dec
                     ~msg:("recovery failure " ^ show_key_size key)
 
 let rsa_oaep_encrypt_selftest ~bits n =
@@ -150,27 +150,27 @@ let rsa_oaep_encrypt_selftest ~bits n =
     let enc = OAEP_MD5.encrypt ~key:(Rsa.pub_of_priv key) msg in
     (match OAEP_MD5.decrypt ~key enc with
      | None     -> assert_failure "unpad failure"
-     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+     | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure");
     let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA1.digest_size - 2) in
     let enc = OAEP_SHA1.encrypt ~key:(Rsa.pub_of_priv key) msg in
     (match OAEP_SHA1.decrypt ~key enc with
      | None     -> assert_failure "unpad failure"
-     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+     | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure");
     let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA224.digest_size - 2) in
     let enc = OAEP_SHA224.encrypt ~key:(Rsa.pub_of_priv key) msg in
     (match OAEP_SHA224.decrypt ~key enc with
      | None     -> assert_failure "unpad failure"
-     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+     | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure");
     let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA256.digest_size - 2) in
     let enc = OAEP_SHA256.encrypt ~key:(Rsa.pub_of_priv key) msg in
     (match OAEP_SHA256.decrypt ~key enc with
      | None     -> assert_failure "unpad failure"
-     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure");
+     | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure");
     let msg = Mirage_crypto_rng.generate (bits // 8 - 2 * Digestif.SHA384.digest_size - 2) in
     let enc = OAEP_SHA384.encrypt ~key:(Rsa.pub_of_priv key) msg in
     (match OAEP_SHA384.decrypt ~key enc with
      | None     -> assert_failure "unpad failure"
-     | Some dec -> assert_str_equal msg dec ~msg:"recovery failure")
+     | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure")
 
 let rsa_pss_sign_selftest ~bits n =
   let module Pss_sha1 = Rsa.PSS (Digestif.SHA1) in
@@ -197,10 +197,10 @@ let rsa_pkcs1_cases =
   in
 
   let case ~hash ~msg ~sgn = test_case @@ fun _ ->
-    let msg = vx_str msg and sgn = vx_str sgn in
+    let msg = vx msg and sgn = vx sgn in
     let key, public = key () in
     Rsa.(PKCS1.sign ~hash ~key (`Message msg))
-      |> assert_str_equal ~msg:"recomputing sig:" sgn ;
+      |> assert_oct_equal ~msg:"recomputing sig:" sgn ;
     Rsa.(PKCS1.verify ~hashp:any ~key:public ~signature:sgn (`Message msg))
       |> assert_bool "sig verification" in
 
@@ -250,11 +250,11 @@ let rsa_pss_cases =
   let case (type a) ~(hash : a Digestif.hash) ~msg ~sgn = test_case @@ fun _ ->
     let module H = (val Digestif.module_of hash) in
     let module Pss = Rsa.PSS (H) in
-    let msg = vx_str msg and sgn = vx_str sgn and salt = vx_str salt in
+    let msg = vx msg and sgn = vx sgn and salt = vx salt in
     let key, public = key () in
     let slen = String.length salt in
     Pss.sign ~g:(random_is salt) ~slen ~mask:`No ~key (`Message msg)
-      |> assert_str_equal ~msg:"recomputing sig:" sgn ;
+      |> assert_oct_equal ~msg:"recomputing sig:" sgn ;
     Pss.verify ~key:public ~slen ~signature:sgn (`Message msg)
       |> assert_bool "sig verification" in
 

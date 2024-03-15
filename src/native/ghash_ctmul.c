@@ -286,12 +286,12 @@ static inline void __copy (uint64_t key[2], uint32_t m[4]) {
 
 CAMLprim value mc_ghash_init_key_generic (value key, value off, value m) {
   //push key at off into m
-  __copy ((uint64_t *) _ba_uint8_off(key, off), (uint32_t *) m);
+  __copy ((uint64_t *) _st_uint8_off(key, off), (uint32_t *) m);
   return Val_unit;
 }
 
 CAMLprim value mc_ghash_generic (value m, value hash, value src, value off, value len) {
-  br_ghash_ctmul(Bp_val(hash), Bp_val(m), _ba_uint8_off(src, off), Int_val(len));
+  br_ghash_ctmul(Bp_val(hash), Bp_val(m), _st_uint8_off(src, off), Int_val(len));
   return Val_unit;
 }
 

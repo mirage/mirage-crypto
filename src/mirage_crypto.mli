@@ -29,33 +29,13 @@ module Uncommon : sig
 
       @raise Division_by_zero when [y < 1]. *)
 
-  (** Addons to the {!Cstruct} interface. *)
-  module Cs : sig
-
-    val (<+>) : Cstruct.t -> Cstruct.t -> Cstruct.t
-    (** [<+>] is an alias for [Cstruct.append]. *)
-
-    val xor_into : Cstruct.t -> Cstruct.t -> int -> unit
-    val xor      : Cstruct.t -> Cstruct.t -> Cstruct.t
-
-    (** {2 Private utilities} *)
-
-    val clone  : ?len:int -> Cstruct.t -> Cstruct.t
-
-    val b : int -> Cstruct.t
-
-    val of_bytes : int list -> Cstruct.t
-
-    val split3 : Cstruct.t -> int -> int -> Cstruct.t * Cstruct.t * Cstruct.t
-  end
-
   val imin : int -> int -> int
   val imax : int -> int -> int
   val iter2 : 'a -> 'a -> ('a -> unit) -> unit
   val iter3 : 'a -> 'a -> 'a -> ('a -> unit) -> unit
 
   val xor : string -> string -> string
-  val xor_into : string -> bytes -> int -> unit
+  val xor_into : string -> ?src_off:int -> bytes -> ?dst_off:int -> int -> unit
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
   val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
@@ -120,7 +100,7 @@ module type AEAD = sig
   type key
   (** The abstract type for the key. *)
 
-  val of_secret : Cstruct.t -> key
+  val of_secret : string -> key
   (** [of_secret secret] constructs the encryption key corresponding to
       [secret].
 
@@ -129,16 +109,16 @@ module type AEAD = sig
 
   (** {1 Authenticated encryption and decryption with inline tag} *)
 
-  val authenticate_encrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
-    Cstruct.t -> Cstruct.t
+  val authenticate_encrypt : key:key -> nonce:string -> ?adata:string ->
+    string -> string
   (** [authenticate_encrypt ~key ~nonce ~adata msg] encrypts [msg] with [key]
       and [nonce], and appends an authentication tag computed over the encrypted
       [msg], using [key], [nonce], and [adata].
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
 
-  val authenticate_decrypt : key:key -> nonce:Cstruct.t -> ?adata:Cstruct.t ->
-    Cstruct.t -> Cstruct.t option
+  val authenticate_decrypt : key:key -> nonce:string -> ?adata:string ->
+    string -> string option
   (** [authenticate_decrypt ~key ~nonce ~adata msg] splits [msg] into encrypted
       data and authentication tag, computes the authentication tag using [key],
       [nonce], and [adata], and decrypts the encrypted data. If the
@@ -148,16 +128,16 @@ module type AEAD = sig
 
   (** {1 Authenticated encryption and decryption with tag provided separately} *)
 
-  val authenticate_encrypt_tag : key:key -> nonce:Cstruct.t ->
-    ?adata:Cstruct.t -> Cstruct.t -> Cstruct.t * Cstruct.t
+  val authenticate_encrypt_tag : key:key -> nonce:string ->
+    ?adata:string -> string -> string * string
   (** [authenticate_encrypt_tag ~key ~nonce ~adata msg] encrypts [msg] with [key]
       and [nonce]. The computed authentication tag is returned separately as
       second part of the tuple.
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
 
-  val authenticate_decrypt_tag : key:key -> nonce:Cstruct.t ->
-    ?adata:Cstruct.t -> tag:Cstruct.t -> Cstruct.t -> Cstruct.t option
+  val authenticate_decrypt_tag : key:key -> nonce:string ->
+    ?adata:string -> tag:string -> string -> string option
   (** [authenticate_decrypt ~key ~nonce ~adata ~tag msg] computes the
       authentication tag using [key], [nonce], and [adata], and decrypts the
       encrypted data. If the authentication tags match, the decrypted data is
@@ -184,9 +164,9 @@ module Cipher_block : sig
     (*   type ekey *)
     (*   type dkey *)
 
-    (*   val of_secret   : Cstruct.t -> ekey * dkey *)
-    (*   val e_of_secret : Cstruct.t -> ekey *)
-    (*   val d_of_secret : Cstruct.t -> dkey *)
+    (*   val of_secret   : string -> ekey * dkey *)
+    (*   val e_of_secret : string -> ekey *)
+    (*   val d_of_secret : string -> dkey *)
 
     (*   val key   : int array *)
     (*   val block : int *)
@@ -201,12 +181,12 @@ module Cipher_block : sig
     module type ECB = sig
 
       type key
-      val of_secret : Cstruct.t -> key
+      val of_secret : string -> key
 
       val key_sizes  : int array
       val block_size : int
-      val encrypt : key:key -> Cstruct.t -> Cstruct.t
-      val decrypt : key:key -> Cstruct.t -> Cstruct.t
+      val encrypt : key:key -> string -> string
+      val decrypt : key:key -> string -> string
     end
 
     (** {e Cipher-block chaining} mode. *)
@@ -214,7 +194,7 @@ module Cipher_block : sig
 
       type key
 
-      val of_secret : Cstruct.t -> key
+      val of_secret : string -> key
       (** Construct the encryption key corresponding to [secret].
 
           @raise Invalid_argument if the length of [secret] is not in
@@ -226,20 +206,20 @@ module Cipher_block : sig
       val block_size : int
       (** The size of a single block. *)
 
-      val encrypt : key:key -> iv:Cstruct.t -> Cstruct.t -> Cstruct.t
+      val encrypt : key:key -> iv:string -> string -> string
       (** [encrypt ~key ~iv msg] is [msg] encrypted under [key], using [iv] as
           the CBC initialization vector.
 
           @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
           [k * block_size] long. *)
 
-      val decrypt : key:key -> iv:Cstruct.t -> Cstruct.t -> Cstruct.t
+      val decrypt : key:key -> iv:string -> string -> string
       (** [decrypt ~key ~iv msg] is the inverse of [encrypt].
 
           @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
           [k * block_size] long. *)
 
-      val next_iv : iv:Cstruct.t -> Cstruct.t -> Cstruct.t
+      val next_iv : iv:string -> string -> string
       (** [next_iv ~iv ciphertext] is the first [iv] {e following} the
           encryption that used [iv] to produce [ciphertext].
 
@@ -261,7 +241,7 @@ module Cipher_block : sig
 
       type key
 
-      val of_secret : Cstruct.t -> key
+      val of_secret : string -> key
       (** Construct the encryption key corresponding to [secret].
 
           @raise Invalid_argument if the length of [secret] is not in
@@ -275,7 +255,7 @@ module Cipher_block : sig
 
       type ctr
 
-      val stream : key:key -> ctr:ctr -> int -> Cstruct.t
+      val stream : key:key -> ctr:ctr -> int -> string
       (** [stream ~key ~ctr n] is the raw keystream.
 
           Keystream is the concatenation of successive encrypted counter states.
@@ -291,17 +271,17 @@ module Cipher_block : sig
           In other words, it is possible to restart a keystream at [block_size]
           boundaries by manipulating the counter. *)
 
-      val encrypt : key:key -> ctr:ctr -> Cstruct.t -> Cstruct.t
+      val encrypt : key:key -> ctr:ctr -> string -> string
       (** [encrypt ~key ~ctr msg] is
           [stream ~key ~ctr ~off (len msg) lxor msg]. *)
 
-      val decrypt : key:key -> ctr:ctr -> Cstruct.t -> Cstruct.t
+      val decrypt : key:key -> ctr:ctr -> string -> string
       (** [decrypt] is [encrypt]. *)
 
       val add_ctr : ctr -> int64 -> ctr
       (** [add_ctr ctr n] adds [n] to [ctr]. *)
 
-      val next_ctr : ctr:ctr -> Cstruct.t -> ctr
+      val next_ctr : ctr:ctr -> string -> ctr
       (** [next_ctr ~ctr msg] is the state of the counter after encrypting or
           decrypting [msg] with the counter [ctr].
 
@@ -316,8 +296,8 @@ module Cipher_block : sig
 
           *)
 
-      val ctr_of_cstruct : Cstruct.t -> ctr
-      (** [ctr_of_cstruct cs] converts the value of [cs] into a counter. *)
+      val ctr_of_octets : string -> ctr
+      (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
     end
 
     (** {e Galois/Counter Mode}. *)
@@ -392,10 +372,10 @@ module Cipher_stream : sig
   (** General stream cipher type. *)
   module type S = sig
     type key
-    type result = { message : Cstruct.t ; key : key }
-    val of_secret : Cstruct.t -> key
-    val encrypt : key:key -> Cstruct.t -> result
-    val decrypt : key:key -> Cstruct.t -> result
+    type result = { message : string ; key : key }
+    val of_secret : string -> key
+    val encrypt : key:key -> string -> result
+    val decrypt : key:key -> string -> result
   end
 
   (** {e Alleged Rivest Cipher 4}. *)

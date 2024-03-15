@@ -1,161 +1,171 @@
 open Uncommon
 
-let (<+>) = Cs.(<+>)
-
 let block_size = 16
 
 let flags bit6 len1 len2 =
-  let byte = Cstruct.create 1
-  and data = bit6 lsl 6 + len1 lsl 3 + len2 in
-  Cstruct.set_uint8 byte 0 data ;
-  byte
+  bit6 lsl 6 + len1 lsl 3 + len2
 
-let encode_len_buf size value buf =
+let encode_len buf ~off size value =
   let rec ass num = function
-    | 0 -> Cstruct.set_uint8 buf 0 num
-    | m -> Cstruct.set_uint8 buf m (num land 0xff) ; ass (num lsr 8) (pred m)
+    | 0 -> Bytes.set_uint8 buf off num
+    | m ->
+      Bytes.set_uint8 buf (off + m) (num land 0xff);
+      ass (num lsr 8) (pred m)
   in
   ass value (pred size)
-
-let encode_len size value =
-  let b = Cstruct.create size in
-  encode_len_buf size value b ;
-  b
 
 let format nonce adata q t (* mac len *) =
   (* assume n <- [7..13] *)
   (* assume t is valid mac size *)
   (* n + q = 15 *)
   (* a < 2 ^ 64 *)
-  let n = Cstruct.length nonce in
+  let n = String.length nonce in
   let small_q = 15 - n in
   (* first byte (flags): *)
   (* reserved | adata | (t - 2) / 2 | q - 1 *)
-  let b6 = if Cstruct.length adata = 0 then 0 else 1 in
-  let flag = flags b6 ((t - 2) / 2) (small_q - 1) in
+  let b6 = if String.length adata = 0 then 0 else 1 in
+  let flag_val = flags b6 ((t - 2) / 2) (small_q - 1) in
   (* first octet block:
      0          : flags
      1..15 - q  : N
      16 - q..15 : Q *)
-  let qblock = encode_len small_q q in
-  flag <+> nonce <+> qblock
+  let buf = Bytes.create 16 in
+  Bytes.set_uint8 buf 0 flag_val;
+  Bytes.unsafe_blit_string nonce 0 buf 1 n;
+  encode_len buf ~off:(n + 1) small_q q;
+  buf
 
 let pad_block b =
-  let size = Cstruct.length b in
-  Cs.rpad b (size // block_size * block_size) 0
+  let size = Bytes.length b in
+  Bytes.concat Bytes.empty [ b ; Bytes.make (size // block_size * block_size) '\x00' ]
 
-let gen_adata a =
+let pad_block_str b =
+  let size = String.length b in
+  String.concat "" [ b ; String.make (size // block_size * block_size) '\x00' ]
+
+let gen_adata hdr a =
   let lbuf =
-    match Cstruct.length a with
+    match String.length a with
     | x when x < (1 lsl 16 - 1 lsl 8) ->
-       let buf = Cstruct.create 2 in
-       Cstruct.BE.set_uint16 buf 0 x ;
-       buf
+      let buf = Bytes.create 2 in
+      Bytes.set_uint16_be buf 0 x;
+      buf
     | x when Sys.int_size < 32 || x < (1 lsl 32) ->
-       let buf = Cstruct.create 4 in
-       Cstruct.BE.set_uint32 buf 0 (Int32.of_int x) ;
-       Cs.of_bytes [0xff ; 0xfe] <+> buf
+      let buf = Bytes.create 6 in
+      Bytes.set_int32_be buf 2 (Int32.of_int x) ;
+      Bytes.set_uint16_be buf 0 0xfffe;
+      buf
     | x ->
-       let buf = Cstruct.create 8 in
-       Cstruct.BE.set_uint64 buf 0 (Int64.of_int x) ;
-       Cs.of_bytes [0xff ; 0xff] <+> buf
+      let buf = Bytes.create 10 in
+      Bytes.set_int64_be buf 2 (Int64.of_int x) ;
+      Bytes.set_uint16_be buf 0 0xffff;
+      buf
   in
-  pad_block (lbuf <+> a)
-
-let gen_ctr_prefix nonce =
-  let n = Cstruct.length nonce in
-  let small_q = 15 - n in
-  let flag = flags 0 0 (small_q - 1) in
-  (flag <+> nonce, succ n, small_q)
+  let to_pad =
+    let leftover = (Bytes.length lbuf + String.length a) mod block_size in
+    block_size - leftover
+  in
+  Bytes.concat Bytes.empty [ hdr ; lbuf ; Bytes.unsafe_of_string a ; Bytes.make to_pad '\x00' ]
 
 let gen_ctr nonce i =
-  let pre, _, q = gen_ctr_prefix nonce in
-  pre <+> encode_len q i
+  let n = String.length nonce in
+  let small_q = 15 - n in
+  let flag_val = flags 0 0 (small_q - 1) in
+  let buf = Bytes.create 16 in
+  Bytes.set_uint8 buf 0 flag_val;
+  Bytes.unsafe_blit_string nonce 0 buf 1 n;
+  encode_len buf ~off:(n + 1) small_q i;
+  buf
 
 let prepare_header nonce adata plen tlen =
-  let ada = if Cstruct.length adata = 0 then Cstruct.empty else gen_adata adata in
-  format nonce adata plen tlen <+> ada
+  let hdr = format nonce adata plen tlen in
+  if String.length adata = 0 then
+    hdr
+  else
+    gen_adata hdr adata
 
 type mode = Encrypt | Decrypt
 
 let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
-  let datalen = Cstruct.length data in
+  let datalen = String.length data in
   let cbcheader = prepare_header nonce adata datalen maclen in
-  let target = Cstruct.create datalen in
+  let dst = Bytes.create datalen in
 
-  let blkprefix, blkpreflen, preflen = gen_ctr_prefix nonce in
+  let small_q = 15 - String.length nonce in
+  let ctr_flag_val = flags 0 0 (small_q - 1) in
   let ctrblock i block =
-    Cstruct.blit blkprefix 0 block 0 blkpreflen ;
-    encode_len_buf preflen i (Cstruct.shift block blkpreflen) ;
-    cipher ~key block block
+    Bytes.set_uint8 block 0 ctr_flag_val;
+    Bytes.unsafe_blit_string nonce 0 block 1 (String.length nonce);
+    encode_len block ~off:ctr_flag_val small_q i;
+    cipher ~key (Bytes.unsafe_to_string block) ~src_off:0 block ~dst_off:0
   in
 
-  let cbc iv block =
-    Cs.xor_into iv block block_size ;
-    cipher ~key block block
+  let cbc iv src_off block dst_off =
+    xor_into iv ~src_off block ~dst_off block_size ;
+    cipher ~key (Bytes.unsafe_to_string block) ~src_off:dst_off block ~dst_off
   in
 
   let cbcprep =
-    let rec doit iv block =
-      match Cstruct.length block with
-      | 0 -> iv
+    let rec doit iv iv_off block block_off =
+      match Bytes.length block - block_off with
+      | 0 -> Bytes.sub iv iv_off block_size
       | _ ->
-         cbc iv block ;
-         doit (Cstruct.sub block 0 block_size)
-              (Cstruct.shift block block_size)
+         cbc (Bytes.unsafe_to_string iv) iv_off block block_off;
+         doit block block_off block (block_off + block_size)
     in
-    doit (Cstruct.create block_size) cbcheader
+    doit (Bytes.make block_size '\x00') 0 cbcheader 0
   in
 
-  let rec loop iv ctr src target =
-    let cbcblock =
+  let rec loop iv ctr src src_off dst dst_off=
+    let cbcblock, cbc_off =
       match mode with
-      | Encrypt -> src
-      | Decrypt -> target
+      | Encrypt -> src, src_off
+      | Decrypt -> Bytes.unsafe_to_string dst, dst_off
     in
-    match Cstruct.length src with
+    match String.length src - src_off with
     | 0 -> iv
     | x when x < block_size ->
-       let ctrbl = pad_block target in
+       let ctrbl = pad_block dst in
        ctrblock ctr ctrbl ;
-       Cstruct.blit ctrbl 0 target 0 x ;
-       Cs.xor_into src target x ;
-       let cbblock = pad_block cbcblock in
-       cbc cbblock iv ;
+       Bytes.unsafe_blit ctrbl 0 dst dst_off x ;
+       xor_into src ~src_off dst ~dst_off x ;
+       let cbblock = pad_block_str cbcblock in
+       cbc cbblock cbc_off iv 0 ;
        iv
     | _ ->
-       ctrblock ctr target ;
-       Cs.xor_into src target block_size ;
-       cbc cbcblock iv ;
+       ctrblock ctr dst ;
+       xor_into src ~src_off dst ~dst_off block_size ;
+       cbc cbcblock cbc_off iv 0 ;
        loop iv
             (succ ctr)
-            (Cstruct.shift src block_size)
-            (Cstruct.shift target block_size)
+            src (src_off + block_size)
+            dst (dst_off + block_size)
   in
-  let last = loop cbcprep 1 data target in
-  let t = Cstruct.sub last 0 maclen in
-  (target, t)
+  let last = loop cbcprep 1 data 0 dst 0 in
+  let t = Bytes.sub last 0 maclen in
+  (dst, t)
 
 let crypto_t t nonce cipher key =
   let ctr = gen_ctr nonce 0 in
-  cipher ~key ctr ctr ;
-  Cs.xor_into ctr t (Cstruct.length t)
+  cipher ~key (Bytes.unsafe_to_string ctr) ~src_off:0 ctr ~dst_off:0 ;
+  xor_into (Bytes.unsafe_to_string ctr) t (Bytes.length t)
 
 let valid_nonce nonce =
-  let nsize = Cstruct.length nonce in
+  let nsize = String.length nonce in
   if nsize < 7 || nsize > 13 then
-    invalid_arg "CCM: nonce length not between 7 and 13: %d" nsize
+    invalid_arg "CCM: nonce length not between 7 and 13: %u" nsize
 
 let generation_encryption ~cipher ~key ~nonce ~maclen ~adata data =
   valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Encrypt ~key ~nonce ~maclen ~adata data in
   crypto_t t nonce cipher key ;
-  cdata, t
+  Bytes.unsafe_to_string cdata, Bytes.unsafe_to_string t
 
 let decryption_verification ~cipher ~key ~nonce ~maclen ~adata ~tag data =
   valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata data in
   crypto_t tag nonce cipher key ;
-  match Eqaf_cstruct.equal tag t with
-  | true  -> Some cdata
+  (* needs a eqaf release *)
+  match Eqaf.equal (Bytes.unsafe_to_string tag) (Bytes.unsafe_to_string t) with
+  | true  -> Some (Bytes.unsafe_to_string cdata)
   | false -> None

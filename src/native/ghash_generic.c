@@ -96,14 +96,14 @@ CAMLprim value mc_ghash_key_size_generic (__unit ()) {
 }
 
 CAMLprim value mc_ghash_init_key_generic (value key, value off, value m) {
-  __derive ((uint64_t *) _ba_uint8_off (key, off), (__uint128_t *) Bp_val (m));
+  __derive ((uint64_t *) _st_uint8_off (key, off), (__uint128_t *) Bp_val (m));
   return Val_unit;
 }
 
 CAMLprim value
 mc_ghash_generic (value m, value hash, value src, value off, value len) {
   __ghash ((__uint128_t *) Bp_val (m), (uint64_t *) Bp_val (hash),
-           _ba_uint8_off (src, off), Int_val (len) );
+           _st_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
 

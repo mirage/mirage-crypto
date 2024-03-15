@@ -15,12 +15,12 @@ let dh_selftest ~bits n =
       ~cmp:(eq_opt String.equal)
       ~pp_diff:(pp_diff (fun ppf -> function
           | None -> Format.fprintf ppf "None"
-          | Some a -> Format.fprintf ppf "Some(%a)" Cstruct.hexdump_pp (Cstruct.of_string a)))
+          | Some a -> Format.fprintf ppf "Some(%a)" (Ohex.pp ()) a))
       ~msg:"shared secret"
 
 let dh_shared_0 =
   "shared_0" >:: fun _ ->
-    let gy = vx_str
+    let gy = vx
         "14 ac e2 c0 9c c0 0c 25 89 71 b2 d0 1c 94 58 21
          02 23 b7 23 ec 3e 24 e5 a3 c2 fd 16 cc 49 f0 e2
          87 62 a5 a0 73 f5 de 5b 9b eb c3 60 0b a4 03 38
@@ -33,7 +33,7 @@ let dh_shared_0 =
          a5 23 69 38 7e ec b5 fc 4b 89 42 c4 32 fa e5 58
          6f 39 5d a7 4e cd b5 da dc 1e 52 fe a4 33 72 c1
          82 48 8a 5b c1 44 bc 60 9b 38 5b 80 5f 44 14 93"
-    and s = vx_str
+    and s = vx
         "f9 47 87 95 d2 a1 6d d1 7c c8 a9 c0 71 28 a2 82
          71 95 7e 79 87 0b fc 34 a2 42 ec 42 ac cc 42 81
          7b f6 c4 f5 80 a9 70 e3 35 93 9b a3 21 81 a4 e3
@@ -46,7 +46,7 @@ let dh_shared_0 =
          29 22 63 6e bb 1a 7f 93 bd 98 db 20 94 f8 f0 2e
          db ce 9d 79 db b9 a7 41 5f e5 29 a2 31 f8 e2 c3
          30 6a 09 f2 16 a7 30 8c 2f 36 7b 71 99 1e 28 54"
-    and shared = vx_str
+    and shared = vx
         "a7 40 0d eb f0 4b 2b ec cb 90 3c 55 2d 3c 17 63
          b2 4b 4e 1a ff 1e a0 24 c6 56 e3 5e 44 7b d0 01
          ef b3 6b 57 20 0e 15 95 b1 53 1a 83 16 3a b1 61
@@ -64,7 +64,7 @@ let dh_shared_0 =
     match Dh.(shared (fst (key_of_secret grp ~s)) gy) with
     | None -> assert_failure "degenerate shared secret"
     | Some shared' ->
-        assert_str_equal ~msg:"shared secret" shared shared'
+        assert_oct_equal ~msg:"shared secret" shared shared'
 
 let suite = [
   dh_selftest ~bits:16  1000 ;

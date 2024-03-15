@@ -22,6 +22,7 @@ depends: [
   "digestif" {>= "1.1.4"}
   "ounit2" {with-test}
   "randomconv" {with-test & >= "0.2.0"}
+  "ohex" {with-test}
 ]
 conflicts: [ "mirage-runtime" {< "3.8.0"} ]
 description: """

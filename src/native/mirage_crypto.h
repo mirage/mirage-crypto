@@ -6,7 +6,6 @@
 #include "bitfn.h"
 
 #include <caml/mlvalues.h>
-#include <caml/bigarray.h>
 
 #ifdef ACCELERATE
 # ifdef _MSC_VER
@@ -72,12 +71,8 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 #define __unit() value __unused(_)
 
 #define _st_uint8(v) ((const uint8_t*) (String_val(v)))
-
-#define _ba_uint8_off(ba, off)  ((uint8_t*) Caml_ba_data_val (ba) + Long_val (off))
-#define _ba_uint32_off(ba, off) ((uint32_t*) Caml_ba_data_val (ba) + Long_val (off))
-
-#define _ba_uint8(ba)  ((uint8_t*) Caml_ba_data_val (ba))
-#define _ba_uint32(ba) ((uint32_t*) Caml_ba_data_val (ba))
+#define _st_uint32(v) ((const uint32_t*) (String_val(v)))
+#define _st_uint8_off(v, off) ((const uint8_t*)(String_val(v) + Long_val(off)))
 
 #define _bp_uint8_off(bp, off) ((uint8_t *) Bp_val (bp) + Long_val (off))
 #define _bp_uint8(bp) ((uint8_t *) Bp_val (bp))

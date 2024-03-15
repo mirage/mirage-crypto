@@ -364,8 +364,8 @@ CAMLprim value
 mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
   _mc_switch_accel(aesni,
     mc_aes_derive_e_key_generic(key, off1, rk, rounds),
-    _mc_aesni_derive_e_key (_ba_uint8_off (key, off1),
-                            _ba_uint8 (rk),
+    _mc_aesni_derive_e_key (_st_uint8_off (key, off1),
+                            _bp_uint8 (rk),
                             Int_val (rounds)))
   return Val_unit;
 }
@@ -374,10 +374,10 @@ CAMLprim value
 mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value rk) {
   _mc_switch_accel(aesni,
     mc_aes_derive_d_key_generic(key, off1, kr, rounds, rk),
-    _mc_aesni_derive_d_key (_ba_uint8_off (key, off1),
-                            _ba_uint8 (kr),
+    _mc_aesni_derive_d_key (_st_uint8_off (key, off1),
+                            _bp_uint8 (kr),
                             Int_val (rounds),
-                            Is_block(rk) ? _ba_uint8(Field(rk, 0)) : 0))
+                            Is_block(rk) ? _bp_uint8(Field(rk, 0)) : 0))
   return Val_unit;
 }
 
@@ -385,9 +385,9 @@ CAMLprim value
 mc_aes_enc (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
   _mc_switch_accel(aesni,
     mc_aes_enc_generic(src, off1, dst, off2, rk, rounds, blocks),
-    _mc_aesni_enc_blocks ( _ba_uint8_off (src, off1),
-                           _ba_uint8_off (dst, off2),
-                           _ba_uint8 (rk),
+    _mc_aesni_enc_blocks ( _st_uint8_off (src, off1),
+                           _bp_uint8_off (dst, off2),
+                           _st_uint8 (rk),
                            Int_val (rounds),
                            Int_val (blocks) ))
   return Val_unit;
@@ -397,9 +397,9 @@ CAMLprim value
 mc_aes_dec (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
   _mc_switch_accel(aesni,
     mc_aes_dec_generic(src, off1, dst, off2, rk, rounds, blocks),
-    _mc_aesni_dec_blocks ( _ba_uint8_off (src, off1),
-                           _ba_uint8_off (dst, off2),
-                           _ba_uint8 (rk),
+    _mc_aesni_dec_blocks ( _st_uint8_off (src, off1),
+                           _bp_uint8_off (dst, off2),
+                           _st_uint8 (rk),
                            Int_val (rounds),
                            Int_val (blocks) ))
   return Val_unit;
