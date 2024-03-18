@@ -21,6 +21,7 @@ depends: [
   "duration"
   "mtime"
   "eio_main" {with-test}
+  "ohex" {with-test & >= "0.2.0"}
 ]
 description: """
 Mirage-crypto-rng-eio feeds the entropy source for Mirage_crypto_rng-based

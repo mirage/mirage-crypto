@@ -19,6 +19,7 @@ depends: [
   "async" {>= "v0.14"}
   "logs"
   "mirage-crypto-rng" {=version}
+  "ohex" {with-test & >= "0.2.0"}
 ]
 available: os != "win32"
 description: """

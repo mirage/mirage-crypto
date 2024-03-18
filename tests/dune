@@ -35,7 +35,7 @@
  (name test_entropy_collection_async)
  (modules test_entropy_collection_async)
  (package mirage-crypto-rng-async)
- (libraries mirage-crypto-rng-async))
+ (libraries mirage-crypto-rng-async ohex))
 
 (test
  (name test_entropy)
@@ -63,5 +63,5 @@
 (tests
  (names     test_eio_rng test_eio_entropy_collection)
  (modules   test_eio_rng test_eio_entropy_collection)
- (libraries mirage-crypto-rng-eio duration eio_main)
+ (libraries mirage-crypto-rng-eio duration eio_main ohex)
  (package   mirage-crypto-rng-eio))
