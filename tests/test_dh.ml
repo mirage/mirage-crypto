@@ -15,7 +15,7 @@ let dh_selftest ~bits n =
       ~cmp:(eq_opt String.equal)
       ~pp_diff:(pp_diff (fun ppf -> function
           | None -> Format.fprintf ppf "None"
-          | Some a -> Format.fprintf ppf "Some(%a)" (Ohex.pp ()) a))
+          | Some a -> Format.fprintf ppf "Some(%a)" (Ohex.pp_hexdump ()) a))
       ~msg:"shared secret"
 
 let dh_shared_0 =

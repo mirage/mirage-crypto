@@ -48,7 +48,7 @@ let eq_opt eq a b = match (a, b) with
   | (Some x, Some y) -> eq x y
   | _                -> false
 
-let pp_octets pp = pp (Ohex.pp ())
+let pp_octets pp = pp (Ohex.pp_hexdump ())
 
 let assert_oct_equal ?msg =
   assert_equal ~cmp:String.equal ?msg ~pp_diff:(pp_octets pp_diff)
