@@ -181,7 +181,7 @@ module Modes = struct
 
     let decrypt ~key:(_, key) ~iv src =
       bounds_check ~iv src ;
-      let msg = Bytes.of_string src
+      let msg = Bytes.create (String.length src)
       and b   = String.length src / block in
       if b > 0 then begin
         Core.decrypt ~key ~blocks:b src 0 msg 0 ;
@@ -329,8 +329,8 @@ module Modes = struct
     let (key_sizes, block_size) = C.(key, block)
 
     let cipher ~key src ~src_off dst ~dst_off =
-      if String.length src < block_size || Bytes.length dst < block_size then
-        invalid_arg "src len %u, dst len %u" (String.length src) (Bytes.length dst);
+      if String.length src - src_off < block_size || Bytes.length dst - dst_off < block_size then
+        invalid_arg "src len %u, dst len %u" (String.length src - src_off) (Bytes.length dst - dst_off);
       C.encrypt ~key ~blocks:1 src src_off dst dst_off
 
     let authenticate_encrypt_tag ~key ~nonce ?(adata = "") cs =

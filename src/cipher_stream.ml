@@ -43,7 +43,7 @@ module ARC4 = struct
           let sj = s.(j) in
           s.(i) <- sj ; s.(j) <- si ;
           let k  = s.((si + sj) land 0xff) in
-          Bytes.(set_uint8 res n (k lxor string_get_uint8 buf n));
+          Bytes.set_uint8 res n (k lxor string_get_uint8 buf n);
           mix i j (succ n)
     in
     let key' = mix i j 0 in
