@@ -205,11 +205,19 @@ module Modes = struct
     let of_secret = Core.e_of_secret
 
     let stream ~key ~ctr n =
-      let blocks = imax 0 n // block_size in
-      let buf = Bytes.create (blocks * block_size) in
+      let blocks = imax 0 n / block_size in
+      let buf = Bytes.create n in
       Ctr.unsafe_count_into ctr ~blocks buf 0 ;
       Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) 0 buf 0 ;
-      String.sub (Bytes.unsafe_to_string buf) 0 n
+      let slack = imax 0 n mod block_size in
+      if slack <> 0 then begin
+        let buf' = Bytes.create block_size in
+        let ctr = Ctr.add ctr (Int64.of_int blocks) in
+        Ctr.unsafe_count_into ctr ~blocks:1 buf' 0 ;
+        Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string buf') 0 buf' 0 ;
+        Bytes.blit buf' 0 buf (blocks * block_size) slack
+      end;
+      Bytes.unsafe_to_string buf
 
     let encrypt ~key ~ctr src =
       let res = Bytes.unsafe_of_string (stream ~key ~ctr (String.length src)) in
