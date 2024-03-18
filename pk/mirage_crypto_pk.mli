@@ -187,14 +187,11 @@ module Rsa : sig
         was produced with the given [key] as per {{!sig_encode}sig_encode}, or
         [None] *)
 
-    type hash = [ `MD5 | `SHA1 | `SHA224 | `SHA256 | `SHA384 | `SHA512 ]
-    (** The type of supported hash algorithms. *)
-
-    val min_key : hash -> bits
+    val min_key : Digestif.hash' -> bits
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
     val sign : ?crt_hardening:bool -> ?mask:mask ->
-      hash:hash -> key:priv -> string or_digest ->
+      hash:Digestif.hash' -> key:priv -> string or_digest ->
       string
     (** [sign ~crt_hardening ~mask ~hash ~key message] is the PKCS 1.5
         signature of [message], signed by the [key], using the hash function
@@ -208,7 +205,7 @@ module Rsa : sig
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
 
-    val verify : hashp:(hash -> bool) -> key:pub ->
+    val verify : hashp:(Digestif.hash' -> bool) -> key:pub ->
       signature:string -> string or_digest -> bool
     (** [verify ~hashp ~key ~signature message] checks that [signature] is the
         PKCS 1.5 signature of the [message] under the given [key].

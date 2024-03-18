@@ -967,15 +967,22 @@ module Ed25519 = struct
 
   type priv = string
 
+  let sha512 datas =
+    let open Digestif.SHA512 in
+    let buf = Bytes.create digest_size in
+    let ctx = List.fold_left (feed_string ?off:None ?len:None) empty datas in
+    get_into_bytes ctx buf;
+    buf
+
   (* RFC 8032 *)
   let public secret =
     (* section 5.1.5 *)
     (* step 1 *)
-    let h = Digestif.SHA512.(digest_string secret |> to_raw_string) in
+    let h = sha512 [ secret ] in
     (* step 2 *)
     let s, rest =
-      Bytes.unsafe_of_string (String.sub h 0 key_len),
-      String.sub h key_len (String.length h - key_len)
+      Bytes.sub h 0 key_len,
+      Bytes.unsafe_to_string (Bytes.sub h key_len (Bytes.length h - key_len))
     in
     Bytes.set_uint8 s 0 ((Bytes.get_uint8 s 0) land 248);
     Bytes.set_uint8 s 31 (((Bytes.get_uint8 s 31) land 127) lor 64);
@@ -1009,13 +1016,11 @@ module Ed25519 = struct
   let sign ~key msg =
     (* section 5.1.6 *)
     let pub, (s, prefix) = public key in
-    let r = Digestif.SHA512.(digest_string (String.concat "" [ prefix; msg ]) |> to_raw_string) in
-    let r = Bytes.unsafe_of_string r in
+    let r = sha512 [ prefix; msg ] in
     reduce_l r;
     let r = Bytes.unsafe_to_string r in
     let r_big = scalar_mult_base_to_bytes r in
-    let k = Digestif.SHA512.(digest_string (String.concat "" [ r_big; pub; msg]) |> to_raw_string) in
-    let k = Bytes.unsafe_of_string k in
+    let k = sha512 [ r_big; pub; msg] in
     reduce_l k;
     let k = Bytes.unsafe_to_string k in
     let s_out = muladd k s r in
@@ -1041,10 +1046,7 @@ module Ed25519 = struct
         String.equal s'' s'
       in
       if s_smaller_l then begin
-        let k =
-          Digestif.SHA512.(digest_string (String.concat "" [ r ; key ; msg ]) |> to_raw_string)
-        in
-        let k = Bytes.unsafe_of_string k in
+        let k = sha512 [ r ; key ; msg ] in
         reduce_l k;
         let k = Bytes.unsafe_to_string k in
         let success, r' = double_scalar_mult k key s in

@@ -23,11 +23,6 @@ module Digest_or (H : Digestif.S) = struct
           invalid_arg "(`Digest _): %d bytes, expecting %d" n m
 end
 
-let digest_or (type a) ~(hash : a Digestif.hash) =
-  let module H = (val Digestif.module_of hash) in
-  let module D = Digest_or (H) in
-  D.digest_or
-
 exception Insufficient_key
 
 type pub = { e : Z.t ; n : Z.t }
@@ -274,69 +269,26 @@ module PKCS1 = struct
     String.length msg >= String.length asn &&
     String.equal asn (String.sub msg 0 (String.length asn))
 
-  type hash = [ `MD5 | `SHA1 | `SHA224 | `SHA256 | `SHA384 | `SHA512 ]
-
-  let digestif_or = function
-    | `MD5 -> digest_or ~hash:Digestif.md5
-    | `SHA1 -> digest_or ~hash:Digestif.sha1
-    | `SHA224 -> digest_or ~hash:Digestif.sha224
-    | `SHA256 -> digest_or ~hash:Digestif.sha256
-    | `SHA384 -> digest_or ~hash:Digestif.sha384
-    | `SHA512 -> digest_or ~hash:Digestif.sha512
-
-  let digestif_size = function
-    | `MD5 ->
-      let module H = (val Digestif.module_of Digestif.md5) in
-      H.digest_size
-    | `SHA1 ->
-      let module H = (val Digestif.module_of Digestif.sha1) in
-      H.digest_size
-    | `SHA224 ->
-      let module H = (val Digestif.module_of Digestif.sha224) in
-      H.digest_size
-    | `SHA256 ->
-      let module H = (val Digestif.module_of Digestif.sha256) in
-      H.digest_size
-    | `SHA384 ->
-      let module H = (val Digestif.module_of Digestif.sha384) in
-      H.digest_size
-    | `SHA512 ->
-      let module H = (val Digestif.module_of Digestif.sha512) in
-      H.digest_size
-
   let asn_of_hash, detect =
-    let md5 = "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10"
-    and sha1 = "\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"
-    and sha224 = "\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04\x05\x00\x04\x1c"
-    and sha256 = "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20"
-    and sha384 = "\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30"
-    and sha512 = "\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
+    let map = [
+      `MD5, "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10" ;
+      `SHA1, "\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14" ;
+      `SHA224, "\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04\x05\x00\x04\x1c" ;
+      `SHA256, "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20" ;
+      `SHA384, "\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30" ;
+      `SHA512, "\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
+    ]
     in
-    (function
-      | `MD5 -> md5
-      | `SHA1 -> sha1
-      | `SHA224 -> sha224
-      | `SHA256 -> sha256
-      | `SHA384 -> sha384
-      | `SHA512 -> sha512),
-     (fun buf ->
-       if is_prefix md5 buf then
-         Some (`MD5, md5)
-       else if is_prefix sha1 buf then
-         Some (`SHA1, sha1)
-       else if is_prefix sha224 buf then
-         Some (`SHA224, sha224)
-       else if is_prefix sha256 buf then
-         Some (`SHA256, sha256)
-       else if is_prefix sha384 buf then
-         Some (`SHA384, sha384)
-       else if is_prefix sha512 buf then
-         Some (`SHA512, sha512)
-       else
-         None)
+    (fun h ->
+       match List.assoc_opt h map with
+       | None -> invalid_arg "unsupported hash (only MD5 and SHA are supported)"
+       | Some x -> x),
+    (fun buf -> List.find_opt (fun (_, d) -> is_prefix d buf) map)
 
   let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
-    let msg' = asn_of_hash hash ^ digestif_or hash msg in
+    let module H = (val Digestif.module_of_hash' hash) in
+    let module D = Digest_or(H) in
+    let msg' = asn_of_hash hash ^ D.digest_or msg in
     sig_encode ~crt_hardening ?mask ~key msg'
 
   let verify ~hashp ~key ~signature msg =
@@ -346,11 +298,14 @@ module PKCS1 = struct
     Option.value
       (sig_decode ~key signature >>= fun buf ->
        detect buf >>| fun (hash, asn) ->
-       hashp hash && Eqaf.equal (asn ^ digestif_or hash msg) buf)
+       let module H = (val Digestif.module_of_hash' hash) in
+       let module D = Digest_or(H) in
+       hashp hash && Eqaf.equal (asn ^ D.digest_or msg) buf)
       ~default:false
 
   let min_key hash =
-    (String.length (asn_of_hash hash) + digestif_size hash + min_pad + 2) * 8 + 1
+    let module H = (val Digestif.module_of_hash' hash) in
+    (String.length (asn_of_hash hash) + H.digest_size + min_pad + 2) * 8 + 1
 end
 
 module MGF1 (H : Digestif.S) = struct
@@ -364,8 +319,11 @@ module MGF1 (H : Digestif.S) = struct
   let mgf ~seed len =
     let rec go acc c = function
       | 0 -> Bytes.sub (Bytes.concat Bytes.empty (List.rev acc)) 0 len
-      | n -> let h = Bytes.unsafe_of_string H.(digesti_string (iter2 seed (repr c)) |> to_raw_string) in
-             go (h :: acc) Int32.(succ c) (pred n) in
+      | n ->
+        let h = Bytes.create H.digest_size in
+        H.get_into_bytes (H.feedi_string H.empty (iter2 seed (repr c))) h;
+        go (h :: acc) Int32.(succ c) (pred n)
+    in
     go [] 0l (len // H.digest_size)
 
   let mask ~seed buf =
