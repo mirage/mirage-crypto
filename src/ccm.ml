@@ -35,12 +35,12 @@ let format nonce adata q t (* mac len *) =
   encode_len buf ~off:(n + 1) small_q q;
   buf
 
-let pad_block b =
-  let size = Bytes.length b in
+let pad_block ?(off = 0) b =
+  let size = Bytes.length b - off in
   Bytes.concat Bytes.empty [ b ; Bytes.make (size // block_size * block_size) '\x00' ]
 
-let pad_block_str b =
-  let size = String.length b in
+let pad_block_str ~off b =
+  let size = String.length b - off in
   String.concat "" [ b ; String.make (size // block_size * block_size) '\x00' ]
 
 let gen_adata hdr a =
@@ -52,13 +52,13 @@ let gen_adata hdr a =
       buf
     | x when Sys.int_size < 32 || x < (1 lsl 32) ->
       let buf = Bytes.create 6 in
-      Bytes.set_int32_be buf 2 (Int32.of_int x) ;
       Bytes.set_uint16_be buf 0 0xfffe;
+      Bytes.set_int32_be buf 2 (Int32.of_int x) ;
       buf
     | x ->
       let buf = Bytes.create 10 in
-      Bytes.set_int64_be buf 2 (Int64.of_int x) ;
       Bytes.set_uint16_be buf 0 0xffff;
+      Bytes.set_int64_be buf 2 (Int64.of_int x) ;
       buf
   in
   let to_pad =
@@ -96,7 +96,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
   let ctrblock i block =
     Bytes.set_uint8 block 0 ctr_flag_val;
     Bytes.unsafe_blit_string nonce 0 block 1 (String.length nonce);
-    encode_len block ~off:ctr_flag_val small_q i;
+    encode_len block ~off:(String.length nonce + 1) small_q i;
     cipher ~key (Bytes.unsafe_to_string block) ~src_off:0 block ~dst_off:0
   in
 
@@ -125,11 +125,12 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
     match String.length src - src_off with
     | 0 -> iv
     | x when x < block_size ->
-       let ctrbl = pad_block dst in
+       (* TODO: the pads below are scary - we're only interested in the last bytes (from dst_off .. end) *)
+       let ctrbl = pad_block ~off:dst_off dst in
        ctrblock ctr ctrbl ;
        Bytes.unsafe_blit ctrbl 0 dst dst_off x ;
        xor_into src ~src_off dst ~dst_off x ;
-       let cbblock = pad_block_str cbcblock in
+       let cbblock = pad_block_str ~off:cbc_off cbcblock in
        cbc cbblock cbc_off iv 0 ;
        iv
     | _ ->
