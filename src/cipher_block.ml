@@ -419,10 +419,11 @@ module DES = struct
     let gen_of_secret ~direction key =
       if String.length key <> 24 then
         invalid_arg "DES.of_secret: key length %u" (String.length key) ;
-      let key = Bytes.create k_s in
+      let key = Bytes.of_string key in
+      let keybuf = Bytes.create k_s in
       Native.DES.des3key key 0 direction ;
-      Native.DES.cp3key key ;
-      Bytes.unsafe_to_string key
+      Native.DES.cp3key keybuf ;
+      Bytes.unsafe_to_string keybuf
 
     let e_of_secret = gen_of_secret ~direction:0
     let d_of_secret = gen_of_secret ~direction:1
