@@ -68,7 +68,7 @@ let generate_rekey ~g buf ~off len =
   let b  = len // block + 2 in
   let n  = b * block in
   let r  = AES_CTR.stream ~key:g.key ~ctr:g.ctr n in
-  Bytes.blit_string r 0 buf off len;
+  Bytes.unsafe_blit_string r 0 buf off len;
   let r2 = String.sub r (n - 32) 32 in
   set_key ~g r2 ;
   g.ctr <- AES_CTR.add_ctr g.ctr (Int64.of_int b)

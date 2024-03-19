@@ -20,7 +20,7 @@ let pp_error fmt e =
 
 let rev_string buf =
   let len = String.length buf in
-  let res = Bytes.make len '\000' in
+  let res = Bytes.create len in
   for i = 0 to len - 1 do
     Bytes.set res (len - 1 - i) (String.get buf i)
   done ;
@@ -135,7 +135,7 @@ end
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
   let b_uts b = Bytes.unsafe_to_string b
 
-  let create () = Bytes.make P.fe_length '\000'
+  let create () = Bytes.create P.fe_length
 
   let mul a b =
     let tmp = create () in
@@ -190,7 +190,7 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     b_uts tmp
 
   let create_octets () =
-    Bytes.make P.byte_length '\000'
+    Bytes.create P.byte_length
 
   let to_octets fe =
     let tmp = create_octets () in
@@ -307,19 +307,19 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       | None -> String.make 1 '\000'
       | Some (x, y) ->
         let len_x = String.length x and len_y = String.length y in
-        let res = Bytes.make (1 + len_x + len_y) '\000' in
+        let res = Bytes.create (1 + len_x + len_y) in
         Bytes.set res 0 '\004' ;
         let rev_x = rev_string x and rev_y = rev_string y in
-        Bytes.blit_string rev_x 0 res 1 len_x ;
-        Bytes.blit_string rev_y 0 res (1 + len_x) len_y ;
+        Bytes.unsafe_blit_string rev_x 0 res 1 len_x ;
+        Bytes.unsafe_blit_string rev_y 0 res (1 + len_x) len_y ;
         Bytes.unsafe_to_string res
     in
     if compress then
-      let out = Bytes.make (P.byte_length + 1) '\000' in
+      let out = Bytes.create (P.byte_length + 1) in
       let ident =
         2 + (string_get_uint8 buf ((P.byte_length * 2) - 1)) land 1
       in
-      Bytes.blit_string buf 1 out 1 P.byte_length;
+      Bytes.unsafe_blit_string buf 1 out 1 P.byte_length;
       Bytes.set_uint8 out 0 ident;
       Bytes.unsafe_to_string out
     else
@@ -391,10 +391,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         2 + (string_get_uint8 y_struct (P.byte_length - 2)) land 1
       in
       let res = if Int.equal signY ident then y_struct else y_struct2 in
-      let out = Bytes.make ((P.byte_length * 2) + 1) '\000' in
+      let out = Bytes.create ((P.byte_length * 2) + 1) in
       Bytes.set out 0 '\004';
-      Bytes.blit_string pk 1 out 1 P.byte_length;
-      Bytes.blit_string res 0 out (P.byte_length + 1) P.byte_length;
+      Bytes.unsafe_blit_string pk 1 out 1 P.byte_length;
+      Bytes.unsafe_blit_string res 0 out (P.byte_length + 1) P.byte_length;
       Bytes.unsafe_to_string out
 
   let of_octets buf =
@@ -547,9 +547,9 @@ end
 module Make_Fn (P : Parameters) (F : Foreign_n) : Fn = struct
   let b_uts = Bytes.unsafe_to_string
 
-  let create () = Bytes.make P.fe_length '\000'
+  let create () = Bytes.create P.fe_length
 
-  let create_octets () = Bytes.make P.byte_length '\000'
+  let create_octets () = Bytes.create P.byte_length
 
   let from_be_octets v =
     let v' = create () in
@@ -617,7 +617,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
       msg
     else
       ( let res = Bytes.make bl '\000' in
-        Bytes.blit_string msg 0 res (bl - l) (String.length msg) ;
+        Bytes.unsafe_blit_string msg 0 res (bl - l) l ;
         Bytes.unsafe_to_string res )
 
   (* RFC 6979: compute a deterministic k *)
@@ -907,7 +907,7 @@ module X25519 = struct
   let key_len = 32
 
   let scalar_mult in_ base =
-    let out = Bytes.make key_len '\000' in
+    let out = Bytes.create key_len in
     x25519_scalar_mult_generic out in_ base;
     Bytes.unsafe_to_string out
 
@@ -949,17 +949,17 @@ module Ed25519 = struct
   let key_len = 32
 
   let scalar_mult_base_to_bytes p =
-    let tmp = Bytes.make key_len '\000' in
+    let tmp = Bytes.create key_len in
     scalar_mult_base_to_bytes tmp p;
     Bytes.unsafe_to_string tmp
 
   let muladd a b c =
-    let tmp = Bytes.make key_len '\000' in
+    let tmp = Bytes.create key_len in
     muladd tmp a b c;
     Bytes.unsafe_to_string tmp
 
   let double_scalar_mult a b c =
-    let tmp = Bytes.make key_len '\000' in
+    let tmp = Bytes.create key_len in
     let s = double_scalar_mult tmp a b c in
     s, Bytes.unsafe_to_string tmp
 
@@ -1024,9 +1024,9 @@ module Ed25519 = struct
     reduce_l k;
     let k = Bytes.unsafe_to_string k in
     let s_out = muladd k s r in
-    let res = Bytes.make (key_len + key_len) '\000' in
-    Bytes.blit_string r_big 0 res 0 key_len ;
-    Bytes.blit_string s_out 0 res key_len key_len ;
+    let res = Bytes.create (key_len + key_len) in
+    Bytes.unsafe_blit_string r_big 0 res 0 key_len ;
+    Bytes.unsafe_blit_string s_out 0 res key_len key_len ;
     Bytes.unsafe_to_string res
 
   let verify ~key signature ~msg =
@@ -1039,10 +1039,10 @@ module Ed25519 = struct
       let s_smaller_l =
         (* check s within 0 <= s < L *)
         let s' = Bytes.make (key_len * 2) '\000' in
-        Bytes.blit_string s 0 s' 0 key_len;
+        Bytes.unsafe_blit_string s 0 s' 0 key_len;
         reduce_l s';
         let s' = Bytes.unsafe_to_string s' in
-        let s'' = String.concat "" [ s; String.make key_len '\000' ] in
+        let s'' = s ^ String.make key_len '\000' in
         String.equal s'' s'
       in
       if s_smaller_l then begin

@@ -86,8 +86,6 @@ module Counters = struct
     val unsafe_count_into : ctr -> bytes -> int -> blocks:int -> unit
   end
 
-  let _tmp = Bytes.make 16 '\x00'
-
   module C64be = struct
     type ctr = int64
     let size = 8
@@ -95,8 +93,9 @@ module Counters = struct
     let of_octets cs = Bytes.get_int64_be (Bytes.unsafe_of_string cs) 0
     let add = Int64.add
     let unsafe_count_into t buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 t;
-      Native.count8be _tmp buf off ~blocks
+      let tmp = Bytes.create 8 in
+      Bytes.set_int64_be tmp 0 t;
+      Native.count8be tmp buf off ~blocks
   end
 
   module C128be = struct
@@ -110,8 +109,9 @@ module Counters = struct
       let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
       ((if flip then Int64.succ w1 else w1), w0')
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
-      Native.count16be _tmp buf off ~blocks
+      let tmp = Bytes.create 16 in
+      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
+      Native.count16be tmp buf off ~blocks
   end
 
   module C128be32 = struct
@@ -120,8 +120,9 @@ module Counters = struct
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
     let unsafe_count_into (w1, w0) buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
-      Native.count16be4 _tmp buf off ~blocks
+      let tmp = Bytes.create 16 in
+      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
+      Native.count16be4 tmp buf off ~blocks
   end
 end
 
@@ -215,7 +216,7 @@ module Modes = struct
         let ctr = Ctr.add ctr (Int64.of_int blocks) in
         Ctr.unsafe_count_into ctr ~blocks:1 buf' 0 ;
         Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string buf') 0 buf' 0 ;
-        Bytes.blit buf' 0 buf (blocks * block_size) slack
+        Bytes.unsafe_blit buf' 0 buf (blocks * block_size) slack
       end;
       Bytes.unsafe_to_string buf
 
@@ -245,9 +246,8 @@ module Modes = struct
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs k;
       Bytes.unsafe_to_string k
-    let hash0 = Bytes.make tagsize '\x00'
     let digesti ~key i =
-      let res = Bytes.copy hash0 in
+      let res = Bytes.make tagsize '\x00' in
       i (fun cs -> Native.GHASH.ghash key res cs (String.length cs));
       Bytes.unsafe_to_string res
   end

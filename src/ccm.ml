@@ -46,8 +46,8 @@ let gen_adata a =
   llen + String.length a + to_pad,
   fun buf off ->
     set_llen buf off;
-    Bytes.blit_string a 0 buf (off + llen) (String.length a);
-    Bytes.fill buf (off + llen + String.length a) to_pad '\000'
+    Bytes.unsafe_blit_string a 0 buf (off + llen) (String.length a);
+    Bytes.unsafe_fill buf (off + llen + String.length a) to_pad '\000'
 
 let gen_ctr nonce i =
   let n = String.length nonce in

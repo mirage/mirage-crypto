@@ -149,7 +149,7 @@ let rec shift_left_inplace buf = function
   | bits when bits mod 8 = 0 ->
     let off = bits / 8 in
     let to_blit = Bytes.length buf - off in
-    Bytes.blit buf off buf 0 to_blit ;
+    Bytes.unsafe_blit buf off buf 0 to_blit ;
     Bytes.unsafe_fill buf to_blit (Bytes.length buf - to_blit) '\x00'
   | bits when bits < 8 ->
     let foo = 8 - bits in
