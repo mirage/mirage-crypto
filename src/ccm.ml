@@ -14,26 +14,16 @@ let encode_len buf ~off size value =
   in
   ass value (pred size)
 
-let format nonce adata q t (* mac len *) =
-  (* assume n <- [7..13] *)
-  (* assume t is valid mac size *)
-  (* n + q = 15 *)
-  (* a < 2 ^ 64 *)
+let set_format buf ?(off = 0) nonce flag_val value =
   let n = String.length nonce in
   let small_q = 15 - n in
-  (* first byte (flags): *)
-  (* reserved | adata | (t - 2) / 2 | q - 1 *)
-  let b6 = if String.length adata = 0 then 0 else 1 in
-  let flag_val = flags b6 ((t - 2) / 2) (small_q - 1) in
   (* first octet block:
      0          : flags
      1..15 - q  : N
      16 - q..15 : Q *)
-  let buf = Bytes.create 16 in
-  Bytes.set_uint8 buf 0 flag_val;
-  Bytes.unsafe_blit_string nonce 0 buf 1 n;
-  encode_len buf ~off:(n + 1) small_q q;
-  buf
+  Bytes.set_uint8 buf off flag_val;
+  Bytes.unsafe_blit_string nonce 0 buf (off + 1) n;
+  encode_len buf ~off:(off + n + 1) small_q value
 
 let pad_block ?(off = 0) b =
   let size = Bytes.length b - off in
@@ -43,46 +33,52 @@ let pad_block_str ~off b =
   let size = String.length b - off in
   String.concat "" [ b ; String.make (size // block_size * block_size) '\x00' ]
 
-let gen_adata hdr a =
-  let lbuf =
+let gen_adata a =
+  let llen, set_llen =
     match String.length a with
     | x when x < (1 lsl 16 - 1 lsl 8) ->
-      let buf = Bytes.create 2 in
-      Bytes.set_uint16_be buf 0 x;
-      buf
+      2, (fun buf off -> Bytes.set_uint16_be buf off x)
     | x when Sys.int_size < 32 || x < (1 lsl 32) ->
-      let buf = Bytes.create 6 in
-      Bytes.set_uint16_be buf 0 0xfffe;
-      Bytes.set_int32_be buf 2 (Int32.of_int x) ;
-      buf
+      6, (fun buf off ->
+          Bytes.set_uint16_be buf off 0xfffe;
+          Bytes.set_int32_be buf (off + 2) (Int32.of_int x))
     | x ->
-      let buf = Bytes.create 10 in
-      Bytes.set_uint16_be buf 0 0xffff;
-      Bytes.set_int64_be buf 2 (Int64.of_int x) ;
-      buf
+      10, (fun buf off ->
+          Bytes.set_uint16_be buf off 0xffff;
+          Bytes.set_int64_be buf (off + 2) (Int64.of_int x))
   in
   let to_pad =
-    let leftover = (Bytes.length lbuf + String.length a) mod block_size in
+    let leftover = (llen + String.length a) mod block_size in
     block_size - leftover
   in
-  Bytes.concat Bytes.empty [ hdr ; lbuf ; Bytes.unsafe_of_string a ; Bytes.make to_pad '\x00' ]
+  llen + String.length a + to_pad,
+  fun buf off ->
+    set_llen buf off;
+    Bytes.blit_string a 0 buf (off + llen) (String.length a);
+    Bytes.fill buf (off + llen + String.length a) to_pad '\000'
 
 let gen_ctr nonce i =
   let n = String.length nonce in
   let small_q = 15 - n in
   let flag_val = flags 0 0 (small_q - 1) in
   let buf = Bytes.create 16 in
-  Bytes.set_uint8 buf 0 flag_val;
-  Bytes.unsafe_blit_string nonce 0 buf 1 n;
-  encode_len buf ~off:(n + 1) small_q i;
+  set_format buf nonce flag_val i;
   buf
 
 let prepare_header nonce adata plen tlen =
-  let hdr = format nonce adata plen tlen in
+  let small_q = 15 - String.length nonce in
+  let b6 = if String.length adata = 0 then 0 else 1 in
+  let flag_val = flags b6 ((tlen - 2) / 2) (small_q - 1) in
   if String.length adata = 0 then
+    let hdr = Bytes.create 16 in
+    set_format hdr nonce flag_val plen;
     hdr
   else
-    gen_adata hdr adata
+    let len, set = gen_adata adata in
+    let buf = Bytes.create (16 + len) in
+    set_format buf nonce flag_val plen;
+    set buf 16;
+    buf
 
 type mode = Encrypt | Decrypt
 
