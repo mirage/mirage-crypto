@@ -15,57 +15,61 @@ let sample arr =
 let ecb_selftest (m : (module Cipher_block.S.ECB)) n =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
-    let data  = Cstruct.of_string (Mirage_crypto_rng.generate (C.block_size * 8))
-    and key   = C.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample C.key_sizes)) in
+    let data  = Mirage_crypto_rng.generate (C.block_size * 8)
+    and key   = C.of_secret @@ Mirage_crypto_rng.generate (sample C.key_sizes) in
     let data' =
       C.( data |> encrypt ~key |> encrypt ~key
                |> decrypt ~key |> decrypt ~key ) in
-    assert_cs_equal ~msg:"ecb mismatch" data data'
+    assert_oct_equal ~msg:"ecb mismatch" data data'
 
 let cbc_selftest (m : (module Cipher_block.S.CBC)) n  =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
-    let data = Cstruct.of_string (Mirage_crypto_rng.generate (C.block_size * 8))
-    and iv   = Cstruct.of_string (Mirage_crypto_rng.generate C.block_size)
-    and key  = C.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample C.key_sizes)) in
-    assert_cs_equal ~msg:"CBC e->e->d->d" data
+    let data = Mirage_crypto_rng.generate (C.block_size * 8)
+    and iv   = Mirage_crypto_rng.generate C.block_size
+    and key  = C.of_secret @@ Mirage_crypto_rng.generate (sample C.key_sizes) in
+    assert_oct_equal ~msg:"CBC e->e->d->d" data
       C.( data |> encrypt ~key ~iv |> encrypt ~key ~iv
                |> decrypt ~key ~iv |> decrypt ~key ~iv );
-    let (d1, d2) = Cstruct.split data (C.block_size * 4) in
-    assert_cs_equal ~msg:"CBC chain"
+    let (d1, d2) =
+      String.sub data 0 (C.block_size * 4),
+      String.sub data (C.block_size * 4) (String.length data - C.block_size * 4)
+    in
+    assert_oct_equal ~msg:"CBC chain"
       C.(encrypt ~key ~iv data)
       C.( let e1 = encrypt ~key ~iv d1 in
-          Cstruct.append e1 (encrypt ~key ~iv:(C.next_iv ~iv e1) d2) )
+          e1 ^ encrypt ~key ~iv:(next_iv ~iv e1) d2)
 
 let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
   let module M = (val m) in
   let bs = M.block_size in
   "selftest" >:: times ~n @@ fun _ ->
-    let key  = M.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate (sample M.key_sizes))
-    and ctr  = Mirage_crypto_rng.generate bs |> Cstruct.of_string |> M.ctr_of_cstruct
-    and data = Cstruct.of_string Mirage_crypto_rng.(generate @@ bs + Randomconv.int ~bound:(20 * bs) Mirage_crypto_rng.generate) in
+    let key  = M.of_secret @@ Mirage_crypto_rng.generate (sample M.key_sizes)
+    and ctr  = Mirage_crypto_rng.generate bs |> M.ctr_of_octets
+    and data = Mirage_crypto_rng.(generate @@ bs + Randomconv.int ~bound:(20 * bs) Mirage_crypto_rng.generate) in
     let enc = M.encrypt ~key ~ctr data in
     let dec = M.decrypt ~key ~ctr enc in
-    assert_cs_equal ~msg:"CTR e->d" data dec;
+    assert_oct_equal ~msg:"CTR e->d" data dec;
     let (d1, d2) =
-      Cstruct.split data @@ bs * Randomconv.int ~bound:(Cstruct.length data / bs) Mirage_crypto_rng.generate in
-    assert_cs_equal ~msg:"CTR chain" enc @@
-      Cstruct.append (M.encrypt ~key ~ctr d1)
-                     (M.encrypt ~key ~ctr:(M.next_ctr ~ctr d1) d2)
+      let s = bs * Randomconv.int ~bound:(String.length data / bs) Mirage_crypto_rng.generate in
+      String.sub data 0 s, String.sub data s (String.length data - s)
+    in
+    assert_oct_equal ~msg:"CTR chain" enc @@
+      M.encrypt ~key ~ctr d1 ^ M.encrypt ~key ~ctr:(M.next_ctr ~ctr d1) d2
 
 let ctr_offsets (type c) ~zero (m : (module Cipher_block.S.CTR with type ctr = c)) n =
   let module M = (val m) in
   "offsets" >:: fun _ ->
-    let key = M.of_secret @@ Cstruct.of_string (Mirage_crypto_rng.generate M.key_sizes.(0)) in
+    let key = M.of_secret @@ Mirage_crypto_rng.generate M.key_sizes.(0) in
     for i = 0 to n - 1 do
       let ctr = match i with
         | 0 -> M.add_ctr zero (-1L)
-        | _ -> Mirage_crypto_rng.generate M.block_size |> Cstruct.of_string |> M.ctr_of_cstruct
+        | _ -> Mirage_crypto_rng.generate M.block_size |> M.ctr_of_octets
       and gap = Randomconv.int ~bound:64 Mirage_crypto_rng.generate in
       let s1 = M.stream ~key ~ctr ((gap + 1) * M.block_size)
       and s2 = M.stream ~key ~ctr:(M.add_ctr ctr (Int64.of_int gap)) M.block_size in
-      assert_cs_equal ~msg:"shifted stream"
-        Cstruct.(sub s1 (gap * M.block_size) M.block_size) s2
+      assert_oct_equal ~msg:"shifted stream"
+        String.(sub s1 (gap * M.block_size) M.block_size) s2
     done
 
 let xor_selftest n =
@@ -79,9 +83,9 @@ let xor_selftest n =
     let x1   = Uncommon.(xor xyz (xor y z))
     and x2   = Uncommon.(xor (xor z y) xyz) in
 
-    assert_str_equal ~msg:"assoc" xyz xyz' ;
-    assert_str_equal ~msg:"invert" x x1 ;
-    assert_str_equal ~msg:"commut" x1 x2
+    assert_oct_equal ~msg:"assoc" xyz xyz' ;
+    assert_oct_equal ~msg:"invert" x x1 ;
+    assert_oct_equal ~msg:"commut" x1 x2
 
 let suite =
   "All" >::: [

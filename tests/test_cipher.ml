@@ -20,8 +20,8 @@ let aes_ecb_cases =
   and check (key, out) _ =
     let enc = AES.ECB.encrypt ~key nist_sp_800_38a in
     let dec = AES.ECB.decrypt ~key enc in
-    assert_cs_equal ~msg:"ciphertext" out enc ;
-    assert_cs_equal ~msg:"plaintext" nist_sp_800_38a dec in
+    assert_oct_equal ~msg:"ciphertext" out enc ;
+    assert_oct_equal ~msg:"plaintext" nist_sp_800_38a dec in
 
   cases_of check [
     case ~key: "2b 7e 15 16 28 ae d2 a6 ab f7 15 88 09 cf 4f 3c"
@@ -53,8 +53,8 @@ let aes_cbc_cases =
   and check (key, iv, out) _ =
     let enc = AES.CBC.encrypt ~key ~iv nist_sp_800_38a in
     let dec = AES.CBC.decrypt ~key ~iv enc in
-    assert_cs_equal ~msg:"ciphertext" out enc ;
-    assert_cs_equal ~msg:"plaintext" nist_sp_800_38a dec in
+    assert_oct_equal ~msg:"ciphertext" out enc ;
+    assert_oct_equal ~msg:"plaintext" nist_sp_800_38a dec in
 
   cases_of check [
     case ~key: "2b 7e 15 16 28 ae d2 a6 ab f7 15 88 09 cf 4f 3c"
@@ -85,14 +85,14 @@ let aes_ctr_cases =
   let case ~key ~ctr ~out ~ctr1 = test_case @@ fun _ ->
     let open Cipher_block.AES.CTR in
     let key  = vx key |> of_secret
-    and ctr  = vx ctr |> ctr_of_cstruct
-    and ctr1 = vx ctr1 |> ctr_of_cstruct
+    and ctr  = vx ctr |> ctr_of_octets
+    and ctr1 = vx ctr1 |> ctr_of_octets
     and out  = vx out in
     let enc = encrypt ~key ~ctr nist_sp_800_38a in
     let dec = decrypt ~key ~ctr enc in
-    assert_cs_equal ~msg:"cipher" out enc;
-    assert_cs_equal ~msg:"plain" nist_sp_800_38a dec;
-    let blocks = Cstruct.length nist_sp_800_38a / block_size in
+    assert_oct_equal ~msg:"cipher" out enc;
+    assert_oct_equal ~msg:"plain" nist_sp_800_38a dec;
+    let blocks = String.length nist_sp_800_38a / block_size in
     assert_equal ~msg:"counters" ctr1 (add_ctr ctr (Int64.of_int blocks))
   in
   [ case ~key:  "2b7e1516 28aed2a6 abf71588 09cf4f3c"
@@ -145,8 +145,8 @@ let gcm_cases =
       | None -> assert_failure "GCM decryption broken"
       | Some data -> data
     in
-    assert_cs_equal ~msg:"ciphertext" (Cstruct.append c t) cipher ;
-    assert_cs_equal ~msg:"decrypted plaintext" p pdata
+    assert_oct_equal ~msg:"ciphertext" (c ^ t) cipher ;
+    assert_oct_equal ~msg:"decrypted plaintext" p pdata
   in
 
   cases_of check [
@@ -292,9 +292,9 @@ let ccm_cases =
 
   let check (key, p, adata, nonce, c) _ =
     let cip = authenticate_encrypt ~key ~nonce ~adata p in
-    assert_cs_equal ~msg:"encrypt" c cip ;
+    assert_oct_equal ~msg:"encrypt" c cip ;
     match authenticate_decrypt ~key ~nonce ~adata c with
-      | Some x -> assert_cs_equal ~msg:"decrypt" p x
+      | Some x -> assert_oct_equal ~msg:"decrypt" p x
       | None -> assert_failure "CCM decryption broken"
   in
 
@@ -330,18 +330,18 @@ let ccm_regressions =
     (* see RFC 3610 Section 2.1, AD of length 0 should be same as no AD *)
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "0001020304050607"
-    and plaintext = Cstruct.of_string "hello"
+    and plaintext = "hello"
     in
-    assert_cs_equal ~msg:"CCM no vs empty ad"
+    assert_oct_equal ~msg:"CCM no vs empty ad"
       (authenticate_encrypt ~key ~nonce plaintext)
-      (authenticate_encrypt ~adata:Cstruct.empty ~key ~nonce plaintext)
+      (authenticate_encrypt ~adata:"" ~key ~nonce plaintext)
   and short_nonce_enc _ =
     (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/167 *)
     (* valid nonce sizes for CCM are 7..13 (L can be 2..8, nonce is 15 - L)*)
     (* see RFC3610 Section 2.1 *)
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
-    and nonce = Cstruct.empty
-    and plaintext = Cstruct.of_string "hello"
+    and nonce = ""
+    and plaintext = "hello"
     in
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 0")
@@ -349,7 +349,7 @@ let ccm_regressions =
   and short_nonce_enc2 _ =
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "00"
-    and plaintext = Cstruct.of_string "hello"
+    and plaintext = "hello"
     in
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 1")
@@ -357,7 +357,7 @@ let ccm_regressions =
   and short_nonce_enc3 _ =
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "000102030405"
-    and plaintext = Cstruct.of_string "hello"
+    and plaintext = "hello"
     in
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 6")
@@ -365,7 +365,7 @@ let ccm_regressions =
   and long_nonce_enc _ =
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "000102030405060708090a0b0c0d"
-    and plaintext = Cstruct.of_string "hello"
+    and plaintext = "hello"
     in
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 14")
@@ -374,23 +374,23 @@ let ccm_regressions =
     (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/168 *)
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "0001020304050607"
-    and adata = Cstruct.of_string "hello"
-    and p = Cstruct.empty
+    and adata = "hello"
+    and p = ""
     in
     let cipher = authenticate_encrypt ~adata ~key ~nonce p in
     match authenticate_decrypt ~key ~nonce ~adata cipher with
-    | Some x -> assert_cs_equal ~msg:"CCM decrypt of empty message" p x
+    | Some x -> assert_oct_equal ~msg:"CCM decrypt of empty message" p x
     | None -> assert_failure "decryption broken"
   and long_adata _ =
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "0001020304050607"
-    and plaintext = Cstruct.of_string "hello"
+    and plaintext = "hello"
     (* [adata] is greater than [1 lsl 16 - 1 lsl 8] *)
-    and adata = Cstruct.create 65280
+    and adata = String.make 65280 '\x00'
     and expected = vx "6592169e946f98973bc06d080f7c9dbb493a536f8a"
     in
     let cipher = authenticate_encrypt ~adata ~key ~nonce plaintext in
-    assert_cs_equal ~msg:"CCM encrypt of >=65280 adata" expected cipher
+    assert_oct_equal ~msg:"CCM encrypt of >=65280 adata" expected cipher
   in
   [
     test_case no_vs_empty_ad ;
@@ -406,7 +406,7 @@ let gcm_regressions =
   let open Cipher_block.AES.GCM in
   let msg = vx "000102030405060708090a0b0c0d0e0f" in
   let key = of_secret msg
-  and nonce = Cstruct.empty
+  and nonce = ""
   in
   let nonce_zero_length_enc _ =
     (* reported in https://github.com/mirleft/ocaml-nocrypto/issues/169 *)
@@ -417,35 +417,20 @@ let gcm_regressions =
     assert_raises ~msg:"GCM with nonce of 0"
       (Invalid_argument "Mirage_crypto: GCM: invalid nonce of length 0")
       (fun () -> authenticate_decrypt ~key ~nonce msg)
-  and unaligned _ =
-    let key = of_secret (vx "00000000000000000000000000000000")
-    and c = vx "0388dace60b6a392f328c2b971b2fe78"
-    and p = vx "00000000000000000000000000000000"
-    and nonce = vx "000000000000000000000000"
-    and t = vx "ab6e47d42cec13bdf53a67b21257bddf"
-    in
-    let cipher = Cstruct.shift (Cstruct.concat [ Cstruct.create 1 ; c ; t ]) 1 in
-    let auth_dec ~key ~nonce cipher = match authenticate_decrypt ~key ~nonce cipher with
-      | None -> assert_failure "GCM decryption failure"
-      | Some x -> x
-    in
-    assert_cs_equal ~msg:"GCM with unaligned msg"
-      (auth_dec ~key ~nonce cipher) p
   in
   [
     test_case nonce_zero_length_enc ;
     test_case nonce_zero_length_dec ;
-    test_case unaligned ;
   ]
 
 
 let chacha20_cases =
   let case msg ?ctr ~key ~nonce ?(input = String.make 128 '\000') output =
     let key = Chacha20.of_secret (vx key)
-    and nonce = vx_str nonce
-    and output = vx_str output
+    and nonce = vx nonce
+    and output = vx output
     in
-    assert_str_equal ~msg (Chacha20.crypt ~key ~nonce ?ctr input) output
+    assert_oct_equal ~msg (Chacha20.crypt ~key ~nonce ?ctr input) output
   in
   let rfc8439_input = "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it." in
   let rfc8439_test_2_4_2 _ =
@@ -477,17 +462,13 @@ let chacha20_cases =
   61 16
   1a e1 0b 59 4f 09 e2 6a 7e 90 2e cb d0 60 06 91|}
     in
-    assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt"
-      (Chacha20.authenticate_encrypt ~key ~nonce ~adata (Cstruct.of_string rfc8439_input))
+    assert_oct_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt"
+      (Chacha20.authenticate_encrypt ~key ~nonce ~adata rfc8439_input)
       output;
-    assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 decrypt"
+    assert_oct_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 decrypt"
       (match Chacha20.authenticate_decrypt ~key ~nonce ~adata output with
        | Some cs -> cs | None -> assert_failure "Chacha20/poly1305 decryption broken")
-      (Cstruct.of_string rfc8439_input);
-    let input = Cstruct.(shift (append (create 16) (Cstruct.of_string rfc8439_input)) 16) in
-    assert_cs_equal ~msg:"Chacha20/Poly1305 RFC 8439 2.8.2 encrypt 2"
-      (Chacha20.authenticate_encrypt ~key ~nonce ~adata input)
-      output;
+      rfc8439_input;
   in
   (* from https://tools.ietf.org/html/draft-strombergson-chacha-test-vectors-01 *)
   let case ~key ~nonce ~output0 ~output1 _ =
@@ -693,92 +674,92 @@ let chacha20_cases =
     ]
 
 let poly1305_rfc8439_2_5_2 _ =
-  let key = vx_str "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
+  let key = vx "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b"
   and data = "Cryptographic Forum Research Group"
-  and output = vx_str "a8061dc1305136c6c22b8baf0c0127a9"
+  and output = vx "a8061dc1305136c6c22b8baf0c0127a9"
   in
-  assert_str_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
+  assert_oct_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
     (Poly1305.mac ~key data) output
 
 let empty_cases _ =
   let open Cipher_block in
-  let plain = Cstruct.empty
-  and cipher = Cstruct.empty
+  let plain = ""
+  and cipher = ""
   in
   (* 3DES ECB CBC CTR *)
   Array.iter (fun key_size ->
-      let key = DES.ECB.of_secret (Cstruct.create key_size) in
-      assert_cs_equal ~msg:"DES ECB encrypt" cipher (DES.ECB.encrypt ~key plain) ;
-      assert_cs_equal ~msg:"DES ECB decrypt" plain (DES.ECB.decrypt ~key cipher))
+      let key = DES.ECB.of_secret (String.make key_size '\x00') in
+      assert_oct_equal ~msg:"DES ECB encrypt" cipher (DES.ECB.encrypt ~key plain) ;
+      assert_oct_equal ~msg:"DES ECB decrypt" plain (DES.ECB.decrypt ~key cipher))
     DES.ECB.key_sizes ;
   Array.iter (fun key_size ->
-      let key = DES.CBC.of_secret (Cstruct.create key_size)
-      and iv = Cstruct.create DES.CBC.block_size
+      let key = DES.CBC.of_secret (String.make key_size '\x00')
+      and iv = String.make DES.CBC.block_size '\x00'
       in
-      assert_cs_equal ~msg:"DES CBC encrypt" cipher (DES.CBC.encrypt ~key ~iv plain) ;
-      assert_cs_equal ~msg:"DES CBC decrypt" plain (DES.CBC.decrypt ~key ~iv cipher))
+      assert_oct_equal ~msg:"DES CBC encrypt" cipher (DES.CBC.encrypt ~key ~iv plain) ;
+      assert_oct_equal ~msg:"DES CBC decrypt" plain (DES.CBC.decrypt ~key ~iv cipher))
     DES.CBC.key_sizes ;
   Array.iter (fun key_size ->
-      let key = DES.CTR.of_secret (Cstruct.create key_size)
-      and ctr = DES.CTR.ctr_of_cstruct (Cstruct.create DES.CTR.block_size)
+      let key = DES.CTR.of_secret (String.make key_size '\x00')
+      and ctr = DES.CTR.ctr_of_octets (String.make DES.CTR.block_size '\x00')
       in
-      assert_cs_equal ~msg:"DES CTR encrypt" cipher (DES.CTR.encrypt ~key ~ctr plain) ;
-      assert_cs_equal ~msg:"DES CTR decrypt" plain (DES.CTR.decrypt ~key ~ctr cipher))
+      assert_oct_equal ~msg:"DES CTR encrypt" cipher (DES.CTR.encrypt ~key ~ctr plain) ;
+      assert_oct_equal ~msg:"DES CTR decrypt" plain (DES.CTR.decrypt ~key ~ctr cipher))
     DES.CTR.key_sizes ;
 
   (* AES ECB CBC CTR GCM CCM16 *)
   Array.iter (fun key_size ->
-      let key = AES.ECB.of_secret (Cstruct.create key_size) in
-      assert_cs_equal ~msg:"AES ECB encrypt" cipher (AES.ECB.encrypt ~key plain) ;
-      assert_cs_equal ~msg:"AES ECB decrypt" plain (AES.ECB.decrypt ~key cipher))
+      let key = AES.ECB.of_secret (String.make key_size '\x00') in
+      assert_oct_equal ~msg:"AES ECB encrypt" cipher (AES.ECB.encrypt ~key plain) ;
+      assert_oct_equal ~msg:"AES ECB decrypt" plain (AES.ECB.decrypt ~key cipher))
     AES.ECB.key_sizes ;
   Array.iter (fun key_size ->
-      let key = AES.CBC.of_secret (Cstruct.create key_size)
-      and iv = Cstruct.create AES.CBC.block_size
+      let key = AES.CBC.of_secret (String.make key_size '\x00')
+      and iv = String.make AES.CBC.block_size '\x00'
       in
-      assert_cs_equal ~msg:"AES CBC encrypt" cipher (AES.CBC.encrypt ~key ~iv plain) ;
-      assert_cs_equal ~msg:"AES CBC decrypt" plain (AES.CBC.decrypt ~key ~iv cipher))
+      assert_oct_equal ~msg:"AES CBC encrypt" cipher (AES.CBC.encrypt ~key ~iv plain) ;
+      assert_oct_equal ~msg:"AES CBC decrypt" plain (AES.CBC.decrypt ~key ~iv cipher))
     AES.CBC.key_sizes ;
   Array.iter (fun key_size ->
-      let key = AES.CTR.of_secret (Cstruct.create key_size)
-      and ctr = AES.CTR.ctr_of_cstruct (Cstruct.create AES.CTR.block_size)
+      let key = AES.CTR.of_secret (String.make key_size '\x00')
+      and ctr = AES.CTR.ctr_of_octets (String.make AES.CTR.block_size '\x00')
       in
-      assert_cs_equal ~msg:"AES CTR encrypt" cipher (AES.CTR.encrypt ~key ~ctr plain) ;
-      assert_cs_equal ~msg:"AES CTR decrypt" plain (AES.CTR.decrypt ~key ~ctr cipher))
+      assert_oct_equal ~msg:"AES CTR encrypt" cipher (AES.CTR.encrypt ~key ~ctr plain) ;
+      assert_oct_equal ~msg:"AES CTR decrypt" plain (AES.CTR.decrypt ~key ~ctr cipher))
     AES.CTR.key_sizes ;
   Array.iter (fun key_size ->
-      let key = AES.CCM16.of_secret (Cstruct.create key_size) in
+      let key = AES.CCM16.of_secret (String.make key_size '\x00') in
       let test_one nonce =
         let c, tag = AES.CCM16.authenticate_encrypt_tag ~key ~nonce plain in
-        assert_cs_equal ~msg:"AES CCM16 encrypt" cipher c ;
+        assert_oct_equal ~msg:"AES CCM16 encrypt" cipher c ;
         match AES.CCM16.authenticate_decrypt_tag ~key ~nonce ~tag cipher with
         | None -> assert false
-        | Some p -> assert_cs_equal ~msg:"AES CCM16 decrypt" plain p
+        | Some p -> assert_oct_equal ~msg:"AES CCM16 decrypt" plain p
       in
-      test_one (Cstruct.create 7);
-      test_one (Cstruct.create 8);
-      test_one (Cstruct.create 13))
+      test_one (String.make 7 '\x00');
+      test_one (String.make 8 '\x00');
+      test_one (String.make 13 '\x00'))
     AES.CCM16.key_sizes ;
 
   (* ChaCha20 *)
   Array.iter (fun key_size ->
-      let key = Chacha20.of_secret (Cstruct.create key_size) in
+      let key = Chacha20.of_secret (String.make key_size '\x00') in
       let test_one nonce =
         let c, tag = Chacha20.authenticate_encrypt_tag ~key ~nonce plain in
-        assert_cs_equal ~msg:"Chacha20 encrypt" cipher c ;
+        assert_oct_equal ~msg:"Chacha20 encrypt" cipher c ;
         match Chacha20.authenticate_decrypt_tag ~key ~nonce ~tag cipher with
         | None -> assert false
-        | Some p -> assert_cs_equal ~msg:"Chacha20 decrypt" plain p
+        | Some p -> assert_oct_equal ~msg:"Chacha20 decrypt" plain p
       in
-      test_one (Cstruct.create 8);
+      test_one (String.make 8 '\x00');
       if key_size = 32 then
-        test_one (Cstruct.create 12))
+        test_one (String.make 12 '\x00'))
     [| 16 ; 32 |] ;
 
   (* ARC4 *)
-  let key = Cipher_stream.ARC4.of_secret (Cstruct.create 16) in
-  assert_cs_equal ~msg:"ARC4 encrypt" cipher (Cipher_stream.ARC4.(encrypt ~key plain).message) ;
-  assert_cs_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
+  let key = Cipher_stream.ARC4.of_secret (String.make 16 '\x00') in
+  assert_oct_equal ~msg:"ARC4 encrypt" cipher (Cipher_stream.ARC4.(encrypt ~key plain).message) ;
+  assert_oct_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
 
 let suite = [
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;

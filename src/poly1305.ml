@@ -22,7 +22,7 @@ module It : S = struct
   module P = Native.Poly1305
   let mac_size = P.mac_size ()
 
-  type t = Native.ctx
+  type t = bytes
 
   let dup = Bytes.copy
 

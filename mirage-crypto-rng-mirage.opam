@@ -25,6 +25,7 @@ depends: [
   "mirage-unix" {with-test & >= "5.0.0"}
   "mirage-time-unix" {with-test & >= "2.0.0"}
   "mirage-clock-unix" {with-test & >= "3.0.0"}
+  "ohex" {with-test & >= "0.2.0"}
 ]
 description: """
 Mirage-crypto-rng-mirage provides entropy collection code for the RNG.

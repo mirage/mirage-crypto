@@ -72,7 +72,7 @@ extern void mc_des2key(unsigned char [16], short);
  * NOTE: this clobbers all three key registers!
  */
 
-extern void mc_Ddes(unsigned char [8], unsigned char [8]);
+extern void mc_Ddes(const unsigned char [8], unsigned char [8]);
 /*		    from[8]	      to[8]
  * Encrypts/Decrypts (according to the keyS currently loaded in the
  * internal key registerS) one block of eight bytes at address 'from'

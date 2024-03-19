@@ -13,7 +13,7 @@ let cpu_bootstrap_check () =
         try
           let data' = cpu_rng_bootstrap 1 in
           if String.equal !data data' then begin
-            Cstruct.hexdump (Cstruct.of_string data');
+            Ohex.pp Format.std_formatter data';
             failwith ("same data from CPU bootstrap at " ^ string_of_int i);
           end;
           data := data'
@@ -24,7 +24,7 @@ let whirlwind_bootstrap_check () =
   for i = 0 to 10 do
     let data' = Mirage_crypto_rng.Entropy.whirlwind_bootstrap 1 in
     if String.equal !data data' then begin
-      Cstruct.hexdump (Cstruct.of_string data');
+      Ohex.pp Format.std_formatter data';
       failwith ("same data from whirlwind bootstrap at " ^ string_of_int i);
     end;
     data := data'
@@ -34,7 +34,7 @@ let timer_check () =
   for i = 0 to 10 do
     let data' = Mirage_crypto_rng.Entropy.interrupt_hook () () in
     if String.equal !data data' then begin
-      Cstruct.hexdump (Cstruct.of_string data');
+      Ohex.pp Format.std_formatter data';
       failwith ("same data from timer at " ^ string_of_int i);
     end;
     data := data'

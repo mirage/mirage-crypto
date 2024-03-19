@@ -15,19 +15,19 @@ open Test_common
 let dsa_test ~priv ~msg ?k ~r ~s ~hash _ =
   let hmsg = Digestif.(digest_string hash msg |> to_raw_string hash) in
   let (r', s') = Dsa.sign ~mask:`No ~key:priv ?k hmsg in
-  assert_str_equal ~msg:"computed r" r r' ;
-  assert_str_equal ~msg:"computed s" s s' ;
+  assert_oct_equal ~msg:"computed r" r r' ;
+  assert_oct_equal ~msg:"computed s" s s' ;
   (* now with masking *)
   let (r', s') = Dsa.sign ~key:priv ?k hmsg in
-  assert_str_equal ~msg:"computed r (masked)" r r' ;
-  assert_str_equal ~msg:"computed s (masked)" s s' ;
+  assert_oct_equal ~msg:"computed r (masked)" r r' ;
+  assert_oct_equal ~msg:"computed s (masked)" s s' ;
   let pub = Dsa.pub_of_priv priv in
   assert_bool "verify of given r, s"
     (Dsa.verify ~key:pub (r, s) hmsg) ;
   assert_bool "verify of computed r, s"
     (Dsa.verify ~key:pub (r', s') hmsg)
 
-let params ~p ~q ~g = vx_str p, vx_str q, vx_str g
+let params ~p ~q ~g = vx p, vx q, vx g
 
 let priv_of f ~p ~q ~gg ~x ~y =
   match Dsa.priv ~fips:true ~p:(f p) ~q:(f q) ~gg:(f gg) ~x:(f x) ~y:(f y) () with
@@ -35,14 +35,14 @@ let priv_of f ~p ~q ~gg ~x ~y =
   | Error (`Msg m) -> invalid_arg "bad DSA private key %s" m
 
 let priv_of_cs  = priv_of Z_extra.of_octets_be
-let priv_of_hex = priv_of (fun cs -> vx_str cs |> Z_extra.of_octets_be)
+let priv_of_hex = priv_of (fun cs -> vx cs |> Z_extra.of_octets_be)
 
 let case_of ~domain ~hash ~x ~y ~k ~r ~s ~msg =
   let (p, q, gg) = domain in
-  let priv   = priv_of_cs ~p ~q ~gg ~x:(vx_str x) ~y:(vx_str y)
-  and (r, s) = vx_str r, vx_str s
-  and k      = Z_extra.of_octets_be (vx_str k)
-  and msg    = vx_str msg in
+  let priv   = priv_of_cs ~p ~q ~gg ~x:(vx x) ~y:(vx y)
+  and (r, s) = vx r, vx s
+  and k      = Z_extra.of_octets_be (vx k)
+  and msg    = vx msg in
   dsa_test ~priv ~msg ~k ~r ~s ~hash
 
 let sha1_cases =
@@ -2191,7 +2191,7 @@ let test_rfc6979 (type a) ~priv ~msg ~(hash: a Digestif.hash) ~k ~r ~s  _ =
     let module H = (val (Digestif.module_of hash)) in
     let module K = Dsa.K_gen (H) in
     K.generate ~key:priv h1 in
-  assert_str_equal
+  assert_oct_equal
     ~msg:"computed k" k
     (Z_extra.to_octets_be ~size:(Z.numbits priv.Dsa.q // 8) k') ;
   dsa_test ~priv ~msg ~k:k' ~r ~s ~hash ()
@@ -2216,7 +2216,7 @@ let rfc6979_dsa_1024 =
   in
 
   let case ~msg ~hash ~k ~r ~s =
-    test_rfc6979 ~priv ~msg ~k:(vx_str k) ~r:(vx_str r) ~s:(vx_str s) ~hash
+    test_rfc6979 ~priv ~msg ~k:(vx k) ~r:(vx r) ~s:(vx s) ~hash
   in [
     case ~msg:"sample" ~hash:Digestif.sha1
     ~k:"7BDB6B0FF756E1BB5D53583EF979082F9AD5BD5B"
@@ -2300,7 +2300,7 @@ let rfc6979_dsa_2048 =
   in
 
   let case ~msg ~hash ~k ~r ~s =
-    test_rfc6979 ~priv ~msg ~k:(vx_str k) ~r:(vx_str r) ~s:(vx_str s) ~hash
+    test_rfc6979 ~priv ~msg ~k:(vx k) ~r:(vx r) ~s:(vx s) ~hash
   in [
     case ~hash:Digestif.sha1 ~msg:"sample"
    ~k:"888FA6F7738A41BDC9846466ABDB8174C0338250AE50CE955CA16230F9CBD53E"

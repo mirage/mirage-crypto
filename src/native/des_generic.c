@@ -18,7 +18,7 @@
 #include "mirage_crypto.h"
 #include "des_generic.h"
 
-static void scrunch(unsigned char *, unsigned long *);
+static void scrunch(const unsigned char *, unsigned long *);
 static void unscrun(unsigned long *, unsigned char *);
 static void desfunc(unsigned long *, unsigned long *);
 static void cookey(unsigned long *);
@@ -145,7 +145,7 @@ void mc_des(unsigned char inblock[8], unsigned char outblock[8])
 	}
 
 
-static void scrunch(unsigned char *outof, unsigned long *into)
+static void scrunch(const unsigned char *outof, unsigned long *into)
 {
 	*into 	 = (*outof++ & 0xffL) << 24;
 	*into 	|= (*outof++ & 0xffL) << 16;
@@ -404,7 +404,7 @@ void mc_des2key(unsigned char hexkey[16], short mode) /* stomps on Kn3 too */
 	return;
 	}
 
-void mc_Ddes(unsigned char from[8], unsigned char into[8])
+void mc_Ddes(const unsigned char from[8], unsigned char into[8])
 {
 	unsigned long work[2];
 
@@ -657,7 +657,7 @@ void mc_make3key(char *aptr /* NULL-terminated   */, unsigned char kptr[24])
 
 /* OCaml front-end */
 
-static inline void _mc_ddes (unsigned char *src, unsigned char *dst, unsigned int blocks) {
+static inline void _mc_ddes (const unsigned char *src, unsigned char *dst, unsigned int blocks) {
   while (blocks --) {
     mc_Ddes (src, dst);
     src += 8 ; dst += 8;
@@ -670,25 +670,25 @@ mc_des_key_size (__unit ()) {
 }
 
 CAMLprim value
-mc_des_des3key (value key, value off, value direction) {
-  mc_des3key (_ba_uint8_off (key, off), Int_val (direction));
+mc_des_des3key (value key, value direction) {
+  mc_des3key (_bp_uint8 (key), Int_val (direction));
   return Val_unit;
 }
 
 CAMLprim value
 mc_des_cp3key (value dst) {
-  mc_cp3key ((unsigned long *) _ba_uint8 (dst));
+  mc_cp3key ((unsigned long *) _bp_uint8 (dst));
   return Val_unit;
 }
 
 CAMLprim value
 mc_des_use3key (value src) {
-  mc_use3key ((unsigned long *) _ba_uint8 (src));
+  mc_use3key ((unsigned long *) _bp_uint8 (src));
   return Val_unit;
 }
 
 CAMLprim value
 mc_des_ddes (value src, value off1, value dst, value off2, value blocks) {
-  _mc_ddes (_ba_uint8_off (src, off1), _ba_uint8_off (dst, off2), Int_val (blocks));
+  _mc_ddes (_st_uint8_off (src, off1), _bp_uint8_off (dst, off2), Int_val (blocks));
   return Val_unit;
 }

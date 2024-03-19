@@ -1232,26 +1232,26 @@ mc_aes_rk_size_generic (value rounds) {
 }
 
 CAMLprim value
-mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds) {
-  mc_rijndaelSetupEncrypt (_ba_uint32 (rk),
-                           _ba_uint8_off (key, off1),
+mc_aes_derive_e_key_generic (value key, value rk, value rounds) {
+  mc_rijndaelSetupEncrypt (_bp_uint32 (rk),
+                           _st_uint8 (key),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
 
 CAMLprim value
-mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk)) {
-  mc_rijndaelSetupDecrypt (_ba_uint32 (kr),
-                           _ba_uint8_off (key, off1),
+mc_aes_derive_d_key_generic (value key, value kr, value rounds, value __unused (rk)) {
+  mc_rijndaelSetupDecrypt (_bp_uint32 (kr),
+                           _st_uint8 (key),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
 
 CAMLprim value
 mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _mc_aes_enc_blocks ( _ba_uint8_off (src, off1),
-                       _ba_uint8_off (dst, off2),
-                       _ba_uint32 (rk),
+  _mc_aes_enc_blocks ( _st_uint8_off (src, off1),
+                       _bp_uint8_off (dst, off2),
+                       _st_uint32 (rk),
                        Int_val (rounds),
                        Int_val (blocks) );
   return Val_unit;
@@ -1259,9 +1259,9 @@ mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, valu
 
 CAMLprim value
 mc_aes_dec_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks) {
-  _mc_aes_dec_blocks ( _ba_uint8_off (src, off1),
-                       _ba_uint8_off (dst, off2),
-                       _ba_uint32 (rk),
+  _mc_aes_dec_blocks ( _st_uint8_off(src, off1),
+                       _bp_uint8_off(dst, off2),
+                       _st_uint32 (rk),
                        Int_val (rounds),
                        Int_val (blocks) );
   return Val_unit;

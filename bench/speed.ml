@@ -26,17 +26,15 @@ let burn_period = 2.0
 let sizes = [16; 64; 256; 1024; 8192]
 (* let sizes = [16] *)
 
-let big_b = Bytes.create List.(hd (rev sizes))
-
 let burn f n =
-  let cs = Cstruct.of_string (Mirage_crypto_rng.generate n) in
+  let buf = Mirage_crypto_rng.generate n in
   let (t1, i1) =
     let rec loop it =
-      let t = Time.time ~n:it f cs in
+      let t = Time.time ~n:it f buf in
       if t > 0.2 then (t, it) else loop (it * 10) in
     loop 10 in
   let iters = int_of_float (float i1 *. burn_period /. t1) in
-  let time  = Time.time ~n:iters f cs in
+  let time  = Time.time ~n:iters f buf in
   (iters, time, float (n * iters) /. time)
 
 let mb = 1024. *. 1024.
@@ -67,13 +65,7 @@ let count title f to_str args =
   Printf.printf "    %s:  %.03f ops per second (%d iters in %.03f)\n%!"
     (to_str arg) (float iters /. time) iters time
 
-let msg =
-  let b = Cstruct.create 100 in
-  Cstruct.memset b 0xAA;
-  b
-
-let msg_str =
-  Cstruct.to_string msg
+let msg_str = String.make 100 '\xAA'
 
 let msg_str_32 = String.sub msg_str 0 32
 let msg_str_48 = String.sub msg_str 0 48
@@ -357,62 +349,63 @@ let benchmarks = [
         fst ecdh_shares);
 
   bm "chacha20-poly1305" (fun name ->
-      let key = Mirage_crypto.Chacha20.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 32))
-      and nonce = Cstruct.of_string (Mirage_crypto_rng.generate 8) in
+      let key = Mirage_crypto.Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      and nonce = Mirage_crypto_rng.generate 8 in
       throughput name (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce)) ;
 
   bm "aes-128-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16)) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "aes-128-cbc-e" (fun name ->
-    let key = AES.CBC.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16))
-    and iv  = Cstruct.of_string (Mirage_crypto_rng.generate 16) in
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
     throughput name (fun cs -> AES.CBC.encrypt ~key ~iv cs)) ;
 
   bm "aes-128-cbc-d" (fun name ->
-    let key = AES.CBC.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16))
-    and iv  = Cstruct.of_string (Mirage_crypto_rng.generate 16) in
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
     throughput name (fun cs -> AES.CBC.decrypt ~key ~iv cs)) ;
 
   bm "aes-128-ctr" (fun name ->
-    let key = Mirage_crypto_rng.generate 16 |> Cstruct.of_string |> AES.CTR.of_secret
-    and ctr = Mirage_crypto_rng.generate 16 |> Cstruct.of_string |> AES.CTR.ctr_of_cstruct in
+    let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
+    and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_octets in
     throughput name (fun cs -> AES.CTR.encrypt ~key ~ctr cs)) ;
 
   bm "aes-128-gcm" (fun name ->
-    let key = AES.GCM.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16))
-    and nonce = Cstruct.of_string (Mirage_crypto_rng.generate 12) in
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 12 in
     throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce cs));
 
   bm "aes-128-ghash" (fun name ->
-    let key = AES.GCM.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16))
-    and nonce = Cstruct.of_string (Mirage_crypto_rng.generate 12) in
-    throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce ~adata:cs Cstruct.empty));
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 12 in
+    throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce ~adata:cs ""));
 
   bm "aes-128-ccm" (fun name ->
-    let key   = AES.CCM16.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 16))
-    and nonce = Cstruct.of_string (Mirage_crypto_rng.generate 10) in
+    let key   = AES.CCM16.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 10 in
     throughput name (fun cs -> AES.CCM16.authenticate_encrypt ~key ~nonce cs));
 
   bm "aes-192-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 24)) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "aes-256-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 32)) in
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 32) in
     throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
 
   bm "d3des-ecb" (fun name ->
-    let key = DES.ECB.of_secret (Cstruct.of_string (Mirage_crypto_rng.generate 24)) in
+    let key = DES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
     throughput name (fun cs -> DES.ECB.encrypt ~key cs)) ;
 
   bm "fortuna" (fun name ->
     let open Mirage_crypto_rng.Fortuna in
     let g = create () in
     reseed ~g "abcd" ;
-    throughput name (fun cs ->
-        generate_into ~g big_b ~off:0 (Cstruct.length cs))) ;
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        generate_into ~g buf ~off:0 (Bytes.length buf))) ;
 ]
 
 let help () =

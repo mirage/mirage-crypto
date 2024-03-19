@@ -39,7 +39,7 @@ let create ?time () =
   let k = String.make 32 '\x00' in
   { ctr    = (0L, 0L)
   ; secret = k
-  ; key    = AES_CTR.of_secret (Cstruct.of_string k)
+  ; key    = AES_CTR.of_secret k
   ; pools  = Array.make pools SHAd256.empty
   ; pool0_size = 0
   ; reseed_count = 0
@@ -54,7 +54,7 @@ let seeded ~g =
 (* XXX We might want to erase the old key. *)
 let set_key ~g sec =
   g.secret <- sec ;
-  g.key    <- AES_CTR.of_secret (Cstruct.of_string sec)
+  g.key    <- AES_CTR.of_secret sec
 
 let reseedi ~g iter =
   set_key ~g @@ SHAd256.digesti (fun f -> f g.secret; iter f);
@@ -67,7 +67,7 @@ let reseed ~g cs = reseedi ~g (iter1 cs)
 let generate_rekey ~g buf ~off len =
   let b  = len // block + 2 in
   let n  = b * block in
-  let r  = Cstruct.to_string (AES_CTR.stream ~key:g.key ~ctr:g.ctr n) in
+  let r  = AES_CTR.stream ~key:g.key ~ctr:g.ctr n in
   Bytes.blit_string r 0 buf off len;
   let r2 = String.sub r (n - 32) 32 in
   set_key ~g r2 ;

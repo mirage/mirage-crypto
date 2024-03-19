@@ -6,7 +6,6 @@
 #include "bitfn.h"
 
 #include <caml/mlvalues.h>
-#include <caml/bigarray.h>
 
 #ifdef ACCELERATE
 # ifdef _MSC_VER
@@ -72,12 +71,8 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 #define __unit() value __unused(_)
 
 #define _st_uint8(v) ((const uint8_t*) (String_val(v)))
-
-#define _ba_uint8_off(ba, off)  ((uint8_t*) Caml_ba_data_val (ba) + Long_val (off))
-#define _ba_uint32_off(ba, off) ((uint32_t*) Caml_ba_data_val (ba) + Long_val (off))
-
-#define _ba_uint8(ba)  ((uint8_t*) Caml_ba_data_val (ba))
-#define _ba_uint32(ba) ((uint32_t*) Caml_ba_data_val (ba))
+#define _st_uint32(v) ((const uint32_t*) (String_val(v)))
+#define _st_uint8_off(v, off) ((const uint8_t*)(String_val(v) + Long_val(off)))
 
 #define _bp_uint8_off(bp, off) ((uint8_t *) Bp_val (bp) + Long_val (off))
 #define _bp_uint8(bp) ((uint8_t *) Bp_val (bp))
@@ -94,10 +89,10 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 CAMLprim value mc_aes_rk_size_generic (value rounds);
 
 CAMLprim value
-mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds);
+mc_aes_derive_e_key_generic (value key, value rk, value rounds);
 
 CAMLprim value
-mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk));
+mc_aes_derive_d_key_generic (value key, value kr, value rounds, value __unused (rk));
 
 CAMLprim value
 mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks);
@@ -107,10 +102,10 @@ mc_aes_dec_generic (value src, value off1, value dst, value off2, value rk, valu
 
 CAMLprim value mc_ghash_key_size_generic (__unit ());
 
-CAMLprim value mc_ghash_init_key_generic (value key, value off, value m);
+CAMLprim value mc_ghash_init_key_generic (value key, value m);
 
 CAMLprim value
-mc_ghash_generic (value m, value hash, value src, value off, value len);
+mc_ghash_generic (value m, value hash, value src, value len);
 
 CAMLprim value
 mc_xor_into_generic (value b1, value off1, value b2, value off2, value n);

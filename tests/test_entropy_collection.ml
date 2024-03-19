@@ -10,13 +10,12 @@ module Printing_rng = struct
   let generate_into ~g:_ _buf ~off:_ _len = assert false
 
   let reseed ~g:_ data =
-    Format.printf "reseeding: %a@.%!" Cstruct.hexdump_pp (Cstruct.of_string data)
+    Format.printf "reseeding:@.%a@.%!" (Ohex.pp_hexdump ()) data
 
   let accumulate ~g:_ source =
     let print data =
       Format.printf "accumulate: (src: %a) %a@.%!"
-        Mirage_crypto_rng.Entropy.pp_source source Cstruct.hexdump_pp
-        (Cstruct.of_string data)
+        Mirage_crypto_rng.Entropy.pp_source source Ohex.pp data
     in
     `Acc print
 

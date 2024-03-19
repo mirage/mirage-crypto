@@ -1,7 +1,7 @@
 (library
  (name mirage_crypto)
  (public_name mirage-crypto)
- (libraries cstruct eqaf.cstruct)
+ (libraries eqaf)
  (private_modules aead chacha20 ccm cipher_block cipher_stream native
    poly1305 uncommon)
  (foreign_stubs
