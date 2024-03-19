@@ -670,8 +670,8 @@ mc_des_key_size (__unit ()) {
 }
 
 CAMLprim value
-mc_des_des3key (value key, value off, value direction) {
-  mc_des3key (_bp_uint8_off (key, off), Int_val (direction));
+mc_des_des3key (value key, value direction) {
+  mc_des3key (_bp_uint8 (key), Int_val (direction));
   return Val_unit;
 }
 

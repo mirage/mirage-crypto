@@ -428,7 +428,7 @@ module DES = struct
         invalid_arg "DES.of_secret: key length %u" (String.length key) ;
       let key = Bytes.of_string key in
       let keybuf = Bytes.create k_s in
-      Native.DES.des3key key 0 direction ;
+      Native.DES.des3key key direction ;
       Native.DES.cp3key keybuf ;
       Bytes.unsafe_to_string keybuf
 
