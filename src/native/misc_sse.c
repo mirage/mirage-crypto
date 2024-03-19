@@ -48,11 +48,11 @@ mc_xor_into_bytes (value b1, value off1, value b2, value off2, value n) {
 }
 
 #define __export_counter(name, f)                                        \
-  CAMLprim value name (value ctr, value dst, value off, value blocks) {  \
+  CAMLprim value name (value ctr, value dst, value blocks) {  \
     _mc_switch_accel(ssse3,                                     \
-      name##_generic (ctr, dst, off, blocks),                            \
+      name##_generic (ctr, dst, blocks),                            \
       f ( (uint64_t*) Bp_val (ctr),                                      \
-          (uint64_t*) _bp_uint8_off (dst, off), Long_val (blocks) ))     \
+          (uint64_t*) _bp_uint8 (dst), Long_val (blocks) ))     \
     return Val_unit;                                                     \
   }
 
