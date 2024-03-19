@@ -30,7 +30,7 @@ depends: [
   "dune-configurator"
   "eqaf" {>= "0.7"}
   "mirage-crypto-rng" {=version}
-  "digestif" {>= "1.1.4"}
+  "digestif" {>= "1.2.0"}
   "hex" {with-test}
   "alcotest" {with-test & >= "0.8.1"}
   "ppx_deriving_yojson" {with-test}
