@@ -114,8 +114,8 @@ module Entropy : sig
 
   (** {1 Timer source} *)
 
-  val interrupt_hook : unit -> unit -> string
-  (** [interrupt_hook ()] collects lower bytes from the cycle counter, to be
+  val interrupt_hook : unit -> string
+  (** [interrupt_hook] collects lower bytes from the cycle counter, to be
       used for entropy collection in the event loop. *)
 
   val timer_accumulator : g option -> unit -> unit
