@@ -34,11 +34,11 @@ module Make (H : Digestif.S) = struct
           let rem = len mod H.digest_size in
           if rem = 0 then H.digest_size else rem
         in
-        Bytes.blit_string v 0 buf off len;
+        Bytes.unsafe_blit_string v 0 buf off len;
         v
       | i ->
         let v = H.hmac_string ~key:k v |> H.to_raw_string in
-        Bytes.blit_string v 0 buf off H.digest_size;
+        Bytes.unsafe_blit_string v 0 buf off H.digest_size;
         go (off + H.digest_size) k v (pred i)
     in
     let v = go off g.k g.v Mirage_crypto.Uncommon.(len // H.digest_size) in

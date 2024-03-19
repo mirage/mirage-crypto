@@ -307,10 +307,10 @@ end
 
 module MGF1 (H : Digestif.S) = struct
 
-  let _buf = Bytes.create 4
   let repr n =
-    Bytes.set_int32_be _buf 0 n;
-    Bytes.unsafe_to_string _buf
+    let buf = Bytes.create 4 in
+    Bytes.set_int32_be buf 0 n;
+    Bytes.unsafe_to_string buf
 
   (* Assumes len < 2^32 * H.digest_size. *)
   let mgf ~seed len =

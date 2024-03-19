@@ -83,10 +83,8 @@ module Counters = struct
     val size : int
     val add  : ctr -> int64 -> ctr
     val of_octets : string -> ctr
-    val unsafe_count_into : ctr -> bytes -> int -> blocks:int -> unit
+    val unsafe_count_into : ctr -> bytes -> blocks:int -> unit
   end
-
-  let _tmp = Bytes.make 16 '\x00'
 
   module C64be = struct
     type ctr = int64
@@ -94,9 +92,10 @@ module Counters = struct
     (* Until OCaml 4.13 is lower bound*)
     let of_octets cs = Bytes.get_int64_be (Bytes.unsafe_of_string cs) 0
     let add = Int64.add
-    let unsafe_count_into t buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 t;
-      Native.count8be _tmp buf off ~blocks
+    let unsafe_count_into t buf ~blocks =
+      let tmp = Bytes.create 8 in
+      Bytes.set_int64_be tmp 0 t;
+      Native.count8be tmp buf ~blocks
   end
 
   module C128be = struct
@@ -109,9 +108,10 @@ module Counters = struct
       let w0'  = Int64.add w0 n in
       let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
       ((if flip then Int64.succ w1 else w1), w0')
-    let unsafe_count_into (w1, w0) buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
-      Native.count16be _tmp buf off ~blocks
+    let unsafe_count_into (w1, w0) buf ~blocks =
+      let tmp = Bytes.create 16 in
+      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
+      Native.count16be tmp buf ~blocks
   end
 
   module C128be32 = struct
@@ -119,9 +119,10 @@ module Counters = struct
     let add (w1, w0) n =
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
-    let unsafe_count_into (w1, w0) buf off ~blocks =
-      Bytes.set_int64_be _tmp 0 w1; Bytes.set_int64_be _tmp 8 w0;
-      Native.count16be4 _tmp buf off ~blocks
+    let unsafe_count_into (w1, w0) buf ~blocks =
+      let tmp = Bytes.create 16 in
+      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
+      Native.count16be4 tmp buf ~blocks
   end
 end
 
@@ -207,15 +208,15 @@ module Modes = struct
     let stream ~key ~ctr n =
       let blocks = imax 0 n / block_size in
       let buf = Bytes.create n in
-      Ctr.unsafe_count_into ctr ~blocks buf 0 ;
+      Ctr.unsafe_count_into ctr ~blocks buf ;
       Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) 0 buf 0 ;
       let slack = imax 0 n mod block_size in
       if slack <> 0 then begin
         let buf' = Bytes.create block_size in
         let ctr = Ctr.add ctr (Int64.of_int blocks) in
-        Ctr.unsafe_count_into ctr ~blocks:1 buf' 0 ;
+        Ctr.unsafe_count_into ctr ~blocks:1 buf' ;
         Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string buf') 0 buf' 0 ;
-        Bytes.blit buf' 0 buf (blocks * block_size) slack
+        Bytes.unsafe_blit buf' 0 buf (blocks * block_size) slack
       end;
       Bytes.unsafe_to_string buf
 
@@ -245,9 +246,8 @@ module Modes = struct
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs k;
       Bytes.unsafe_to_string k
-    let hash0 = Bytes.make tagsize '\x00'
     let digesti ~key i =
-      let res = Bytes.copy hash0 in
+      let res = Bytes.make tagsize '\x00' in
       i (fun cs -> Native.GHASH.ghash key res cs (String.length cs));
       Bytes.unsafe_to_string res
   end
@@ -261,21 +261,21 @@ module Modes = struct
 
     let tag_size = GHASH.tagsize
     let key_sizes, block_size = C.(key, block)
-    let z128, h = String.make block_size '\x00', Bytes.create block_size
+    let z128 = String.make block_size '\x00'
 
     let of_secret cs =
+      let h = Bytes.create block_size in
       let key = C.e_of_secret cs in
       C.encrypt ~key ~blocks:1 z128 0 h 0;
       { key ; hkey = GHASH.derive (Bytes.unsafe_to_string h) }
 
     let bits64 cs = Int64.of_int (String.length cs * 8)
 
-    let pack64s =
-      let _cs = Bytes.create 16 in
-      fun a b ->
-        Bytes.set_int64_be _cs 0 a;
-        Bytes.set_int64_be _cs 8 b;
-        Bytes.unsafe_to_string _cs
+    let pack64s a b =
+      let cs = Bytes.create 16 in
+      Bytes.set_int64_be cs 0 a;
+      Bytes.set_int64_be cs 8 b;
+      Bytes.unsafe_to_string cs
 
     (* OCaml 4.13 *)
     let string_get_int64 s idx =

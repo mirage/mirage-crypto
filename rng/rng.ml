@@ -70,6 +70,8 @@ let get = function Some g -> g | None -> default_generator ()
 let generate_into ?(g = default_generator ()) b ?(off = 0) n =
   let Generator (g, _, m) = g in
   let module M = (val m) in
+  if Bytes.length b - off < n then
+    invalid_arg "buffer too short";
   M.generate_into ~g b ~off n
 
 let generate ?g n =

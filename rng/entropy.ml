@@ -130,17 +130,15 @@ let bootstrap id =
 
 let interrupt_hook () =
   let buf = Bytes.create 4 in
-  fun () ->
-    let a = Cpu_native.cycles () in
-    Bytes.set_int32_le buf 0 (Int32.of_int a) ;
-    Bytes.unsafe_to_string buf
+  let a = Cpu_native.cycles () in
+  Bytes.set_int32_le buf 0 (Int32.of_int a) ;
+  Bytes.unsafe_to_string buf
 
 let timer_accumulator g =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
   let source = register_source "timer" in
   let `Acc handle = Rng.accumulate g source in
-  let hook = interrupt_hook () in
-  (fun () -> handle (hook ()))
+  (fun () -> handle (interrupt_hook ()))
 
 let feed_pools g source f =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
@@ -159,8 +157,8 @@ let cpu_rng =
         let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
         register_source s
       in
-      let buf = Bytes.create 8 in
       let f () =
+        let buf = Bytes.create 8 in
         Bytes.set_int64_le buf 0 (Int64.of_int (randomf ()));
         Bytes.unsafe_to_string buf
       in
