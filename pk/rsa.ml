@@ -279,14 +279,11 @@ module PKCS1 = struct
       `SHA512, "\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
     ]
     in
-    (fun h ->
-       match List.assoc_opt h map with
-       | None -> invalid_arg "unsupported hash (only MD5 and SHA are supported)"
-       | Some x -> x),
+    (fun h -> List.assoc h map),
     (fun buf -> List.find_opt (fun (_, d) -> is_prefix d buf) map)
 
   let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
-    let module H = (val Digestif.module_of_hash' hash) in
+    let module H = (val Digestif.module_of_hash' (hash :> Digestif.hash')) in
     let module D = Digest_or(H) in
     let msg' = asn_of_hash hash ^ D.digest_or msg in
     sig_encode ~crt_hardening ?mask ~key msg'
@@ -298,13 +295,13 @@ module PKCS1 = struct
     Option.value
       (sig_decode ~key signature >>= fun buf ->
        detect buf >>| fun (hash, asn) ->
-       let module H = (val Digestif.module_of_hash' hash) in
+       let module H = (val Digestif.module_of_hash' (hash :> Digestif.hash')) in
        let module D = Digest_or(H) in
        hashp hash && Eqaf.equal (asn ^ D.digest_or msg) buf)
       ~default:false
 
   let min_key hash =
-    let module H = (val Digestif.module_of_hash' hash) in
+    let module H = (val Digestif.module_of_hash' (hash :> Digestif.hash')) in
     (String.length (asn_of_hash hash) + H.digest_size + min_pad + 2) * 8 + 1
 end
 
