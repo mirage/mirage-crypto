@@ -25,14 +25,6 @@ let set_format buf ?(off = 0) nonce flag_val value =
   Bytes.unsafe_blit_string nonce 0 buf (off + 1) n;
   encode_len buf ~off:(off + n + 1) small_q value
 
-let pad_block ?(off = 0) b =
-  let size = Bytes.length b - off in
-  Bytes.concat Bytes.empty [ b ; Bytes.make (size // block_size * block_size) '\x00' ]
-
-let pad_block_str ~off b =
-  let size = String.length b - off in
-  String.concat "" [ b ; String.make (size // block_size * block_size) '\x00' ]
-
 let gen_adata a =
   let llen, set_llen =
     match String.length a with
@@ -121,22 +113,20 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
     match String.length src - src_off with
     | 0 -> iv
     | x when x < block_size ->
-       (* TODO: the pads below are scary - we're only interested in the last bytes (from dst_off .. end) *)
-       let ctrbl = pad_block ~off:dst_off dst in
-       ctrblock ctr ctrbl ;
-       Bytes.unsafe_blit ctrbl 0 dst dst_off x ;
-       xor_into src ~src_off dst ~dst_off x ;
-       let cbblock = pad_block_str ~off:cbc_off cbcblock in
-       cbc cbblock cbc_off iv 0 ;
-       iv
+      let buf = Bytes.make block_size '\x00' in
+      Bytes.unsafe_blit dst dst_off buf 0 x;
+      ctrblock ctr buf ;
+      Bytes.unsafe_blit buf 0 dst dst_off x ;
+      xor_into src ~src_off dst ~dst_off x ;
+      Bytes.unsafe_blit_string cbcblock cbc_off buf 0 x;
+      Bytes.unsafe_fill buf x (block_size - x) '\x00';
+      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0 ;
+      iv
     | _ ->
-       ctrblock ctr dst ;
-       xor_into src ~src_off dst ~dst_off block_size ;
-       cbc cbcblock cbc_off iv 0 ;
-       loop iv
-            (succ ctr)
-            src (src_off + block_size)
-            dst (dst_off + block_size)
+      ctrblock ctr dst ;
+      xor_into src ~src_off dst ~dst_off block_size ;
+      cbc cbcblock cbc_off iv 0 ;
+      loop iv (succ ctr) src (src_off + block_size) dst (dst_off + block_size)
   in
   let last = loop cbcprep 1 data 0 dst 0 in
   let t = Bytes.sub last 0 maclen in
