@@ -2,7 +2,8 @@
 
 ### Breaking changes
 
-* mirage-crypto: Poly1305 interface now uses string (#203 @hannesm)
+* mirage-crypto: Poly1305 API now uses string (#203 @hannesm)
+* mirage-crypto: the API uses string instead of cstruct (#214 @reynir @hannesm)
 * mirage-crypto: Hash module has been removed. Use digestif if you need hash
   functions (#213 @hannesm)
 * mirage-crypto-pk: s-expression conversions for private and public keys (Dh,
@@ -24,6 +25,13 @@
 * PERFORMANCE mirage-crypto: ChaCha20/Poly1305 use string instead of Cstruct.t,
   ChaCha20 interface unchanged, performance improvement roughly 2x
   (#203 @hannesm @reynir)
+* mirage-crypto-ec, mirage-crypto-pk, mirage-crypto-rng: use digestif for
+  hashes (#212 #215 @reynir @hannesm)
+* mirage-crypto-rng: use a set for entropy sources instead of a list
+  (#218 @hannesm)
+* mirage-crypto, mirage-crypto-rng, mirage-crypto-pk, mirage-crypto-ec:
+  avoid global buffers, use freshly allocated strings/bytes instead, avoids
+  data races (#186 #219 @dinosaure @reynir @hannesm)
 
 ## v0.11.3 (2024-02-26)
 
