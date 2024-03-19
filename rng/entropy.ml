@@ -121,12 +121,11 @@ let bootstrap id =
   | Ok cpu_rng_bootstrap ->
     try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
 
-let interrupt_hook () =
+let interrupt_hook () () =
   let buf = Bytes.create 4 in
-  fun () ->
-    let a = Cpu_native.cycles () in
-    Bytes.set_int32_le buf 0 (Int32.of_int a) ;
-    Bytes.unsafe_to_string buf
+  let a = Cpu_native.cycles () in
+  Bytes.set_int32_le buf 0 (Int32.of_int a) ;
+  Bytes.unsafe_to_string buf
 
 let timer_accumulator g =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
@@ -152,8 +151,8 @@ let cpu_rng =
         let s = match insn with `Rdrand -> "rdrand" | `Rdseed -> "rdseed" in
         register_source s
       in
-      let buf = Bytes.create 8 in
       let f () =
+        let buf = Bytes.create 8 in
         Bytes.set_int64_le buf 0 (Int64.of_int (randomf ()));
         Bytes.unsafe_to_string buf
       in

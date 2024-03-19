@@ -261,21 +261,21 @@ module Modes = struct
 
     let tag_size = GHASH.tagsize
     let key_sizes, block_size = C.(key, block)
-    let z128, h = String.make block_size '\x00', Bytes.create block_size
+    let z128 = String.make block_size '\x00'
 
     let of_secret cs =
+      let h = Bytes.create block_size in
       let key = C.e_of_secret cs in
       C.encrypt ~key ~blocks:1 z128 0 h 0;
       { key ; hkey = GHASH.derive (Bytes.unsafe_to_string h) }
 
     let bits64 cs = Int64.of_int (String.length cs * 8)
 
-    let pack64s =
-      let _cs = Bytes.create 16 in
-      fun a b ->
-        Bytes.set_int64_be _cs 0 a;
-        Bytes.set_int64_be _cs 8 b;
-        Bytes.unsafe_to_string _cs
+    let pack64s a b =
+      let cs = Bytes.create 16 in
+      Bytes.set_int64_be cs 0 a;
+      Bytes.set_int64_be cs 8 b;
+      Bytes.unsafe_to_string cs
 
     (* OCaml 4.13 *)
     let string_get_int64 s idx =

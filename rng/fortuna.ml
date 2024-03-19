@@ -105,15 +105,14 @@ let generate_into ~g buf ~off len =
   in
   chunk off len
 
-let _buf = Bytes.create 2
-
 let add ~g (source, _) ~pool data =
-    let pool   = pool land (pools - 1)
-    and source = source land 0xff in
-    Bytes.set_uint8 _buf 0 source;
-    Bytes.set_uint8 _buf 1 (String.length data);
-    g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 (Bytes.unsafe_to_string _buf) data);
-    if pool = 0 then g.pool0_size <- g.pool0_size + String.length data
+  let buf = Bytes.create 2
+  and pool   = pool land (pools - 1)
+  and source = source land 0xff in
+  Bytes.set_uint8 buf 0 source;
+  Bytes.set_uint8 buf 1 (String.length data);
+  g.pools.(pool) <- SHAd256.feedi g.pools.(pool) (iter2 (Bytes.unsafe_to_string buf) data);
+  if pool = 0 then g.pool0_size <- g.pool0_size + String.length data
 
 (* XXX
  * Schneier recommends against using generator-imposed pool-seeding schedule
