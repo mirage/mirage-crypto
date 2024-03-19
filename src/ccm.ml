@@ -165,8 +165,7 @@ let generation_encryption ~cipher ~key ~nonce ~maclen ~adata data =
 let decryption_verification ~cipher ~key ~nonce ~maclen ~adata ~tag data =
   valid_nonce nonce;
   let cdata, t = crypto_core ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata data in
-  crypto_t tag nonce cipher key ;
-  (* needs a eqaf release *)
-  match Eqaf.equal (Bytes.unsafe_to_string tag) (Bytes.unsafe_to_string t) with
+  crypto_t t nonce cipher key ;
+  match Eqaf.equal tag (Bytes.unsafe_to_string t) with
   | true  -> Some (Bytes.unsafe_to_string cdata)
   | false -> None

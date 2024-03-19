@@ -349,7 +349,6 @@ module Modes = struct
       cdata ^ ctag
 
     let authenticate_decrypt_tag ~key ~nonce ?(adata = "") ~tag cs =
-      let tag = Bytes.of_string tag in
       Ccm.decryption_verification ~cipher ~key ~nonce ~maclen:tag_size ~adata ~tag cs
 
     let authenticate_decrypt ~key ~nonce ?adata data =
