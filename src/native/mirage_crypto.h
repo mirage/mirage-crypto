@@ -89,10 +89,10 @@ extern struct _mc_cpu_features mc_detected_cpu_features;
 CAMLprim value mc_aes_rk_size_generic (value rounds);
 
 CAMLprim value
-mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds);
+mc_aes_derive_e_key_generic (value key, value rk, value rounds);
 
 CAMLprim value
-mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk));
+mc_aes_derive_d_key_generic (value key, value kr, value rounds, value __unused (rk));
 
 CAMLprim value
 mc_aes_enc_generic (value src, value off1, value dst, value off2, value rk, value rounds, value blocks);

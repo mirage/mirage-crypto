@@ -372,20 +372,20 @@ mc_aes_rk_size (value rounds) {
 }
 
 CAMLprim value
-mc_aes_derive_e_key (value key, value off1, value rk, value rounds) {
+mc_aes_derive_e_key (value key, value rk, value rounds) {
   _mc_switch_accel(aesni,
-    mc_aes_derive_e_key_generic(key, off1, rk, rounds),
-    _mc_aesni_derive_e_key (_st_uint8_off (key, off1),
+    mc_aes_derive_e_key_generic(key, rk, rounds),
+    _mc_aesni_derive_e_key (_st_uint8 (key),
                             _bp_uint8 (rk),
                             Int_val (rounds)))
   return Val_unit;
 }
 
 CAMLprim value
-mc_aes_derive_d_key (value key, value off1, value kr, value rounds, value rk) {
+mc_aes_derive_d_key (value key, value kr, value rounds, value rk) {
   _mc_switch_accel(aesni,
-    mc_aes_derive_d_key_generic(key, off1, kr, rounds, rk),
-    _mc_aesni_derive_d_key (_st_uint8_off (key, off1),
+    mc_aes_derive_d_key_generic(key, kr, rounds, rk),
+    _mc_aesni_derive_d_key (_st_uint8 (key),
                             _bp_uint8 (kr),
                             Int_val (rounds),
                             Is_block(rk) ? _bp_uint8(Field(rk, 0)) : 0))

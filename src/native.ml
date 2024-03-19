@@ -2,8 +2,8 @@
 module AES = struct
   external enc      : string -> int -> bytes -> int -> string -> int -> int -> unit = "mc_aes_enc_bc" "mc_aes_enc" [@@noalloc]
   external dec      : string -> int -> bytes -> int -> string -> int -> int -> unit = "mc_aes_dec_bc" "mc_aes_dec" [@@noalloc]
-  external derive_e : string -> int -> bytes -> int -> unit = "mc_aes_derive_e_key" [@@noalloc]
-  external derive_d : string -> int -> bytes -> int -> string option -> unit = "mc_aes_derive_d_key" [@@noalloc]
+  external derive_e : string -> bytes -> int -> unit = "mc_aes_derive_e_key" [@@noalloc]
+  external derive_d : string -> bytes -> int -> string option -> unit = "mc_aes_derive_d_key" [@@noalloc]
   external rk_s     : int  -> int = "mc_aes_rk_size" [@@noalloc]
   external mode     : unit -> int = "mc_aes_mode" [@@noalloc]
 end

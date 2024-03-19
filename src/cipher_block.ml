@@ -380,10 +380,10 @@ module AES = struct
         | _ -> invalid_arg "AES.of_secret: key length %u" (String.length key)
       in
       let rk = Bytes.create (Native.AES.rk_s rounds) in
-      init key 0 rk rounds ;
+      init key rk rounds ;
       Bytes.unsafe_to_string rk, rounds
 
-    let derive_d ?e buf off rk rs = Native.AES.derive_d buf off rk rs e
+    let derive_d ?e buf rk rs = Native.AES.derive_d buf rk rs e
 
     let e_of_secret = of_secret_with Native.AES.derive_e
     let d_of_secret = of_secret_with (derive_d ?e:None)

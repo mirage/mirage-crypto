@@ -1232,17 +1232,17 @@ mc_aes_rk_size_generic (value rounds) {
 }
 
 CAMLprim value
-mc_aes_derive_e_key_generic (value key, value off1, value rk, value rounds) {
+mc_aes_derive_e_key_generic (value key, value rk, value rounds) {
   mc_rijndaelSetupEncrypt (_bp_uint32 (rk),
-                           _st_uint8_off (key, off1),
+                           _st_uint8 (key),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
 
 CAMLprim value
-mc_aes_derive_d_key_generic (value key, value off1, value kr, value rounds, value __unused (rk)) {
+mc_aes_derive_d_key_generic (value key, value kr, value rounds, value __unused (rk)) {
   mc_rijndaelSetupDecrypt (_bp_uint32 (kr),
-                           _st_uint8_off (key, off1),
+                           _st_uint8 (key),
                            keybits_of_r (Int_val (rounds)));
   return Val_unit;
 }
