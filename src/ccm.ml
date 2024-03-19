@@ -14,25 +14,28 @@ let encode_len buf ~off size value =
   in
   ass value (pred size)
 
+let set_format buf ?(off = 0) nonce flag_val value =
+  let n = String.length nonce in
+  let small_q = 15 - n in
+  (* first octet block:
+     0          : flags
+     1..15 - q  : N
+     16 - q..15 : Q *)
+  Bytes.set_uint8 buf off flag_val;
+  Bytes.unsafe_blit_string nonce 0 buf (off + 1) n;
+  encode_len buf ~off:(off + n + 1) small_q value
+
 let format nonce adata q t (* mac len *) =
   (* assume n <- [7..13] *)
   (* assume t is valid mac size *)
   (* n + q = 15 *)
   (* a < 2 ^ 64 *)
-  let n = String.length nonce in
-  let small_q = 15 - n in
-  (* first byte (flags): *)
   (* reserved | adata | (t - 2) / 2 | q - 1 *)
+  let small_q = 15 - String.length nonce in
   let b6 = if String.length adata = 0 then 0 else 1 in
   let flag_val = flags b6 ((t - 2) / 2) (small_q - 1) in
-  (* first octet block:
-     0          : flags
-     1..15 - q  : N
-     16 - q..15 : Q *)
   let buf = Bytes.create 16 in
-  Bytes.set_uint8 buf 0 flag_val;
-  Bytes.unsafe_blit_string nonce 0 buf 1 n;
-  encode_len buf ~off:(n + 1) small_q q;
+  set_format buf nonce flag_val q;
   buf
 
 let pad_block ?(off = 0) b =
@@ -72,9 +75,7 @@ let gen_ctr nonce i =
   let small_q = 15 - n in
   let flag_val = flags 0 0 (small_q - 1) in
   let buf = Bytes.create 16 in
-  Bytes.set_uint8 buf 0 flag_val;
-  Bytes.unsafe_blit_string nonce 0 buf 1 n;
-  encode_len buf ~off:(n + 1) small_q i;
+  set_format buf nonce flag_val i;
   buf
 
 let prepare_header nonce adata plen tlen =
