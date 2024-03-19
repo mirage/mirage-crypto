@@ -43,19 +43,26 @@ module Cpu_native = struct
     | _ -> assert false
 end
 
-let _sources = ref []
+module S = Set.Make(struct
+    type t = int * string
+    (* only the name is relevant for comparison - the idx not *)
+    let compare ((_a, an) : int * string) ((_b, bn) : int * string) =
+      String.compare an bn
+  end)
+
+let _sources = ref S.empty
 
 type source = Rng.source
 
 let register_source name =
-  let n = List.length !_sources in
+  let n = S.cardinal !_sources in
   let source = (n, name) in
-  _sources := source :: !_sources;
+  _sources := S.add source !_sources;
   source
 
 let id (idx, _) = idx
 
-let sources () = !_sources
+let sources () = S.elements !_sources
 
 let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
