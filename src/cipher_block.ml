@@ -243,12 +243,12 @@ module Modes = struct
     let derive cs =
       assert (String.length cs >= tagsize);
       let k = Bytes.create keysize in
-      Native.GHASH.keyinit cs 0 k;
+      Native.GHASH.keyinit cs k;
       Bytes.unsafe_to_string k
     let hash0 = Bytes.make tagsize '\x00'
     let digesti ~key i =
       let res = Bytes.copy hash0 in
-      i (fun cs -> Native.GHASH.ghash key res cs 0 (String.length cs));
+      i (fun cs -> Native.GHASH.ghash key res cs (String.length cs));
       Bytes.unsafe_to_string res
   end
 

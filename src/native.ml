@@ -30,8 +30,8 @@ end
 
 module GHASH = struct
   external keysize : unit -> int = "mc_ghash_key_size" [@@noalloc]
-  external keyinit : string -> int -> bytes -> unit = "mc_ghash_init_key" [@@noalloc]
-  external ghash : string -> bytes -> string -> int -> int -> unit = "mc_ghash" [@@noalloc]
+  external keyinit : string -> bytes -> unit = "mc_ghash_init_key" [@@noalloc]
+  external ghash : string -> bytes -> string -> int -> unit = "mc_ghash" [@@noalloc]
   external mode : unit -> int = "mc_ghash_mode" [@@noalloc]
 end
 

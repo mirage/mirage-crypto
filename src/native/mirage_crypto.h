@@ -102,10 +102,10 @@ mc_aes_dec_generic (value src, value off1, value dst, value off2, value rk, valu
 
 CAMLprim value mc_ghash_key_size_generic (__unit ());
 
-CAMLprim value mc_ghash_init_key_generic (value key, value off, value m);
+CAMLprim value mc_ghash_init_key_generic (value key, value m);
 
 CAMLprim value
-mc_ghash_generic (value m, value hash, value src, value off, value len);
+mc_ghash_generic (value m, value hash, value src, value len);
 
 CAMLprim value
 mc_xor_into_generic (value b1, value off1, value b2, value off2, value n);

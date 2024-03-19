@@ -196,19 +196,19 @@ CAMLprim value mc_ghash_key_size (__unit ()) {
   return s;
 }
 
-CAMLprim value mc_ghash_init_key (value key, value off, value m) {
+CAMLprim value mc_ghash_init_key (value key, value m) {
   _mc_switch_accel(pclmul,
-    mc_ghash_init_key_generic(key, off, m),
-    __derive ((__m128i *) _st_uint8_off (key, off), (__m128i *) Bp_val (m)))
+    mc_ghash_init_key_generic(key, m),
+    __derive ((__m128i *) _st_uint8 (key), (__m128i *) Bp_val (m)))
   return Val_unit;
 }
 
 CAMLprim value
-mc_ghash (value k, value hash, value src, value off, value len) {
+mc_ghash (value k, value hash, value src, value len) {
   _mc_switch_accel(pclmul,
-    mc_ghash_generic(k, hash, src, off, len),
+    mc_ghash_generic(k, hash, src, len),
     __ghash ( (__m128i *) Bp_val (k), (__m128i *) Bp_val (hash),
-      (__m128i *) _st_uint8_off (src, off), Int_val (len) ))
+      (__m128i *) _st_uint8 (src), Int_val (len) ))
   return Val_unit;
 }
 
