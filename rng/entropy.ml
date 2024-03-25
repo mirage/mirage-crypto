@@ -55,10 +55,15 @@ let _sources = Atomic.make S.empty
 type source = Rng.source
 
 let register_source name =
-  let n = S.cardinal (Atomic.get _sources) in
-  let source = (n, name) in
-  Atomic.set _sources (S.add source (Atomic.get _sources));
-  source
+  let rec go backoff =
+    let seen = Atomic.get _sources in
+    let n = S.cardinal seen in
+    let source = (n, name) in
+    let after = S.add source (Atomic.get _sources) in
+    if Atomic.compare_and_set _sources seen after = false
+    then go (Backoff.once backoff)
+    else source in
+  go Backoff.default
 
 let id (idx, _) = idx
 

@@ -18,6 +18,7 @@ depends: [
   "dune-configurator" {>= "2.0.0"}
   "duration"
   "logs"
+  "backoff"
   "mirage-crypto" {=version}
   "digestif" {>= "1.1.4"}
   "ounit2" {with-test}
