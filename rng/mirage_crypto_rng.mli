@@ -231,11 +231,13 @@ val unset_default_generator : unit -> unit
 (**/**)
 
 val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
-(** Invoke {{!Generator.generate}generate} on [g] or
-    {{!generator}default generator}. The offset [off] defaults to 0. *)
+(** [generate_into ~g buf ~off len] invokes
+    {{!Generator.generate_into}generate_into} on [g] or
+    {{!generator}default generator}. The random data is put into [buf] starting
+    at [off] (defaults to 0) with [len] bytes. *)
 
 val generate : ?g:g -> int -> string
-(** Invoke {generate_into} on [g] or {{!generator}default generator} and a
+(** Invoke {!generate_into} on [g] or {{!generator}default generator} and a
     freshly allocated string. *)
 
 val block : g option -> int
