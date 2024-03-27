@@ -1,12 +1,5 @@
 open OUnit2
 
-(* Gather quantum uncertainty. *)
-(* let () = *)
-(*   let t  = Unix.gettimeofday () in *)
-(*   let cs = Cstruct.create 8 in *)
-(*   Cstruct.BE.set_uint64 cs 0 Int64.(of_float (t *. 1000.)) ; *)
-(*   Mirage_crypto_rng.reseed cs *)
-
 let () =
   Format.printf "accel: %a\n%!"
     (fun ppf -> List.iter @@ fun x ->

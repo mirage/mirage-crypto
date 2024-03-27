@@ -4,6 +4,94 @@ open Mirage_crypto
 
 open Test_common
 
+let des_ecb_cases =
+  let open Cipher_block in
+
+  let case ~data ~key ~out = vx data, DES.ECB.of_secret (vx key), vx out
+
+  and check (data, key, out) _ =
+    let enc = DES.ECB.encrypt ~key data in
+    let dec = DES.ECB.decrypt ~key enc in
+    assert_oct_equal ~msg:"ciphertext" out enc ;
+    assert_oct_equal ~msg:"plaintext" data dec in
+
+  cases_of check [
+    case
+      ~data:"3f87 9123 0058 8d88  e784 d52a 5d0f 2038
+             f523 6889 bbce ce1f  a7bf 7aa8 6fcc 8245
+             0576 2144 8f11 94d7  07bc 1bba 9b92 5e45
+             3190 c42b 758f 3d91  f68e ebbb ce62 b8e7"
+      ~key: "3f47 f79c c120 7188  4700 217e fd88 bbe4 6f51 27fb 7340 81e5"
+      ~out: "b43b 3ae3 d765 b299  06ea 7c35 ceeb 9e52
+             946c 06e7 0d50 193e  5a22 1ff0 afe9 abe0
+             3b82 ce7d c42a 465d  0f19 45f0 5382 7006
+             b4cd 21f0 5b0f 6843  de2a 67b6 9fb4 6a8f"
+]
+
+let des_cbc_cases =
+  let open Cipher_block in
+
+  let case ~data ~key ~iv ~out = vx data, DES.CBC.of_secret (vx key), vx iv, vx out
+
+  and check (data, key, iv, out) _ =
+    let enc = DES.CBC.encrypt ~key ~iv data in
+    let dec = DES.CBC.decrypt ~key ~iv enc in
+    assert_oct_equal ~msg:"ciphertext" out enc ;
+    assert_oct_equal ~msg:"plaintext" data dec in
+
+  cases_of check [
+    case
+      ~data:
+"8f8c 1e0a c8fb 1614  3cec ed1c 28ac fd6f
+ae6d 3686 5365 511d  6707 68d9 7928 0479
+cacd 6808 1540 d5fc  2971 2a8a c2b1 17c2
+f0e6 a329 e190 44ff  54e7 5eec 8296 6a58"
+      ~iv:"b219 ef93 4c37 aadf"
+      ~key:"7ecd 2240 a2ac a10a  e713 f467 7ea5 d327  e04c cfe0 5cb4 bb09"
+~out:
+"3110 3904 faa1 4ef4  e404 d3d0 f2ee ae58
+5fe9 e6b7 9552 b4f4  3608 03ca 395a f6e9
+2330 69d6 2c6f a52a  d083 faab 3306 b794
+89f6 6671 e3dd 3368  0b13 f8d9 7136 9674"
+  ]
+
+let des_ctr_cases =
+  let case ~data ~key ~ctr ~out = test_case @@ fun _ ->
+    let open Cipher_block.DES.CTR in
+    let key  = vx key |> of_secret
+    and ctr  = vx ctr |> ctr_of_octets
+    and out  = vx out
+    and data = vx data in
+    let enc = encrypt ~key ~ctr data in
+    let dec = decrypt ~key ~ctr enc in
+    assert_oct_equal ~msg:"cipher" out enc;
+    assert_oct_equal ~msg:"plain" data dec
+  in
+  [ case
+      ~data:
+"e9ee ce61 7b75 4c70  79f3 3e5b 036a 7d5b
+4bee f693 0eb3 fa50  9fe3 61d8 713a a487
+a692 21b0 8627 5e6f  d021 4030 7c58 507a
+5fea ca64 d17d a493  7337 8c17 ae05 f3c4
+c6dc 15cc 49c4 3ab0  dab3 9c9b e964 a3c8
+5865 7bb8 6e4d 8507  3866 b805 02c2 4970
+dbbd 3554 20b1 76b2  ee6c 98b3 f7ce 9035
+1e5f 880e"
+~key:"76b9 d4ff d52f 5024  6d24 a3e1 4ebd e605  b82c d81f 0c07 2da1"
+~ctr:"6318 a132 cafd aac0"
+~out:
+"b8d8 aeec d583 009c  f042 ec4d 7ddf c5e5
+386f 89e6 d975 02bc  7583 e113 4899 dabc
+bd93 871b 774b e5ce  4e12 6778 f208 0c53
+52cb a3ac 7567 cdb9  ae81 fc46 25d4 7f9d
+6f3f fbec 4512 8845  3739 1014 2b39 d293
+845a 8505 91a6 f644  5168 bf00 ca4d 4603
+6e5f 418f c43f fabd  272e 1009 c69b 2a6b
+7d2c edb2"
+
+  ]
+
+
 (* NIST SP 800-38A test vectors for block cipher modes of operation *)
 
 let nist_sp_800_38a = vx
@@ -762,6 +850,9 @@ let empty_cases _ =
   assert_oct_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
 
 let suite = [
+  "3DES-ECB" >::: des_ecb_cases ;
+  "3DES-CBC" >::: des_cbc_cases ;
+  "3DES-CTR" >::: des_ctr_cases ;
   "AES-ECB" >::: [ "SP 300-38A" >::: aes_ecb_cases ] ;
   "AES-CBC" >::: [ "SP 300-38A" >::: aes_cbc_cases ] ;
   "AES-CTR" >::: [ "SP 300-38A" >::: aes_ctr_cases; ] ;
