@@ -3,14 +3,14 @@ module Main (R : Mirage_random.S) = struct
     Logs.info (fun m -> m "using Fortuna, entropy sources: %a"
                   Fmt.(list ~sep:(any ", ") Mirage_crypto_rng.Entropy.pp_source)
                   (Mirage_crypto_rng.Entropy.sources ())) ;
-    Logs.info (fun m -> m "64 byte random:@ %a" Cstruct.hexdump_pp
+    Logs.info (fun m -> m "64 byte random:@ %a" (Ohex.pp_hexdump ())
                   (R.generate 64)) ;
-    let n = Cstruct.create 32 in
+    let n = Bytes.(unsafe_to_string (create 32)) in
     let key = Mirage_crypto.Chacha20.of_secret n
-    and nonce = Cstruct.create 12
+    and nonce = Bytes.(unsafe_to_string (create 12))
     in
     Logs.info (fun m -> m "Chacha20/Poly1305 of 32*0, key 32*0, nonce 12*0: %a"
-                  Cstruct.hexdump_pp
+                  (Ohex.pp_hexdump ())
                   (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce n));
     let key = Mirage_crypto_pk.Rsa.generate ~bits:4096 () in
     let signature =
