@@ -22,7 +22,7 @@
 
 static void scrunch(const unsigned char *, unsigned long *);
 static void unscrun(unsigned long *, unsigned char *);
-static void desfunc(unsigned long *, unsigned long *);
+static void desfunc(unsigned long *, const unsigned long *);
 static void cookey(unsigned long *, unsigned long[32]);
 
 static unsigned short bytebit[8]	= {
@@ -283,7 +283,7 @@ static unsigned long SP8[64] = {
 	0x10041040L, 0x00041000L, 0x00041000L, 0x00001040L,
 	0x00001040L, 0x00040040L, 0x10000000L, 0x10041000L };
 
-static void desfunc(unsigned long *block, unsigned long *keys)
+static void desfunc(unsigned long *block, const unsigned long *keys)
 {
 	unsigned long fval, work, right, leftt;
 	int round;
@@ -357,7 +357,7 @@ static void desfunc(unsigned long *block, unsigned long *keys)
 	return;
 	}
 
-void mc_Ddes(const unsigned char from[8], unsigned char into[8], unsigned long* key1, unsigned long* key2, unsigned long* key3)
+void mc_Ddes(const unsigned char from[8], unsigned char into[8], const unsigned long* key1, const unsigned long* key2, const unsigned long* key3)
 {
 	unsigned long work[2];
 
@@ -384,9 +384,9 @@ void mc_des3key(unsigned char hexkey[24], short mode, unsigned long into[96])
 		first = &hexkey[16];
 		third = hexkey;
 		}
-	mc_deskey(&hexkey[8], revmod, into);
-	mc_deskey(third, mode, &into[32]);
-	mc_deskey(first, mode, &into[64]);
+	mc_deskey(&hexkey[8], revmod, &into[32]);
+	mc_deskey(third, mode, &into[64]);
+	mc_deskey(first, mode, into);
 	return;
 	}
 
@@ -423,10 +423,10 @@ void mc_des3key(unsigned char hexkey[24], short mode, unsigned long into[96])
 
 /* OCaml front-end */
 
-static inline void _mc_ddes (const unsigned char *src, unsigned char *dst, unsigned int blocks, unsigned long* key) {
-  unsigned long* key1 = key;
-  unsigned long* key2 = key + 32;
-  unsigned long* key3 = key + 64;
+static inline void _mc_ddes (const unsigned char *src, unsigned char *dst, unsigned int blocks, const unsigned long* key) {
+  const unsigned long* key1 = key;
+  const unsigned long* key2 = key + 32;
+  const unsigned long* key3 = key + 64;
   while (blocks --) {
     mc_Ddes (src, dst, key1, key2, key3);
     src += 8 ; dst += 8;
@@ -446,7 +446,7 @@ mc_des_des3key (value key, value direction, value dst) {
 
 CAMLprim value
 mc_des_ddes (value src, value off1, value dst, value off2, value blocks, value key) {
-  _mc_ddes (_st_uint8_off (src, off1), _bp_uint8_off (dst, off2), Int_val (blocks), (unsigned long *) _bp_uint8 (key));
+  _mc_ddes (_st_uint8_off (src, off1), _bp_uint8_off (dst, off2), Int_val (blocks), (unsigned long *) _st_uint8 (key));
   return Val_unit;
 }
 
