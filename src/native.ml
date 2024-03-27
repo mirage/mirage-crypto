@@ -9,10 +9,8 @@ module AES = struct
 end
 
 module DES = struct
-  external ddes    : string -> int -> bytes -> int -> int -> unit = "mc_des_ddes" [@@noalloc]
-  external des3key : bytes -> int -> unit = "mc_des_des3key" [@@noalloc]
-  external cp3key  : bytes -> unit = "mc_des_cp3key" [@@noalloc]
-  external use3key : string -> unit = "mc_des_use3key" [@@noalloc]
+  external ddes    : string -> int -> bytes -> int -> int -> string -> unit = "mc_des_ddes_bc" "mc_des_ddes" [@@noalloc]
+  external des3key : bytes -> int -> bytes -> unit = "mc_des_des3key" [@@noalloc]
   external k_s     : unit -> int = "mc_des_key_size" [@@noalloc]
 end
 
