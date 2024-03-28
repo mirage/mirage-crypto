@@ -55,10 +55,16 @@ let _sources = Atomic.make S.empty
 type source = Rng.source
 
 let register_source name =
-  let n = S.cardinal (Atomic.get _sources) in
-  let source = (n, name) in
-  Atomic.set _sources (S.add source (Atomic.get _sources));
-  source
+  let rec set () =
+    let sources = Atomic.get _sources in
+    let n = S.cardinal sources in
+    let source = (n, name) in
+    if Atomic.compare_and_set _sources sources (S.add source sources) then
+      source
+    else
+      set ()
+  in
+  set ()
 
 let id (idx, _) = idx
 
