@@ -16,25 +16,19 @@
  */
 
 #include "mirage_crypto.h"
-#include "des_generic.h"
+
+#define EN0    0               /* MODE == encrypt */
+#define DE1    1               /* MODE == decrypt */
 
 static void scrunch(const unsigned char *, unsigned long *);
-static void unscrun(unsigned long *, unsigned char *);
-static void desfunc(unsigned long *, unsigned long *);
-static void cookey(unsigned long *);
+static void unscrun(const unsigned long *, unsigned char *);
+static void desfunc(unsigned long *, const unsigned long *);
+static void cookey(const unsigned long *, unsigned long[32]);
 
-static unsigned long KnL[32] = { 0L };
-static unsigned long KnR[32] = { 0L };
-static unsigned long Kn3[32] = { 0L };
-static unsigned char Df_Key[24] = {
-	0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,
-	0xfe,0xdc,0xba,0x98,0x76,0x54,0x32,0x10,
-	0x89,0xab,0xcd,0xef,0x01,0x23,0x45,0x67 };
-
-static unsigned short bytebit[8]	= {
+static const unsigned short bytebit[8]	= {
 	0200, 0100, 040, 020, 010, 04, 02, 01 };
 
-static unsigned long bigbyte[24] = {
+static const unsigned long bigbyte[24] = {
 	0x800000L,	0x400000L,	0x200000L, 	0x100000L,
 	0x80000L,	0x40000L,	0x20000L,	0x10000L,
 	0x8000L,	0x4000L,	0x2000L,	0x1000L,
@@ -44,22 +38,22 @@ static unsigned long bigbyte[24] = {
 
 /* Use the key schedule specified in the Standard (ANSI X3.92-1981). */
 
-static unsigned char pc1[56] = {
+static const unsigned char pc1[56] = {
 	56, 48, 40, 32, 24, 16,  8,	 0, 57, 49, 41, 33, 25, 17,
 	 9,  1, 58, 50, 42, 34, 26,	18, 10,  2, 59, 51, 43, 35,
 	62, 54, 46, 38, 30, 22, 14,	 6, 61, 53, 45, 37, 29, 21,
 	13,  5, 60, 52, 44, 36, 28,	20, 12,  4, 27, 19, 11,  3 };
 
-static unsigned char totrot[16] = {
+static const unsigned char totrot[16] = {
 	1,2,4,6,8,10,12,14,15,17,19,21,23,25,27,28 };
 
-static unsigned char pc2[48] = {
+static const unsigned char pc2[48] = {
 	13, 16, 10, 23,  0,  4,	 2, 27, 14,  5, 20,  9,
 	22, 18, 11,  3, 25,  7,	15,  6, 26, 19, 12,  1,
 	40, 51, 30, 36, 46, 54,	29, 39, 50, 44, 32, 47,
 	43, 48, 38, 55, 33, 52,	45, 41, 49, 35, 28, 31 };
 
-void mc_deskey(unsigned char key[8], short edf) /* Thanks to James Gillogly & Phil Karn! */
+void mc_deskey(const unsigned char key[8], short edf, unsigned long into[32]) /* Thanks to James Gillogly & Phil Karn! */
 {
 	int i, j, l, m, n;
 	unsigned char pc1m[56], pcr[56];
@@ -90,13 +84,14 @@ void mc_deskey(unsigned char key[8], short edf) /* Thanks to James Gillogly & Ph
 			if( pcr[pc2[j+24]] ) kn[n] |= bigbyte[j];
 			}
 		}
-	cookey(kn);
+	cookey(kn, into);
 	return;
 	}
 
-static void cookey(unsigned long *raw1)
+static void cookey(const unsigned long *raw1, unsigned long into[32])
 {
-	unsigned long *cook, *raw0;
+	unsigned long *cook;
+	const unsigned long *raw0;
 	unsigned long dough[32];
 	int i;
 
@@ -112,38 +107,11 @@ static void cookey(unsigned long *raw1)
 		*cook	|= (*raw1 & 0x0003f000L) >> 4;
 		*cook++	|= (*raw1 & 0x0000003fL);
 		}
-	mc_usekey(dough);
+        for( i = 0; i < 32; i++) {
+          into[i] = dough[i];
+        }
 	return;
 	}
-
-void mc_cpkey(unsigned long into[32])
-{
-	unsigned long *from, *endp;
-
-	from = KnL, endp = &KnL[32];
-	while( from < endp ) *into++ = *from++;
-	return;
-	}
-
-void mc_usekey(unsigned long from[32])
-{
-	unsigned long *to, *endp;
-
-	to = KnL, endp = &KnL[32];
-	while( to < endp ) *to++ = *from++;
-	return;
-	}
-
-void mc_des(unsigned char inblock[8], unsigned char outblock[8])
-{
-	unsigned long work[2];
-
-	scrunch(inblock, work);
-	desfunc(work, KnL);
-	unscrun(work, outblock);
-	return;
-	}
-
 
 static void scrunch(const unsigned char *outof, unsigned long *into)
 {
@@ -159,7 +127,7 @@ static void scrunch(const unsigned char *outof, unsigned long *into)
 	}
 
 
-static void unscrun(unsigned long *outof, unsigned char *into)
+static void unscrun(const unsigned long *outof, unsigned char *into)
 {
 	*into++ = (*outof >> 24) & 0xffL;
 	*into++ = (*outof >> 16) & 0xffL;
@@ -172,7 +140,7 @@ static void unscrun(unsigned long *outof, unsigned char *into)
 	return;
 	}
 
-static unsigned long SP1[64] = {
+static const unsigned long SP1[64] = {
 	0x01010400L, 0x00000000L, 0x00010000L, 0x01010404L,
 	0x01010004L, 0x00010404L, 0x00000004L, 0x00010000L,
 	0x00000400L, 0x01010400L, 0x01010404L, 0x00000400L,
@@ -190,7 +158,7 @@ static unsigned long SP1[64] = {
 	0x00000404L, 0x01000400L, 0x01000400L, 0x00000000L,
 	0x00010004L, 0x00010400L, 0x00000000L, 0x01010004L };
 
-static unsigned long SP2[64] = {
+static const unsigned long SP2[64] = {
 	0x80108020L, 0x80008000L, 0x00008000L, 0x00108020L,
 	0x00100000L, 0x00000020L, 0x80100020L, 0x80008020L,
 	0x80000020L, 0x80108020L, 0x80108000L, 0x80000000L,
@@ -208,7 +176,7 @@ static unsigned long SP2[64] = {
 	0x00108000L, 0x00000000L, 0x80008000L, 0x00008020L,
 	0x80000000L, 0x80100020L, 0x80108020L, 0x00108000L };
 
-static unsigned long SP3[64] = {
+static const unsigned long SP3[64] = {
 	0x00000208L, 0x08020200L, 0x00000000L, 0x08020008L,
 	0x08000200L, 0x00000000L, 0x00020208L, 0x08000200L,
 	0x00020008L, 0x08000008L, 0x08000008L, 0x00020000L,
@@ -226,7 +194,7 @@ static unsigned long SP3[64] = {
 	0x08020000L, 0x08000208L, 0x00000208L, 0x08020000L,
 	0x00020208L, 0x00000008L, 0x08020008L, 0x00020200L };
 
-static unsigned long SP4[64] = {
+static const unsigned long SP4[64] = {
 	0x00802001L, 0x00002081L, 0x00002081L, 0x00000080L,
 	0x00802080L, 0x00800081L, 0x00800001L, 0x00002001L,
 	0x00000000L, 0x00802000L, 0x00802000L, 0x00802081L,
@@ -244,7 +212,7 @@ static unsigned long SP4[64] = {
 	0x00002001L, 0x00002080L, 0x00800000L, 0x00802001L,
 	0x00000080L, 0x00800000L, 0x00002000L, 0x00802080L };
 
-static unsigned long SP5[64] = {
+static const unsigned long SP5[64] = {
 	0x00000100L, 0x02080100L, 0x02080000L, 0x42000100L,
 	0x00080000L, 0x00000100L, 0x40000000L, 0x02080000L,
 	0x40080100L, 0x00080000L, 0x02000100L, 0x40080100L,
@@ -262,7 +230,7 @@ static unsigned long SP5[64] = {
 	0x00080100L, 0x02000100L, 0x40000100L, 0x00080000L,
 	0x00000000L, 0x40080000L, 0x02080100L, 0x40000100L };
 
-static unsigned long SP6[64] = {
+static const unsigned long SP6[64] = {
 	0x20000010L, 0x20400000L, 0x00004000L, 0x20404010L,
 	0x20400000L, 0x00000010L, 0x20404010L, 0x00400000L,
 	0x20004000L, 0x00404010L, 0x00400000L, 0x20000010L,
@@ -280,7 +248,7 @@ static unsigned long SP6[64] = {
 	0x00004000L, 0x00400010L, 0x20004010L, 0x00000000L,
 	0x20404000L, 0x20000000L, 0x00400010L, 0x20004010L };
 
-static unsigned long SP7[64] = {
+static const unsigned long SP7[64] = {
 	0x00200000L, 0x04200002L, 0x04000802L, 0x00000000L,
 	0x00000800L, 0x04000802L, 0x00200802L, 0x04200800L,
 	0x04200802L, 0x00200000L, 0x00000000L, 0x04000002L,
@@ -298,7 +266,7 @@ static unsigned long SP7[64] = {
 	0x00000000L, 0x00200802L, 0x04200000L, 0x00000800L,
 	0x04000002L, 0x04000800L, 0x00000800L, 0x00200002L };
 
-static unsigned long SP8[64] = {
+static const unsigned long SP8[64] = {
 	0x10001040L, 0x00001000L, 0x00040000L, 0x10041040L,
 	0x10000000L, 0x10001040L, 0x00000040L, 0x10000000L,
 	0x00040040L, 0x10040000L, 0x10041040L, 0x00041000L,
@@ -316,7 +284,7 @@ static unsigned long SP8[64] = {
 	0x10041040L, 0x00041000L, 0x00041000L, 0x00001040L,
 	0x00001040L, 0x00040040L, 0x10000000L, 0x10041000L };
 
-static void desfunc(unsigned long *block, unsigned long *keys)
+static void desfunc(unsigned long *block, const unsigned long *keys)
 {
 	unsigned long fval, work, right, leftt;
 	int round;
@@ -390,134 +358,21 @@ static void desfunc(unsigned long *block, unsigned long *keys)
 	return;
 	}
 
-#ifdef D2_DES
-
-void mc_des2key(unsigned char hexkey[16], short mode) /* stomps on Kn3 too */
-{
-	short revmod;
-
-	revmod = (mode == EN0) ? DE1 : EN0;
-	mc_deskey(&hexkey[8], revmod);
-	mc_cpkey(KnR);
-	mc_deskey(hexkey, mode);
-	mc_cpkey(Kn3);					/* Kn3 = KnL */
-	return;
-	}
-
-void mc_Ddes(const unsigned char from[8], unsigned char into[8])
+void mc_Ddes(const unsigned char from[8], unsigned char into[8], const unsigned long* key1, const unsigned long* key2, const unsigned long* key3)
 {
 	unsigned long work[2];
 
 	scrunch(from, work);
-	desfunc(work, KnL);
-	desfunc(work, KnR);
-	desfunc(work, Kn3);
+	desfunc(work, key1);
+	desfunc(work, key2);
+	desfunc(work, key3);
 	unscrun(work, into);
 	return;
 	}
 
-void mc_D2des(unsigned char from[16], unsigned char into[16])
+void mc_des3key(const unsigned char hexkey[24], short mode, unsigned long into[96])
 {
-	unsigned long *right, *l1, swap;
-	unsigned long leftt[2], bufR[2];
-
-	right = bufR;
-	l1 = &leftt[1];
-	scrunch(from, leftt);
-	scrunch(&from[8], right);
-	desfunc(leftt, KnL);
-	desfunc(right, KnL);
-	swap = *l1;
-	*l1 = *right;
-	*right = swap;
-	desfunc(leftt, KnR);
-	desfunc(right, KnR);
-	swap = *l1;
-	*l1 = *right;
-	*right = swap;
-	desfunc(leftt, Kn3);
-	desfunc(right, Kn3);
-	unscrun(leftt, into);
-	unscrun(right, &into[8]);
-	return;
-	}
-
-void mc_makekey(char *aptr /* NULL-terminated */, unsigned char kptr[8])
-{
-	unsigned char *store;
-	int first, i;
-	unsigned long savek[96];
-
-	cpDkey(savek);
-	mc_des2key(Df_Key, EN0);
-	for( i = 0; i < 8; i++ ) kptr[i] = Df_Key[i];
-	first = 1;
-	while( (*aptr != '\0') || first ) {
-		store = kptr;
-		for( i = 0; i < 8 && (*aptr != '\0'); i++ ) {
-			*store++ ^= *aptr & 0x7f;
-			*aptr++ = '\0';
-			}
-		mc_Ddes(kptr, kptr);
-		first = 0;
-		}
-	useDkey(savek);
-	return;
-	}
-
-void mc_make2key(char *aptr /* NULL-terminated */, unsigned char kptr[16])
-{
-	unsigned char *store;
-	int first, i;
-	unsigned long savek[96];
-
-	cpDkey(savek);
-	mc_des2key(Df_Key, EN0);
-	for( i = 0; i < 16; i++ ) kptr[i] = Df_Key[i];
-	first = 1;
-	while( (*aptr != '\0') || first ) {
-		store = kptr;
-		for( i = 0; i < 16 && (*aptr != '\0'); i++ ) {
-			*store++ ^= *aptr & 0x7f;
-			*aptr++ = '\0';
-			}
-		mc_D2des(kptr, kptr);
-		first = 0;
-		}
-	useDkey(savek);
-	return;
-	}
-
-#ifndef D3_DES	/* D2_DES only */
-
-void mc_cp2key(unsigned long into[64])
-{
-	unsigned long *from, *endp;
-
-	cpkey(into);
-	into = &into[32];
-	from = KnR, endp = &KnR[32];
-	while( from < endp ) *into++ = *from++;
-	return;
-	}
-
-void mc_use2key(unsigned long from[64])	/* stomps on Kn3 too */
-{
-	unsigned long *to, *endp;
-
-	usekey(from);
-	from = &from[32];
-	to = KnR, endp = &KnR[32];
-	while( to < endp ) *to++ = *from++;
-	cpkey(Kn3);					/* Kn3 = KnL */
-	return;
-	}
-
-#else	/* D3_DES too */
-
-void mc_des3key(unsigned char hexkey[24], short mode)
-{
-	unsigned char *first, *third;
+	const unsigned char *first, *third;
 	short revmod;
 
 	if( mode == EN0 ) {
@@ -530,99 +385,11 @@ void mc_des3key(unsigned char hexkey[24], short mode)
 		first = &hexkey[16];
 		third = hexkey;
 		}
-	mc_deskey(&hexkey[8], revmod);
-	mc_cpkey(KnR);
-	mc_deskey(third, mode);
-	mc_cpkey(Kn3);
-	mc_deskey(first, mode);
+	mc_deskey(&hexkey[8], revmod, &into[32]);
+	mc_deskey(third, mode, &into[64]);
+	mc_deskey(first, mode, into);
 	return;
 	}
-
-void mc_cp3key(unsigned long into[96])
-{
-	unsigned long *from, *endp;
-
-	mc_cpkey(into);
-	into = &into[32];
-	from = KnR, endp = &KnR[32];
-	while( from < endp ) *into++ = *from++;
-	from = Kn3, endp = &Kn3[32];
-	while( from < endp ) *into++ = *from++;
-	return;
-	}
-
-void mc_use3key(unsigned long from[96])
-{
-	unsigned long *to, *endp;
-
-	mc_usekey(from);
-	from = &from[32];
-	to = KnR, endp = &KnR[32];
-	while( to < endp ) *to++ = *from++;
-	to = Kn3, endp = &Kn3[32];
-	while( to < endp ) *to++ = *from++;
-	return;
-	}
-
-static void D3des(unsigned char from[24], unsigned char into[24])	/* amateur theatrics */
-{
-	unsigned long swap, leftt[2], middl[2], right[2];
-
-	scrunch(from, leftt);
-	scrunch(&from[8], middl);
-	scrunch(&from[16], right);
-	desfunc(leftt, KnL);
-	desfunc(middl, KnL);
-	desfunc(right, KnL);
-	swap = leftt[1];
-	leftt[1] = middl[0];
-	middl[0] = swap;
-	swap = middl[1];
-	middl[1] = right[0];
-	right[0] = swap;
-	desfunc(leftt, KnR);
-	desfunc(middl, KnR);
-	desfunc(right, KnR);
-	swap = leftt[1];
-	leftt[1] = middl[0];
-	middl[0] = swap;
-	swap = middl[1];
-	middl[1] = right[0];
-	right[0] = swap;
-	desfunc(leftt, Kn3);
-	desfunc(middl, Kn3);
-	desfunc(right, Kn3);
-	unscrun(leftt, into);
-	unscrun(middl, &into[8]);
-	unscrun(right, &into[16]);
-	return;
-	}
-
-void mc_make3key(char *aptr /* NULL-terminated   */, unsigned char kptr[24])
-{
-	unsigned char *store;
-	int first, i;
-	unsigned long savek[96];
-
-	mc_cp3key(savek);
-	mc_des3key(Df_Key, EN0);
-	for( i = 0; i < 24; i++ ) kptr[i] = Df_Key[i];
-	first = 1;
-	while( (*aptr != '\0') || first ) {
-		store = kptr;
-		for( i = 0; i < 24 && (*aptr != '\0'); i++ ) {
-			*store++ ^= *aptr & 0x7f;
-			*aptr++ = '\0';
-			}
-		D3des(kptr, kptr);
-		first = 0;
-		}
-	mc_use3key(savek);
-	return;
-	}
-
-#endif	/* D3_DES */
-#endif	/* D2_DES */
 
 /* Validation sets:
  *
@@ -657,9 +424,12 @@ void mc_make3key(char *aptr /* NULL-terminated   */, unsigned char kptr[24])
 
 /* OCaml front-end */
 
-static inline void _mc_ddes (const unsigned char *src, unsigned char *dst, unsigned int blocks) {
+static inline void _mc_ddes (const unsigned char *src, unsigned char *dst, unsigned int blocks, const unsigned long* key) {
+  const unsigned long* key1 = key;
+  const unsigned long* key2 = key + 32;
+  const unsigned long* key3 = key + 64;
   while (blocks --) {
-    mc_Ddes (src, dst);
+    mc_Ddes (src, dst, key1, key2, key3);
     src += 8 ; dst += 8;
   }
 }
@@ -670,25 +440,15 @@ mc_des_key_size (__unit ()) {
 }
 
 CAMLprim value
-mc_des_des3key (value key, value direction) {
-  mc_des3key (_bp_uint8 (key), Int_val (direction));
+mc_des_des3key (value key, value direction, value dst) {
+  mc_des3key (_bp_uint8 (key), Int_val (direction), (unsigned long *) _bp_uint8 (dst));
   return Val_unit;
 }
 
 CAMLprim value
-mc_des_cp3key (value dst) {
-  mc_cp3key ((unsigned long *) _bp_uint8 (dst));
+mc_des_ddes (value src, value off1, value dst, value off2, value blocks, value key) {
+  _mc_ddes (_st_uint8_off (src, off1), _bp_uint8_off (dst, off2), Int_val (blocks), (unsigned long *) _st_uint8 (key));
   return Val_unit;
 }
 
-CAMLprim value
-mc_des_use3key (value src) {
-  mc_use3key ((unsigned long *) _bp_uint8 (src));
-  return Val_unit;
-}
-
-CAMLprim value
-mc_des_ddes (value src, value off1, value dst, value off2, value blocks) {
-  _mc_ddes (_st_uint8_off (src, off1), _bp_uint8_off (dst, off2), Int_val (blocks));
-  return Val_unit;
-}
+__define_bc_6(mc_des_ddes)

@@ -428,8 +428,7 @@ module DES = struct
         invalid_arg "DES.of_secret: key length %u" (String.length key) ;
       let key = Bytes.of_string key in
       let keybuf = Bytes.create k_s in
-      Native.DES.des3key key direction ;
-      Native.DES.cp3key keybuf ;
+      Native.DES.des3key key direction keybuf;
       Bytes.unsafe_to_string keybuf
 
     let e_of_secret = gen_of_secret ~direction:0
@@ -438,8 +437,7 @@ module DES = struct
     let of_secret secret = (e_of_secret secret, d_of_secret secret)
 
     let encrypt ~key ~blocks src off1 dst off2 =
-      Native.DES.use3key key ;
-      Native.DES.ddes src off1 dst off2 blocks
+      Native.DES.ddes src off1 dst off2 blocks key
 
     let decrypt = encrypt
   end
