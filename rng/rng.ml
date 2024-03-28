@@ -54,14 +54,14 @@ let create (type a) ?g ?seed ?(strict=false) ?time (m : a generator) =
   Option.iter (M.reseed ~g) seed;
   Generator (g, strict, m)
 
-let _default_generator = ref None
+let _default_generator = Atomic.make None
 
-let set_default_generator g = _default_generator := Some g
+let set_default_generator g = Atomic.set _default_generator (Some g)
 
-let unset_default_generator () = _default_generator := None
+let unset_default_generator () = Atomic.set _default_generator None
 
 let default_generator () =
-  match !_default_generator with
+  match Atomic.get _default_generator with
   | None -> raise No_default_generator
   | Some g -> g
 
