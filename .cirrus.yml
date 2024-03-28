@@ -5,7 +5,7 @@ freebsd_task:
   env:
     matrix:
       - OCAML_VERSION: 4.13.1
-      - OCAML_VERSION: 4.14.1
+      - OCAML_VERSION: 4.14.2
 
   pkg_install_script: pkg install -y ocaml-opam gmp gmake pkgconf bash
 
