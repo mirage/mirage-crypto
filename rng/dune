@@ -1,5 +1,5 @@
 (library
  (name mirage_crypto_rng)
  (public_name mirage-crypto-rng)
- (libraries mirage-crypto backoff digestif)
+ (libraries mirage-crypto digestif)
  (private_modules entropy fortuna hmac_drbg rng))
