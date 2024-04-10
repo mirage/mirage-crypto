@@ -310,7 +310,7 @@ module AES : sig
   module CTR : Block.CTR with type ctr = int64 * int64
   module GCM : Block.GCM
   module CCM16 : Block.CCM16
-  end
+end
 
 module DES : sig
   module ECB : Block.ECB
