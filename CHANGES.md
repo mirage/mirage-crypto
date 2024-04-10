@@ -6,6 +6,12 @@
 * mirage-crypto: the API uses string instead of cstruct (#214 @reynir @hannesm)
 * mirage-crypto: Hash module has been removed. Use digestif if you need hash
   functions (#213 @hannesm)
+* mirage-crypto: the Cipher_block and Cipher_stream modules have been removed,
+  its contents is inlined:
+  Mirage_crypto.Cipher_block.S -> Mirage_crypto.Block
+  Mirage_crypto.Cipher_stream.S -> Mirage_crypto.Stream
+  Mirage_crypto.Cipher_block.AES.CTR -> Mirage_crypto.AES.CTR
+  (#225 @hannesm, suggested in #224 by @reynir)
 * mirage-crypto-pk: s-expression conversions for private and public keys (Dh,
   Dsa, Rsa) have been removed. You can use PKCS8 for encoding and decoding
   `X509.{Private,Public}_key.{en,de}code_{der,pem}` (#208 @hannesm)
@@ -20,6 +26,15 @@
 
 * mirage-crypto (32 bit systems): CCM with long adata (#207 @reynir)
 
+### Data race free
+
+* mirage-crypto (3DES): avoid global state in key derivation (#223 @hannesm)
+* mirage-crypto-rng: use atomic instead of reference to be domain-safe (#221
+  @dinosaure @reynir @hannesm)
+* mirage-crypto, mirage-crypto-rng, mirage-crypto-pk, mirage-crypto-ec:
+  avoid global buffers, use freshly allocated strings/bytes instead, avoids
+  data races (#186 #219 @dinosaure @reynir @hannesm)
+
 ### Other changes
 
 * PERFORMANCE mirage-crypto: ChaCha20/Poly1305 use string instead of Cstruct.t,
@@ -29,9 +44,6 @@
   hashes (#212 #215 @reynir @hannesm)
 * mirage-crypto-rng: use a set for entropy sources instead of a list
   (#218 @hannesm)
-* mirage-crypto, mirage-crypto-rng, mirage-crypto-pk, mirage-crypto-ec:
-  avoid global buffers, use freshly allocated strings/bytes instead, avoids
-  data races (#186 #219 @dinosaure @reynir @hannesm)
 
 ## v0.11.3 (2024-02-26)
 
