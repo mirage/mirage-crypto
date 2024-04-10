@@ -5,8 +5,6 @@ open Mirage_crypto
 open Test_common
 
 let des_ecb_cases =
-  let open Cipher_block in
-
   let case ~data ~key ~out = vx data, DES.ECB.of_secret (vx key), vx out
 
   and check (data, key, out) _ =
@@ -29,8 +27,6 @@ let des_ecb_cases =
 ]
 
 let des_cbc_cases =
-  let open Cipher_block in
-
   let case ~data ~key ~iv ~out = vx data, DES.CBC.of_secret (vx key), vx iv, vx out
 
   and check (data, key, iv, out) _ =
@@ -57,7 +53,7 @@ f0e6 a329 e190 44ff  54e7 5eec 8296 6a58"
 
 let des_ctr_cases =
   let case ~data ~key ~ctr ~out = test_case @@ fun _ ->
-    let open Cipher_block.DES.CTR in
+    let open DES.CTR in
     let key  = vx key |> of_secret
     and ctr  = vx ctr |> ctr_of_octets
     and out  = vx out
@@ -101,8 +97,6 @@ let nist_sp_800_38a = vx
    f6 9f 24 45 df 4f 9b 17 ad 2b 41 7b e6 6c 37 10"
 
 let aes_ecb_cases =
-  let open Cipher_block in
-
   let case ~key ~out = (AES.ECB.of_secret (vx key), vx out)
 
   and check (key, out) _ =
@@ -134,8 +128,6 @@ let aes_ecb_cases =
   ]
 
 let aes_cbc_cases =
-  let open Cipher_block in
-
   let case ~key ~iv ~out = (AES.CBC.of_secret (vx key), vx iv, vx out)
 
   and check (key, iv, out) _ =
@@ -171,7 +163,7 @@ let aes_cbc_cases =
 
 let aes_ctr_cases =
   let case ~key ~ctr ~out ~ctr1 = test_case @@ fun _ ->
-    let open Cipher_block.AES.CTR in
+    let open AES.CTR in
     let key  = vx key |> of_secret
     and ctr  = vx ctr |> ctr_of_octets
     and ctr1 = vx ctr1 |> ctr_of_octets
@@ -221,8 +213,6 @@ let aes_ctr_cases =
 (* aes gcm *)
 
 let gcm_cases =
-  let open Cipher_block in
-
   let case ~key ~p ~a ~nonce ~c ~t =
     (AES.GCM.of_secret (vx key), vx p, vx a, vx nonce, vx c, vx t) in
 
@@ -412,7 +402,7 @@ let ccm_cases =
 *)
 
 let ccm_regressions =
-  let open Cipher_block.AES.CCM16 in
+  let open AES.CCM16 in
   let no_vs_empty_ad _ =
     (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/166 *)
     (* see RFC 3610 Section 2.1, AD of length 0 should be same as no AD *)
@@ -491,7 +481,7 @@ let ccm_regressions =
   ]
 
 let gcm_regressions =
-  let open Cipher_block.AES.GCM in
+  let open AES.GCM in
   let msg = vx "000102030405060708090a0b0c0d0e0f" in
   let key = of_secret msg
   and nonce = ""
@@ -770,7 +760,6 @@ let poly1305_rfc8439_2_5_2 _ =
     (Poly1305.mac ~key data) output
 
 let empty_cases _ =
-  let open Cipher_block in
   let plain = ""
   and cipher = ""
   in
@@ -845,9 +834,9 @@ let empty_cases _ =
     [| 16 ; 32 |] ;
 
   (* ARC4 *)
-  let key = Cipher_stream.ARC4.of_secret (String.make 16 '\x00') in
-  assert_oct_equal ~msg:"ARC4 encrypt" cipher (Cipher_stream.ARC4.(encrypt ~key plain).message) ;
-  assert_oct_equal ~msg:"ARC4 decrypt" plain (Cipher_stream.ARC4.(decrypt ~key cipher).message)
+  let key = ARC4.of_secret (String.make 16 '\x00') in
+  assert_oct_equal ~msg:"ARC4 encrypt" cipher (ARC4.(encrypt ~key plain).message) ;
+  assert_oct_equal ~msg:"ARC4 decrypt" plain (ARC4.(decrypt ~key cipher).message)
 
 let suite = [
   "3DES-ECB" >::: des_ecb_cases ;

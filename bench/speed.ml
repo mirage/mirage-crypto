@@ -1,7 +1,5 @@
 open Mirage_crypto
 
-open Cipher_block
-
 module Time = struct
 
   let time ~n f a =
@@ -418,7 +416,7 @@ let runv fs =
     (fun ppf -> List.iter @@ fun x ->
       Format.fprintf ppf "%s " @@
         match x with `XOR -> "XOR" | `AES -> "AES" | `GHASH -> "GHASH")
-    Cipher_block.accelerated;
+    accelerated;
   Time.warmup () ;
   List.iter (fun f -> f ()) fs
 

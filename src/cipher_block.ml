@@ -1,6 +1,6 @@
 open Uncommon
 
-module S = struct
+module Block = struct
 
   module type Core = sig
 
@@ -127,7 +127,7 @@ module Counters = struct
 end
 
 module Modes = struct
-  module ECB_of (Core : S.Core) : S.ECB = struct
+  module ECB_of (Core : Block.Core) : Block.ECB = struct
 
     type key = Core.ekey * Core.dkey
 
@@ -148,7 +148,7 @@ module Modes = struct
 
   end
 
-  module CBC_of (Core : S.Core) : S.CBC = struct
+  module CBC_of (Core : Block.Core) : Block.CBC = struct
 
     type key = Core.ekey * Core.dkey
 
@@ -193,8 +193,8 @@ module Modes = struct
 
   end
 
-  module CTR_of (Core : S.Core) (Ctr : Counters.S) :
-    S.CTR with type key = Core.ekey and type ctr = Ctr.ctr =
+  module CTR_of (Core : Block.Core) (Ctr : Counters.S) :
+    Block.CTR with type key = Core.ekey and type ctr = Ctr.ctr =
   struct
     (* FIXME: CTR has more room for speedups. Like stitching. *)
 
@@ -252,7 +252,7 @@ module Modes = struct
       Bytes.unsafe_to_string res
   end
 
-  module GCM_of (C : S.Core) : S.GCM = struct
+  module GCM_of (C : Block.Core) : Block.GCM = struct
 
     let _ = assert (C.block = 16)
     module CTR = CTR_of (C) (Counters.C128be32)
@@ -324,7 +324,7 @@ module Modes = struct
         authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
   end
 
-  module CCM16_of (C : S.Core) : S.CCM16 = struct
+  module CCM16_of (C : Block.Core) : Block.CCM16 = struct
 
     let _ = assert (C.block = 16)
 
@@ -365,7 +365,7 @@ end
 
 module AES = struct
 
-  module Core : S.Core = struct
+  module Core : Block.Core = struct
 
     let key   = [| 16; 24; 32 |]
     let block = 16
@@ -413,7 +413,7 @@ end
 
 module DES = struct
 
-  module Core : S.Core = struct
+  module Core : Block.Core = struct
 
     let key   = [| 24 |]
     let block = 8

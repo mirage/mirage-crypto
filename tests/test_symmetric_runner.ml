@@ -5,7 +5,7 @@ let () =
     (fun ppf -> List.iter @@ fun x ->
       Format.fprintf ppf "%s " @@
         match x with `XOR -> "XOR" | `AES -> "AES" | `GHASH -> "GHASH")
-    Mirage_crypto.Cipher_block.accelerated
+    Mirage_crypto.accelerated
 
 let suite =
   "All" >::: [

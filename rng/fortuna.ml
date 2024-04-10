@@ -1,7 +1,7 @@
 open Mirage_crypto
 open Mirage_crypto.Uncommon
 
-module AES_CTR = Cipher_block.AES.CTR
+module AES_CTR = AES.CTR
 
 module SHAd256 = struct
   open Digestif
