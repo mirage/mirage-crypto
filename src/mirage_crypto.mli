@@ -150,201 +150,177 @@ end
 
     Each algorithm, and each mode of operation, is contained in its own separate
     module. *)
-module Cipher_block : sig
 
-  (** Module types for various block cipher modes of operation. *)
-  module S : sig
+(** Module types for various block cipher modes of operation. *)
+module Block : sig
 
-    (** Raw block cipher in all its glory.
+  (** Modes of operation: *)
 
-        Make absolutely sure to check the arguments. Behavior is unspecified on
-        invalid inputs. *)
-    (* module type Core = sig *)
+  (** {e Electronic Codebook} "mode". *)
+  module type ECB = sig
 
-    (*   type ekey *)
-    (*   type dkey *)
+    type key
+    val of_secret : string -> key
 
-    (*   val of_secret   : string -> ekey * dkey *)
-    (*   val e_of_secret : string -> ekey *)
-    (*   val d_of_secret : string -> dkey *)
+    val key_sizes  : int array
+    val block_size : int
+    val encrypt : key:key -> string -> string
+    val decrypt : key:key -> string -> string
+  end
 
-    (*   val key   : int array *)
-    (*   val block : int *)
+  (** {e Cipher-block chaining} mode. *)
+  module type CBC = sig
 
-    (*   val encrypt : key:ekey -> blocks:int -> Native.buffer -> int -> Native.buffer -> int -> unit *)
-    (*   val decrypt : key:dkey -> blocks:int -> Native.buffer -> int -> Native.buffer -> int -> unit *)
-    (* end *)
+    type key
 
-    (** Modes of operation: *)
+    val of_secret : string -> key
+    (** Construct the encryption key corresponding to [secret].
 
-    (** {e Electronic Codebook} "mode". *)
-    module type ECB = sig
+        @raise Invalid_argument if the length of [secret] is not in
+        {{!key_sizes}[key_sizes]}. *)
 
-      type key
-      val of_secret : string -> key
+    val key_sizes : int array
+    (** Key sizes allowed with this cipher. *)
 
-      val key_sizes  : int array
-      val block_size : int
-      val encrypt : key:key -> string -> string
-      val decrypt : key:key -> string -> string
-    end
+    val block_size : int
+    (** The size of a single block. *)
 
-    (** {e Cipher-block chaining} mode. *)
-    module type CBC = sig
+    val encrypt : key:key -> iv:string -> string -> string
+    (** [encrypt ~key ~iv msg] is [msg] encrypted under [key], using [iv] as the
+        CBC initialization vector.
 
-      type key
+        @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
+        [k * block_size] long. *)
 
-      val of_secret : string -> key
-      (** Construct the encryption key corresponding to [secret].
+    val decrypt : key:key -> iv:string -> string -> string
+    (** [decrypt ~key ~iv msg] is the inverse of [encrypt].
 
-          @raise Invalid_argument if the length of [secret] is not in
-          {{!key_sizes}[key_sizes]}. *)
+        @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
+        [k * block_size] long. *)
 
-      val key_sizes : int array
-      (** Key sizes allowed with this cipher. *)
+    val next_iv : iv:string -> string -> string
+    (** [next_iv ~iv ciphertext] is the first [iv] {e following} the
+        encryption that used [iv] to produce [ciphertext].
 
-      val block_size : int
-      (** The size of a single block. *)
+        For protocols which perform inter-message chaining, this is the [iv]
+        for the next message.
 
-      val encrypt : key:key -> iv:string -> string -> string
-      (** [encrypt ~key ~iv msg] is [msg] encrypted under [key], using [iv] as
-          the CBC initialization vector.
-
-          @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
-          [k * block_size] long. *)
-
-      val decrypt : key:key -> iv:string -> string -> string
-      (** [decrypt ~key ~iv msg] is the inverse of [encrypt].
-
-          @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
-          [k * block_size] long. *)
-
-      val next_iv : iv:string -> string -> string
-      (** [next_iv ~iv ciphertext] is the first [iv] {e following} the
-          encryption that used [iv] to produce [ciphertext].
-
-          For protocols which perform inter-message chaining, this is the [iv]
-          for the next message.
-
-          It is either [iv], when [len ciphertext = 0], or the last block of
-          [ciphertext]. Note that
+        It is either [iv], when [len ciphertext = 0], or the last block of
+        [ciphertext]. Note that
 
 {[encrypt ~iv msg1 || encrypt ~iv:(next_iv ~iv (encrypt ~iv msg1)) msg2
   == encrypt ~iv (msg1 || msg2)]}
 
-          @raise Invalid_argument if the length of [iv] is not [block_size], or
-          the length of [ciphertext] is not [k * block_size] for some [k]. *)
-    end
+        @raise Invalid_argument if the length of [iv] is not [block_size], or
+        the length of [ciphertext] is not [k * block_size] for some [k]. *)
+  end
 
-    (** {e Counter} mode. *)
-    module type CTR = sig
+  (** {e Counter} mode. *)
+  module type CTR = sig
 
-      type key
+    type key
 
-      val of_secret : string -> key
-      (** Construct the encryption key corresponding to [secret].
+    val of_secret : string -> key
+    (** Construct the encryption key corresponding to [secret].
 
-          @raise Invalid_argument if the length of [secret] is not in
-          {{!key_sizes}[key_sizes]}. *)
+        @raise Invalid_argument if the length of [secret] is not in
+        {{!key_sizes}[key_sizes]}. *)
 
-      val key_sizes : int array
-      (** Key sizes allowed with this cipher. *)
+    val key_sizes : int array
+    (** Key sizes allowed with this cipher. *)
 
-      val block_size : int
-      (** The size of a single block. *)
+    val block_size : int
+    (** The size of a single block. *)
 
-      type ctr
+    type ctr
 
-      val stream : key:key -> ctr:ctr -> int -> string
-      (** [stream ~key ~ctr n] is the raw keystream.
+    val stream : key:key -> ctr:ctr -> int -> string
+    (** [stream ~key ~ctr n] is the raw keystream.
 
-          Keystream is the concatenation of successive encrypted counter states.
-          If [E(x)] is the single block [x] encrypted under [key], then keystream
-          is the first [n] bytes of
-          [E(ctr) || E(add ctr 1) || E(add ctr 2) || ...].
+        Keystream is the concatenation of successive encrypted counter states.
+        If [E(x)] is the single block [x] encrypted under [key], then keystream
+        is the first [n] bytes of
+        [E(ctr) || E(add ctr 1) || E(add ctr 2) || ...].
 
-          Note that
+        Note that
 
 {[stream ~key ~ctr (k * block_size) || stream ~key ~ctr:(add ctr k) x
   == stream ~key ~ctr (k * block_size + x)]}
 
-          In other words, it is possible to restart a keystream at [block_size]
-          boundaries by manipulating the counter. *)
+        In other words, it is possible to restart a keystream at [block_size]
+        boundaries by manipulating the counter. *)
 
-      val encrypt : key:key -> ctr:ctr -> string -> string
-      (** [encrypt ~key ~ctr msg] is
+    val encrypt : key:key -> ctr:ctr -> string -> string
+    (** [encrypt ~key ~ctr msg] is
           [stream ~key ~ctr ~off (len msg) lxor msg]. *)
 
-      val decrypt : key:key -> ctr:ctr -> string -> string
-      (** [decrypt] is [encrypt]. *)
+    val decrypt : key:key -> ctr:ctr -> string -> string
+    (** [decrypt] is [encrypt]. *)
 
-      val add_ctr : ctr -> int64 -> ctr
-      (** [add_ctr ctr n] adds [n] to [ctr]. *)
+    val add_ctr : ctr -> int64 -> ctr
+    (** [add_ctr ctr n] adds [n] to [ctr]. *)
 
-      val next_ctr : ctr:ctr -> string -> ctr
-      (** [next_ctr ~ctr msg] is the state of the counter after encrypting or
-          decrypting [msg] with the counter [ctr].
+    val next_ctr : ctr:ctr -> string -> ctr
+    (** [next_ctr ~ctr msg] is the state of the counter after encrypting or
+        decrypting [msg] with the counter [ctr].
 
-          For protocols which perform inter-message chaining, this is the
-          counter for the next message.
+        For protocols which perform inter-message chaining, this is the
+        counter for the next message.
 
-          It is computed as [C.add ctr (ceil (len msg / block_size))]. Note that
-          if [len msg1 = k * block_size],
+        It is computed as [C.add ctr (ceil (len msg / block_size))]. Note that
+        if [len msg1 = k * block_size],
 
 {[encrypt ~ctr msg1 || encrypt ~ctr:(next_ctr ~ctr msg1) msg2
   == encrypt ~ctr (msg1 || msg2)]}
 
-          *)
+    *)
 
-      val ctr_of_octets : string -> ctr
-      (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
-    end
-
-    (** {e Galois/Counter Mode}. *)
-    module type GCM = sig
-
-      include AEAD
-
-      val key_sizes  : int array
-      (** Key sizes allowed with this cipher. *)
-
-      val block_size : int
-      (** The size of a single block. *)
-    end
-
-    (** {e Counter with CBC-MAC} mode. *)
-    module type CCM16 = sig
-
-      include AEAD
-
-      val key_sizes  : int array
-      (** Key sizes allowed with this cipher. *)
-
-      val block_size : int
-      (** The size of a single block. *)
-    end
+    val ctr_of_octets : string -> ctr
+    (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
   end
 
-  module AES : sig
-(*     module Core : S.Core *)
-    module ECB  : S.ECB
-    module CBC  : S.CBC
-    module CTR  : S.CTR with type ctr = int64 * int64
-    module GCM  : S.GCM
-    module CCM16  : S.CCM16
+  (** {e Galois/Counter Mode}. *)
+  module type GCM = sig
+
+    include AEAD
+
+    val key_sizes  : int array
+    (** Key sizes allowed with this cipher. *)
+
+    val block_size : int
+    (** The size of a single block. *)
   end
 
-  module DES : sig
-(*     module Core : S.Core *)
-    module ECB  : S.ECB
-    module CBC  : S.CBC
-    module CTR  : S.CTR with type ctr = int64
-  end
+  (** {e Counter with CBC-MAC} mode. *)
+  module type CCM16 = sig
 
-  val accelerated : [`XOR | `AES | `GHASH] list
-  (** Operations using non-portable, hardware-dependent implementation in
-      this build of the library. *)
+    include AEAD
+
+    val key_sizes  : int array
+    (** Key sizes allowed with this cipher. *)
+
+    val block_size : int
+    (** The size of a single block. *)
+  end
 end
+
+module AES : sig
+  module ECB : Block.ECB
+  module CBC : Block.CBC
+  module CTR : Block.CTR with type ctr = int64 * int64
+  module GCM : Block.GCM
+  module CCM16 : Block.CCM16
+  end
+
+module DES : sig
+  module ECB : Block.ECB
+  module CBC : Block.CBC
+  module CTR : Block.CTR with type ctr = int64
+end
+
+val accelerated : [`XOR | `AES | `GHASH] list
+(** Operations using non-portable, hardware-dependent implementation in
+      this build of the library. *)
 
 (** The ChaCha20 cipher proposed by D.J. Bernstein. *)
 module Chacha20 : sig
@@ -366,18 +342,14 @@ module Chacha20 : sig
   *)
 end
 
-(** Streaming ciphers. *)
-module Cipher_stream : sig
-
-  (** General stream cipher type. *)
-  module type S = sig
-    type key
-    type result = { message : string ; key : key }
-    val of_secret : string -> key
-    val encrypt : key:key -> string -> result
-    val decrypt : key:key -> string -> result
-  end
-
-  (** {e Alleged Rivest Cipher 4}. *)
-  module ARC4 : S
+(** General stream cipher type. *)
+module type Stream = sig
+  type key
+  type result = { message : string ; key : key }
+  val of_secret : string -> key
+  val encrypt : key:key -> string -> result
+  val decrypt : key:key -> string -> result
 end
+
+(** {e Alleged Rivest Cipher 4}. *)
+module ARC4 : Stream

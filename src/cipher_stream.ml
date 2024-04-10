@@ -1,6 +1,6 @@
 open Uncommon
 
-module type S = sig
+module type Stream = sig
   type key
   type result = { message : string ; key : key }
   val of_secret : string -> key

@@ -12,7 +12,7 @@ let sample arr =
 
 (* randomized selfies *)
 
-let ecb_selftest (m : (module Cipher_block.S.ECB)) n =
+let ecb_selftest (m : (module Block.ECB)) n =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
     let data  = Mirage_crypto_rng.generate (C.block_size * 8)
@@ -22,7 +22,7 @@ let ecb_selftest (m : (module Cipher_block.S.ECB)) n =
                |> decrypt ~key |> decrypt ~key ) in
     assert_oct_equal ~msg:"ecb mismatch" data data'
 
-let cbc_selftest (m : (module Cipher_block.S.CBC)) n  =
+let cbc_selftest (m : (module Block.CBC)) n  =
   let module C = ( val m ) in
   "selftest" >:: times ~n @@ fun _ ->
     let data = Mirage_crypto_rng.generate (C.block_size * 8)
@@ -40,7 +40,7 @@ let cbc_selftest (m : (module Cipher_block.S.CBC)) n  =
       C.( let e1 = encrypt ~key ~iv d1 in
           e1 ^ encrypt ~key ~iv:(next_iv ~iv e1) d2)
 
-let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
+let ctr_selftest (m : (module Block.CTR)) n =
   let module M = (val m) in
   let bs = M.block_size in
   "selftest" >:: times ~n @@ fun _ ->
@@ -57,7 +57,7 @@ let ctr_selftest (m : (module Cipher_block.S.CTR)) n =
     assert_oct_equal ~msg:"CTR chain" enc @@
       M.encrypt ~key ~ctr d1 ^ M.encrypt ~key ~ctr:(M.next_ctr ~ctr d1) d2
 
-let ctr_offsets (type c) ~zero (m : (module Cipher_block.S.CTR with type ctr = c)) n =
+let ctr_offsets (type c) ~zero (m : (module Block.CTR with type ctr = c)) n =
   let module M = (val m) in
   "offsets" >:: fun _ ->
     let key = M.of_secret @@ Mirage_crypto_rng.generate M.key_sizes.(0) in
@@ -90,17 +90,17 @@ let xor_selftest n =
 let suite =
   "All" >::: [
     "XOR" >::: [ xor_selftest 300 ] ;
-    "3DES-ECB" >::: [ ecb_selftest (module Cipher_block.DES.ECB) 100 ] ;
+    "3DES-ECB" >::: [ ecb_selftest (module DES.ECB) 100 ] ;
 
-    "3DES-CBC" >::: [ cbc_selftest (module Cipher_block.DES.CBC) 100 ] ;
+    "3DES-CBC" >::: [ cbc_selftest (module DES.CBC) 100 ] ;
 
-    "3DES-CTR" >::: Cipher_block.[ ctr_selftest (module DES.CTR) 100;
-                                   ctr_offsets  (module DES.CTR) 100 ~zero:0L; ] ;
+    "3DES-CTR" >::: [ ctr_selftest (module DES.CTR) 100;
+                      ctr_offsets  (module DES.CTR) 100 ~zero:0L; ] ;
 
-    "AES-ECB" >::: [ ecb_selftest (module Cipher_block.AES.ECB) 100 ] ;
-    "AES-CBC" >::: [ cbc_selftest (module Cipher_block.AES.CBC) 100 ] ;
-    "AES-CTR" >::: Cipher_block.[ ctr_selftest (module AES.CTR) 100;
-                                  ctr_offsets  (module AES.CTR) 100 ~zero:(0L, 0L) ] ;
+    "AES-ECB" >::: [ ecb_selftest (module AES.ECB) 100 ] ;
+    "AES-CBC" >::: [ cbc_selftest (module AES.CBC) 100 ] ;
+    "AES-CTR" >::: [ ctr_selftest (module AES.CTR) 100;
+                     ctr_offsets  (module AES.CTR) 100 ~zero:(0L, 0L) ] ;
 
   ]
 
