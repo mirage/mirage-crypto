@@ -135,7 +135,7 @@ end
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
   let b_uts b = Bytes.unsafe_to_string b
 
-  let create () = Bytes.create P.fe_length
+  let create () = Bytes.make P.fe_length '\000'
 
   let mul a b =
     let tmp = create () in
