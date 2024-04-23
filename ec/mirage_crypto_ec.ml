@@ -158,7 +158,8 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     b_uts tmp
 
   let zero =
-    b_uts (create ())
+    let b = Bytes.make P.fe_length '\000' in
+    b_uts b
 
   let one =
     let fe = create () in
