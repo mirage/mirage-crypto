@@ -6,12 +6,14 @@
 
 (test
  (name test_symmetric_runner)
+ (modes native)
  (libraries test_common mirage-crypto ounit2)
  (package mirage-crypto)
  (modules test_base test_cipher test_symmetric_runner))
 
 (test
  (name test_random_runner)
+ (modes native)
  (libraries test_common mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix
    randomconv ounit2)
  (package mirage-crypto-rng)
@@ -19,6 +21,7 @@
 
 (test
  (name test_pk_runner)
+ (modes native)
  (libraries test_common mirage-crypto-pk mirage-crypto-rng.unix randomconv
    ounit2)
  (package mirage-crypto-pk)
@@ -26,6 +29,7 @@
 
 (test
  (name test_entropy_collection)
+ (modes native)
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
  (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix
@@ -33,24 +37,28 @@
 
 (test
  (name test_entropy_collection_async)
+ (modes native)
  (modules test_entropy_collection_async)
  (package mirage-crypto-rng-async)
  (libraries mirage-crypto-rng-async ohex))
 
 (test
  (name test_entropy)
+ (modes native)
  (modules test_entropy)
  (package mirage-crypto-rng)
  (libraries mirage-crypto-rng ohex))
 
 (test
  (name test_ec)
+ (modes native)
  (modules test_ec)
  (libraries test_common alcotest mirage-crypto-ec mirage-crypto-rng.unix)
  (package mirage-crypto-ec))
 
 (test
  (name test_ec_wycheproof)
+ (modes native)
  (modules test_ec_wycheproof)
  (deps ecdh_secp256r1_test.json ecdsa_secp256r1_sha256_test.json
    ecdsa_secp256r1_sha512_test.json ecdh_secp384r1_test.json
@@ -62,6 +70,14 @@
 
 (tests
  (names     test_eio_rng test_eio_entropy_collection)
+ (modes native)
  (modules   test_eio_rng test_eio_entropy_collection)
  (libraries mirage-crypto-rng-eio duration eio_main ohex)
  (package   mirage-crypto-rng-eio))
+
+(tests
+ (names     test_miou_rng test_miou_entropy_collection)
+ (modes native)
+ (modules   test_miou_rng test_miou_entropy_collection)
+ (libraries mirage-crypto-rng-miou-unix duration ohex)
+ (package   mirage-crypto-rng-miou-unix))

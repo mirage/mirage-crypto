@@ -25,7 +25,8 @@
     {{!Mirage_crypto_rng_async}mirage-crypto-rng-async} (for Async),
     {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
     {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix},
-    and {{!Mirage_crypto_rng_eio}mirage-crypto-rng-eio} (for Eio).
+    {{!Mirage_crypto_rng_eio}mirage-crypto-rng-eio} (for Eio),
+    and {{!Mirage_crypto_rng_miou_unix}mirage-crypto-miou-unix} (for Miou_unix).
 
     The intention is that "initialize" in the respective sub-library is called
     once, which sets the default generator and registers entropy
