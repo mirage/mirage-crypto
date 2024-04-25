@@ -24,6 +24,7 @@ jobs:
           opam-local-packages: |
             *.opam
             !mirage-crypto-rng-eio.opam
+            !mirage-crypto-rng-miou-unix.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
@@ -35,8 +36,8 @@ jobs:
       - name: Test
         run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
 
-  build-test-unix-eio:
-    name : Unix (eio)
+  build-test-ocaml-5:
+    name : Tests with OCaml 5
 
     strategy:
       fail-fast: false
@@ -57,13 +58,14 @@ jobs:
             mirage-crypto.opam
             mirage-crypto-rng.opam
             mirage-crypto-rng-eio.opam
+            mirage-crypto-rng-miou-unix.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-eio
+        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-eio mirage-crypto-rng-miou-unix
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio,mirage-crypto-rng-miou-unix
 
       - name: Test
-        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio,mirage-crypto-rng-miou-unix
