@@ -79,19 +79,20 @@ let initialize (type a) ?g ?(sleep= Duration.of_sec 1) (rng : a generator) =
     let seed =
       let init = Entropy.[ bootstrap; whirlwind_bootstrap; bootstrap; getrandom_init ] in
       List.mapi (fun i fn -> fn i) init |> String.concat "" in
-    let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns rng in
-    set_default_generator rng;
-    call_if_domain_available @@ fun () ->
-    let finally () = compare_and_set running true false in
-    Fun.protect ~finally @@ fun () -> switch @@ fun orphans ->
     let () =
       try let _ = default_generator () in
           Logs.warn (fun m -> m "%s" default_generator_already_set)
       with No_default_generator -> () in
+    let rng = create ?g ~seed ~time:Mtime_clock.elapsed_ns rng in
+    set_default_generator rng;
+    call_if_domain_available @@ fun () -> switch @@ fun orphans ->
     rdrand sleep;
     let source = Entropy.register_source "getrandom" in
     getrandom (Int64.mul sleep 10L) source;
     clean_up sleep orphans
   end else invalid_arg miou_generator_already_launched
 
-let kill prm = Miou.cancel prm
+let kill prm =
+  Miou.cancel prm;
+  compare_and_set running true false;
+  unset_default_generator ()
