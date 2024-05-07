@@ -511,7 +511,7 @@ let ecdsa_rfc6979_p521 =
     let sig' = P521.Dsa.sign ~key:priv ~k msg in
     Alcotest.(check bool __LOC__ true (sig_eq sig'))
   in
-  let _cases = [
+  let cases = [
 
    case Digestif.sha1 ~message:"sample"
    ~k:"089C071B419E1C2820962321787258469511958E80582E95D8378E0C2CCDB3CB
@@ -624,9 +624,9 @@ let ecdsa_rfc6979_p521 =
        CE3"
 
   ] in
-  [ ("public key matches", `Quick, pub_rfc); ("public key compression and decompression", `Quick, pub_key_compression)]
-  (* TODO: our deterministic generator for bit_size mod 8 <> 0 is different from RFC 6979 *)
-(* List.mapi (fun i c -> "RFC 6979 A.2.7 " ^ string_of_int i, `Quick, c) cases *)
+  ("public key matches", `Quick, pub_rfc) ::
+  ("public key compression and decompression", `Quick, pub_key_compression) ::
+  List.mapi (fun i c -> "RFC 6979 A.2.7 " ^ string_of_int i, `Quick, c) cases
 
 let x25519 () =
   (* RFC 7748, 6.1 *)

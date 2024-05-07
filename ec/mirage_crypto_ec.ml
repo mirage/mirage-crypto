@@ -51,6 +51,7 @@ module type Dsa = sig
   type priv
   type pub
   val byte_length : int
+  val bit_length : int
   val priv_of_octets : string -> (priv, error) result
   val priv_to_octets : priv -> string
   val pub_of_octets : string -> (pub, error) result
@@ -85,6 +86,7 @@ module type Parameters = sig
   val n : field_element
   val pident: string
   val byte_length : int
+  val bit_length : int
   val fe_length : int
   val first_byte_bits : int option
 end
@@ -600,6 +602,8 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
   let byte_length = Param.byte_length
 
+  let bit_length = Param.bit_length
+
   let priv_of_octets= S.of_octets
 
   let priv_to_octets = S.to_octets
@@ -632,10 +636,32 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
         (S.to_octets key ^ msg);
       g
 
+    (* Defined in RFC 6979 sec 2.3.2 with
+       - blen = 8 * Param.byte_length
+       - qlen = Param.bit_length *)
+    let bits2int r =
+        (* keep qlen *leftmost* bits *)
+        let shift = (8 * Param.byte_length) - Param.bit_length in
+        if shift = 0 then Bytes.unsafe_to_string r
+        else (
+            (* Assuming shift is < 8 *)
+            let r' = Bytes.create Param.byte_length in
+            for i = 0 to Param.byte_length - 1 do
+                let x = Bytes.get_uint8 r i in
+                let p = if i = 0 then 0x00 else Bytes.get_uint8 r (i - 1) in
+                let v = (x lsr shift) lor (p lsl (8 - shift)) in
+                Bytes.set_uint8 r' i v
+            done;
+            Bytes.unsafe_to_string r'
+        )
+
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
     let gen g =
       let rec go () =
-        let r = Mirage_crypto_rng.generate ~g Param.byte_length in
+        let b = Bytes.create Param.byte_length in
+        Mirage_crypto_rng.generate_into ~g b Param.byte_length;
+        (* truncate to the desired number of bits *)
+        let r = bits2int b in
         if S.is_in_range r then r else go ()
       in
       go ()
@@ -758,6 +784,7 @@ module P256 : Dh_dsa  = struct
     let n = "\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xBC\xE6\xFA\xAD\xA7\x17\x9E\x84\xF3\xB9\xCA\xC2\xFC\x63\x25\x51"
     let pident = "\x3F\xFF\xFF\xFF\xC0\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" |> rev_string (* (Params.p + 1) / 4*)
     let byte_length = 32
+    let bit_length = 256
     let fe_length = 32
     let first_byte_bits = None
   end
@@ -809,6 +836,7 @@ module P384 : Dh_dsa = struct
     let n = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xC7\x63\x4D\x81\xF4\x37\x2D\xDF\x58\x1A\x0D\xB2\x48\xB0\xA7\x7A\xEC\xEC\x19\x6A\xCC\xC5\x29\x73"
     let pident = "\x3F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xBF\xFF\xFF\xFF\xC0\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00" |> rev_string (* (Params.p + 1) / 4*)
     let byte_length = 48
+    let bit_length = 384
     let fe_length = 48
     let first_byte_bits = None
   end
@@ -861,6 +889,7 @@ module P521 : Dh_dsa = struct
     let n = "\x01\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFA\x51\x86\x87\x83\xBF\x2F\x96\x6B\x7F\xCC\x01\x48\xF7\x09\xA5\xD0\x3B\xB5\xC9\xB8\x89\x9C\x47\xAE\xBB\x6F\xB7\x1E\x91\x38\x64\x09"
     let pident = "\x01\x7f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" |> rev_string
     let byte_length = 66
+    let bit_length = 521
     let fe_length = if Sys.word_size == 64 then 72 else 68  (* TODO: is this congruent with C code? *)
     let first_byte_bits = Some 0x01
   end

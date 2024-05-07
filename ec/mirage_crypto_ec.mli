@@ -75,6 +75,9 @@ module type Dsa = sig
   val byte_length : int
   (** [byte_length] is the size of a ECDSA signature in bytes. *)
 
+  val bit_length : int
+  (** [bit_length] is the number of significant bits in a ECDSA signature *)
+
   (** {2 Serialisation} *)
 
   val priv_of_octets : string -> (priv, error) result
