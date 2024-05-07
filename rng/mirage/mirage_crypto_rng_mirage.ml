@@ -30,7 +30,7 @@
 let src = Logs.Src.create "mirage-crypto-rng-mirage" ~doc:"Mirage crypto RNG mirage"
 module Log = (val Logs.src_log src : Logs.LOG)
 
-module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
+module Make (M : Mirage_clock.MCLOCK) = struct
   include Mirage_crypto_rng
 
   let rdrand_task delta =
@@ -42,7 +42,7 @@ module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) = struct
       Lwt.async (fun () ->
           let rec one () =
             rdrand ();
-            T.sleep_ns delta >>=
+            Mirage_time.sleep_ns delta >>=
             one
           in
           one ())

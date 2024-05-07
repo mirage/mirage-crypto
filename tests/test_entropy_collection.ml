@@ -23,7 +23,7 @@ module Printing_rng = struct
   let pools = 1
 end
 
-module E = Mirage_crypto_rng_mirage.Make(Time)(Mclock)
+module E = Mirage_crypto_rng_mirage.Make(Mclock)
 
 let with_entropy act =
   E.initialize (module Printing_rng) >>= fun () ->
@@ -35,4 +35,4 @@ let with_entropy act =
   act ()
 
 let () =
-  Unix_os.(Main.run (with_entropy (fun () -> Time.sleep_ns (Duration.of_sec 3))))
+  Lwt_main.run (with_entropy (fun () -> Mirage_time.sleep_ns (Duration.of_sec 3)))

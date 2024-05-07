@@ -26,7 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) : sig
+module Make (M : Mirage_clock.MCLOCK) : sig
   val initialize :
     ?g:'a -> ?sleep:int64 -> 'a Mirage_crypto_rng.generator -> unit Lwt.t
   (** [initialize ~g ~sleep generator] sets the default generator to the
