@@ -632,28 +632,28 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
     let g ~key msg =
       let g = Mirage_crypto_rng.create ~strict:true drbg in
-      Mirage_crypto_rng.reseed ~g
-        (S.to_octets key ^ msg);
+      Mirage_crypto_rng.reseed ~g (S.to_octets key ^ msg);
       g
 
     (* Defined in RFC 6979 sec 2.3.2 with
        - blen = 8 * Param.byte_length
        - qlen = Param.bit_length *)
     let bits2int r =
-        (* keep qlen *leftmost* bits *)
-        let shift = (8 * Param.byte_length) - Param.bit_length in
-        if shift = 0 then Bytes.unsafe_to_string r
-        else (
-            (* Assuming shift is < 8 *)
-            let r' = Bytes.create Param.byte_length in
-            for i = 0 to Param.byte_length - 1 do
-                let x = Bytes.get_uint8 r i in
-                let p = if i = 0 then 0x00 else Bytes.get_uint8 r (i - 1) in
-                let v = (x lsr shift) lor (p lsl (8 - shift)) in
-                Bytes.set_uint8 r' i v
-            done;
-            Bytes.unsafe_to_string r'
-        )
+      (* keep qlen *leftmost* bits *)
+      let shift = (8 * Param.byte_length) - Param.bit_length in
+      if shift = 0 then
+        Bytes.unsafe_to_string r
+      else
+        (* Assuming shift is < 8 *)
+        let r' = Bytes.create Param.byte_length in
+        let p = ref 0x00 in
+        for i = 0 to Param.byte_length - 1 do
+          let x = Bytes.get_uint8 r i in
+          let v = (x lsr shift) lor (!p lsl (8 - shift)) in
+          p := x;
+          Bytes.set_uint8 r' i v
+        done;
+        Bytes.unsafe_to_string r'
 
     (* take qbit length, and ensure it is suitable for ECDSA (> 0 & < n) *)
     let gen g =
