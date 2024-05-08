@@ -25,6 +25,10 @@
 ### Bugfixes
 
 * mirage-crypto (32 bit systems): CCM with long adata (#207 @reynir)
+* mirage-crypto-ec: fix K_gen for bitlen mod 8 != 0 (reported in #105 that
+  P521 test vectors don't pass, re-reported #228, fixed #230 @Firobe)
+* mirage-crypto-ec: zero out bytes allocated for Field_element.zero (reported
+  mirleft/ocaml-x509#167, fixed #226 @dinosaure)
 
 ### Data race free
 
