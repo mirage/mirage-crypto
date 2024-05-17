@@ -57,9 +57,9 @@ let miou_generator_already_launched =
 
 type rng = unit Miou.t
 
-let rec compare_and_set ?(backoff= Backoff.default) t a b =
+let rec compare_and_set ?(backoff= Miou_backoff.default) t a b =
   if Atomic.compare_and_set t a b = false
-  then compare_and_set ~backoff:(Backoff.once backoff) t a b
+  then compare_and_set ~backoff:(Miou_backoff.once backoff) t a b
 
 let rec clean_up sleep orphans = match Miou.care orphans with
   | Some None | None -> Miou_unix.sleep (Duration.to_f sleep); clean_up sleep orphans
