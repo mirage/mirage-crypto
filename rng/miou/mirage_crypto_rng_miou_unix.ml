@@ -41,7 +41,7 @@ let switch fn =
   let effc : type c. c Effect.t -> ((c, 'r) continuation -> 'r) option
     = function
     | Spawn fn ->
-      ignore (Miou.call_cc ~orphans fn);
+      ignore (Miou.async ~orphans fn);
       Some (fun k -> continue k ())
     | _ -> None in
   match_with fn orphans { retc; exnc; effc }
@@ -71,7 +71,7 @@ let call_if_domain_available fn =
   if current = 0 && available > 0
   || current <> 0 && available > 1
   then Miou.call fn
-  else Miou.call_cc fn
+  else Miou.async fn
 
 let initialize (type a) ?g ?(sleep= Duration.of_sec 1) (rng : a generator) =
   if Atomic.compare_and_set running false true

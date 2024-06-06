@@ -404,6 +404,18 @@ let benchmarks = [
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
         generate_into ~g buf ~off:0 (Bytes.length buf))) ;
+
+  bm "pfortuna" (fun name ->
+    let open Mirage_crypto_rng_miou_unix.Pfortuna in
+    Miou_unix.run ~domains:2 @@ fun () ->
+    let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
+    let g = create () in
+    reseed ~g "abcd" ;
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        generate_into ~g buf ~off:0 (Bytes.length buf));
+    Mirage_crypto_rng_miou_unix.kill rng) ;
+
 ]
 
 let help () =

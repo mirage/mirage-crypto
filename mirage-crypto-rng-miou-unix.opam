@@ -15,7 +15,7 @@ build: [ ["dune" "subst"] {dev}
 depends: [
   "ocaml" {>= "5.0.0"}
   "dune" {>= "2.7"}
-  "miou"
+  "miou" {>= "0.2.0"}
   "logs"
   "mirage-crypto-rng" {=version}
   "duration"
@@ -26,7 +26,3 @@ description: """
 Mirage-crypto-rng-miou-unix feeds the entropy source for Mirage_crypto_rng-based
 random number generator implementations, in an miou.unix-friendly way.
 """
-
-pin-depends: [
-  [ "miou.dev" "git+https://github.com/robur-coop/miou.git#b43d607e45fe35c2ab5e9ad1c50f22ada6d11c2a" ]
-]
