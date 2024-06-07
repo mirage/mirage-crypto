@@ -37,9 +37,9 @@ end
  * Unsolved: bounds-checked XORs are slowing things down considerably... *)
 external xor_into_bytes : string -> int -> bytes -> int -> int -> unit = "mc_xor_into_bytes" [@@noalloc]
 
-external count8be   : bytes -> bytes -> blocks:int -> unit = "mc_count_8_be"    [@@noalloc]
-external count16be  : bytes -> bytes -> blocks:int -> unit = "mc_count_16_be"   [@@noalloc]
-external count16be4 : bytes -> bytes -> blocks:int -> unit = "mc_count_16_be_4" [@@noalloc]
+external count8be   : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_8_be"    [@@noalloc]
+external count16be  : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_16_be"   [@@noalloc]
+external count16be4 : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_16_be_4" [@@noalloc]
 
 external misc_mode : unit -> int = "mc_misc_mode" [@@noalloc]
 

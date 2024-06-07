@@ -99,7 +99,7 @@ module Counters = struct
     val size : int
     val add  : ctr -> int64 -> ctr
     val of_octets : string -> ctr
-    val unsafe_count_into : ctr -> bytes -> blocks:int -> unit
+    val unsafe_count_into : ctr -> bytes -> off:int -> blocks:int -> unit
   end
 
   module C64be = struct
@@ -107,10 +107,10 @@ module Counters = struct
     let size = 8
     let of_octets cs = String.get_int64_be cs 0
     let add = Int64.add
-    let unsafe_count_into t buf ~blocks =
-      let tmp = Bytes.create 8 in
-      Bytes.set_int64_be tmp 0 t;
-      Native.count8be tmp buf ~blocks
+    let unsafe_count_into t buf ~off ~blocks =
+      let ctr = Bytes.create 8 in
+      Bytes.set_int64_be ctr 0 t;
+      Native.count8be ~ctr buf ~off ~blocks
   end
 
   module C128be = struct
@@ -123,10 +123,10 @@ module Counters = struct
       let w0'  = Int64.add w0 n in
       let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
       ((if flip then Int64.succ w1 else w1), w0')
-    let unsafe_count_into (w1, w0) buf ~blocks =
-      let tmp = Bytes.create 16 in
-      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
-      Native.count16be tmp buf ~blocks
+    let unsafe_count_into (w1, w0) buf ~off ~blocks =
+      let ctr = Bytes.create 16 in
+      Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
+      Native.count16be ~ctr buf ~off ~blocks
   end
 
   module C128be32 = struct
@@ -134,10 +134,10 @@ module Counters = struct
     let add (w1, w0) n =
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
-    let unsafe_count_into (w1, w0) buf ~blocks =
-      let tmp = Bytes.create 16 in
-      Bytes.set_int64_be tmp 0 w1; Bytes.set_int64_be tmp 8 w0;
-      Native.count16be4 tmp buf ~blocks
+    let unsafe_count_into (w1, w0) buf ~off ~blocks =
+      let ctr = Bytes.create 16 in
+      Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
+      Native.count16be4 ~ctr buf ~off ~blocks
   end
 end
 
@@ -280,13 +280,13 @@ module Modes = struct
     let stream ~key ~ctr n =
       let blocks = imax 0 n / block_size in
       let buf = Bytes.create n in
-      Ctr.unsafe_count_into ctr ~blocks buf ;
+      Ctr.unsafe_count_into ctr buf ~off:0 ~blocks ;
       Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) 0 buf 0 ;
       let slack = imax 0 n mod block_size in
       if slack <> 0 then begin
         let buf' = Bytes.create block_size in
         let ctr = Ctr.add ctr (Int64.of_int blocks) in
-        Ctr.unsafe_count_into ctr ~blocks:1 buf' ;
+        Ctr.unsafe_count_into ctr buf' ~off:0 ~blocks:1 ;
         Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string buf') 0 buf' 0 ;
         Bytes.unsafe_blit buf' 0 buf (blocks * block_size) slack
       end;
