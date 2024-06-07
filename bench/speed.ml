@@ -405,7 +405,12 @@ let benchmarks = [
   bm "aes-128-ctr" (fun name ->
     let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
     and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_octets in
-    throughput name (fun cs -> AES.CTR.encrypt ~key ~ctr cs)) ;
+    throughput_into name (fun dst cs -> AES.CTR.encrypt_into ~key ~ctr cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-ctr-unsafe" (fun name ->
+    let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
+    and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_octets in
+    throughput_into name (fun dst cs -> AES.CTR.unsafe_encrypt_into ~key ~ctr cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-gcm" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)

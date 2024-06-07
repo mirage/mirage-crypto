@@ -64,18 +64,29 @@ module Block = struct
     type key
     val of_secret : string -> key
 
-    type ctr
-
     val key_sizes  : int array
     val block_size : int
+
+    type ctr
+    val add_ctr        : ctr -> int64 -> ctr
+    val next_ctr       : ?off:int -> string -> ctr:ctr -> ctr
+    val ctr_of_octets  : string -> ctr
 
     val stream  : key:key -> ctr:ctr -> int -> string
     val encrypt : key:key -> ctr:ctr -> string -> string
     val decrypt : key:key -> ctr:ctr -> string -> string
 
-    val add_ctr        : ctr -> int64 -> ctr
-    val next_ctr       : ctr:ctr -> string -> ctr
-    val ctr_of_octets  : string -> ctr
+    val stream_into  : key:key -> ctr:ctr -> bytes -> off:int -> int -> unit
+    val encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    val decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+
+    val unsafe_stream_into  : key:key -> ctr:ctr -> bytes -> off:int -> int -> unit
+    val unsafe_encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    val unsafe_decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
   end
 
   module type GCM = sig
@@ -277,30 +288,58 @@ module Modes = struct
     let (key_sizes, block_size) = Core.(key, block)
     let of_secret = Core.e_of_secret
 
-    let stream ~key ~ctr n =
-      let blocks = imax 0 n / block_size in
-      let buf = Bytes.create n in
-      Ctr.unsafe_count_into ctr buf ~off:0 ~blocks ;
-      Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) 0 buf 0 ;
-      let slack = imax 0 n mod block_size in
+    let unsafe_stream_into ~key ~ctr buf ~off len =
+      let blocks = imax 0 len / block_size in
+      Ctr.unsafe_count_into ctr buf ~off ~blocks ;
+      Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) off buf off ;
+      let slack = imax 0 len mod block_size in
       if slack <> 0 then begin
         let buf' = Bytes.create block_size in
         let ctr = Ctr.add ctr (Int64.of_int blocks) in
         Ctr.unsafe_count_into ctr buf' ~off:0 ~blocks:1 ;
         Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string buf') 0 buf' 0 ;
-        Bytes.unsafe_blit buf' 0 buf (blocks * block_size) slack
-      end;
+        Bytes.unsafe_blit buf' 0 buf (off + blocks * block_size) slack
+      end
+
+    let stream_into ~key ~ctr buf ~off len =
+      if Bytes.length buf - off < len then
+        invalid_arg "CTR: buffer length %u - off %u < len %u"
+          (Bytes.length buf) off len;
+      unsafe_stream_into ~key ~ctr buf ~off len
+
+    let stream ~key ~ctr n =
+      let buf = Bytes.create n in
+      unsafe_stream_into ~key ~ctr buf ~off:0 n;
       Bytes.unsafe_to_string buf
 
+    let unsafe_encrypt_into ~key ~ctr src ~src_off dst ~dst_off len =
+      unsafe_stream_into ~key ~ctr dst ~off:dst_off len;
+      Uncommon.unsafe_xor_into src ~src_off dst ~dst_off len
+
+    let encrypt_into ~key ~ctr src ~src_off dst ~dst_off len =
+      if String.length src - src_off < len then
+        invalid_arg "CTR: src length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "CTR: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      unsafe_encrypt_into ~key ~ctr src ~src_off dst ~dst_off len
+
     let encrypt ~key ~ctr src =
-      let res = Bytes.unsafe_of_string (stream ~key ~ctr (String.length src)) in
-      Native.xor_into_bytes src 0 res 0 (String.length src) ;
-      Bytes.unsafe_to_string res
+      let len = String.length src in
+      let dst = Bytes.create len in
+      encrypt_into ~key ~ctr src ~src_off:0 dst ~dst_off:0 len;
+      Bytes.unsafe_to_string dst
 
     let decrypt = encrypt
 
+    let decrypt_into = encrypt_into
+
+    let unsafe_decrypt_into = unsafe_encrypt_into
+
     let add_ctr = Ctr.add
-    let next_ctr ~ctr msg = add_ctr ctr (Int64.of_int @@ String.length msg // block_size)
+    let next_ctr ?(off = 0) msg ~ctr =
+      add_ctr ctr (Int64.of_int @@ (String.length msg - off) // block_size)
     let ctr_of_octets = Ctr.of_octets
   end
 

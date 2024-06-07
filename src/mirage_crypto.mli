@@ -202,20 +202,18 @@ module Block : sig
 
     (**/**)
     val unsafe_encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
-    (** [unsafe_encrypt_into ~key src ~src_off dst dst_off len] encrypts [len]
-        octets from [src] starting at [src_off] into [dst] starting at
-        [dst_off]. Since buffer lengths and block sizes are not checked, this
-        may cause memory issues if an invariant is violated:
+    (** [unsafe_encrypt_into] is {!encrypt_into}, but without bounds checks.
+
+        This may cause memory issues if an invariant is violated:
         {ul
         {- [len] must be a multiple of {!block_size},}
         {- [String.length src - src_off >= len],}
         {- [Bytes.length dst - dst_off >= len].}} *)
 
     val unsafe_decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
-    (** [unsafe_decrypt_into ~key src ~src_off dst dst_off len] decrypts [len]
-        octets from [src] starting at [src_off] into [dst] starting at
-        [dst_off]. Since buffer lengths and block sizes are not checked, this
-        may cause memory issues if an invariant is violated:
+    (** [unsafe_decrypt_into] is {!decrypt_into}, but without bounds checks.
+
+        This may cause memory issues if an invariant is violated:
         {ul
         {- [len] must be a multiple of {!block_size},}
         {- [String.length src - src_off >= len],}
@@ -260,8 +258,8 @@ module Block : sig
         For protocols which perform inter-message chaining, this is the [iv]
         for the next message.
 
-        It is either [iv], when [len ciphertext = 0], or the last block of
-        [ciphertext]. Note that
+        It is either [iv], when [String.length ciphertext - off = 0], or the
+        last block of [ciphertext]. Note that
 
 {[encrypt ~iv msg1 || encrypt ~iv:(next_iv ~iv (encrypt ~iv msg1)) msg2
   == encrypt ~iv (msg1 || msg2)]}
@@ -293,11 +291,9 @@ module Block : sig
     (**/**)
     val unsafe_encrypt_into : key:key -> iv:string -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
-    (** [unsafe_encrypt_into ~key ~iv src ~src_off dst dst_off len] encrypts [len]
-        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+    (** [unsafe_encrypt_into] is {!encrypt_into}, but without bounds checks.
 
-        It is unsafe since buffer lengths are not checks. This may casue memory
-        issues if an invariant is violated:
+        This may casue memory issues if an invariant is violated:
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
@@ -306,11 +302,9 @@ module Block : sig
 
     val unsafe_decrypt_into : key:key -> iv:string -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
-    (** [unsafe_decrypt_into ~key ~iv src ~src_off dst dst_off len] decrypts [len]
-        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+    (** [unsafe_decrypt_into] is {!decrypt_into}, but without bounds checks.
 
-        It is unsafe since buffer lengths are not checks. This may casue memory
-        issues if an invariant is violated:
+        This may casue memory issues if an invariant is violated:
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
@@ -319,13 +313,10 @@ module Block : sig
 
     val unsafe_encrypt_into_inplace : key:key -> iv:string ->
       bytes -> dst_off:int -> int -> unit
-    (** [unsafe_encrypt_into_inplace ~key ~iv dst dst_off len] encrypts [len]
-        octets from [dst] starting at [dst_off] into [dst] starting at [dst_off].
+    (** [unsafe_encrypt_into_inplace] is {!unsafe_encrypt_into}, but assumes
+        that [dst] already contains the mesage to be encrypted.
 
-        The [dst] buffer must contain the message to be encrypted.
-
-        It is unsafe since buffer lengths are not checks. This may casue memory
-        issues if an invariant is violated:
+        This may casue memory issues if an invariant is violated:
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
@@ -353,6 +344,27 @@ end
 
     type ctr
 
+    val add_ctr : ctr -> int64 -> ctr
+    (** [add_ctr ctr n] adds [n] to [ctr]. *)
+
+    val next_ctr : ?off:int -> string -> ctr:ctr -> ctr
+    (** [next_ctr ~off msg ~ctr] is the state of the counter after encrypting or
+        decrypting [msg] at offset [off] with the counter [ctr].
+
+        For protocols which perform inter-message chaining, this is the
+        counter for the next message.
+
+        It is computed as [C.add ctr (ceil (len msg / block_size))]. Note that
+        if [len msg1 = k * block_size],
+
+{[encrypt ~ctr msg1 || encrypt ~ctr:(next_ctr ~ctr msg1) msg2
+  == encrypt ~ctr (msg1 || msg2)]}
+
+    *)
+
+    val ctr_of_octets : string -> ctr
+    (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
+
     val stream : key:key -> ctr:ctr -> int -> string
     (** [stream ~key ~ctr n] is the raw keystream.
 
@@ -371,31 +383,51 @@ end
 
     val encrypt : key:key -> ctr:ctr -> string -> string
     (** [encrypt ~key ~ctr msg] is
-          [stream ~key ~ctr ~off (len msg) lxor msg]. *)
+          [stream ~key ~ctr (len msg) lxor msg]. *)
 
     val decrypt : key:key -> ctr:ctr -> string -> string
     (** [decrypt] is [encrypt]. *)
 
-    val add_ctr : ctr -> int64 -> ctr
-    (** [add_ctr ctr n] adds [n] to [ctr]. *)
+    val stream_into  : key:key -> ctr:ctr -> bytes -> off:int -> int -> unit
+    (** [stream_into ~key ~ctr dst ~off len] is the raw key stream put into
+        [dst] starting at [off].
 
-    val next_ctr : ctr:ctr -> string -> ctr
-    (** [next_ctr ~ctr msg] is the state of the counter after encrypting or
-        decrypting [msg] with the counter [ctr].
+        @raise Invalid_argument if [Bytes.length dst - off < len]. *)
 
-        For protocols which perform inter-message chaining, this is the
-        counter for the next message.
+    val encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [encrypt_into ~key ~ctr src ~src_off dst ~dst_off len] produces the
+        key stream into [dst] at [dst_off], and then xors it with [src] at
+        [src_off].
 
-        It is computed as [C.add ctr (ceil (len msg / block_size))]. Note that
-        if [len msg1 = k * block_size],
+        @raise Invalid_argument if [Bytes.length dst - off < len].
+        @raise Invalid_argument if [String.length src - off < len]. *)
 
-{[encrypt ~ctr msg1 || encrypt ~ctr:(next_ctr ~ctr msg1) msg2
-  == encrypt ~ctr (msg1 || msg2)]}
+    val decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [decrypt_into] is {!encrypt_into}. *)
 
-    *)
+    (**/**)
+    val unsafe_stream_into  : key:key -> ctr:ctr -> bytes -> off:int -> int -> unit
+    (** [unsafe_stream_into] is {!stream_into}, but without bounds checks.
 
-    val ctr_of_octets : string -> ctr
-    (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
+        This may cause memory issues if the invariant is violated:
+        {ul
+        {- [Bytes.length buf - off >= len].}} *)
+
+    val unsafe_encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [unsafe_encrypt_into] is {!encrypt_into}, but without bounds checks.
+
+        This may cause memory issues if an invariant is violated:
+        {ul
+        {- [Bytes.length dst - off >= len],}
+        {- [String.length src - off < len].}} *)
+
+    val unsafe_decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [unsafe_decrypt_into] is {!unsafe_encrypt_into}. *)
+    (**/**)
   end
 
   (** {e Galois/Counter Mode}. *)
