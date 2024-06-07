@@ -45,6 +45,15 @@ let throughput title f =
     Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
       size (bw /. mb) iters time
 
+let throughput_into title f =
+  Printf.printf "\n* [%s]\n%!" title ;
+  sizes |> List.iter @@ fun size ->
+    Gc.full_major () ;
+    let dst = Bytes.create size in
+    let (iters, time, bw) = burn (f dst) size in
+    Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
+      size (bw /. mb) iters time
+
 let count_period = 10.
 
 let count f n =
@@ -353,7 +362,13 @@ let benchmarks = [
 
   bm "aes-128-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
-    throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.ECB.encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-ecb-unsafe" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
+    throughput_into name
+      (fun dst cs -> AES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-cbc-e" (fun name ->
     let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)

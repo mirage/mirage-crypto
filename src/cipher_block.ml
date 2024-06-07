@@ -28,6 +28,10 @@ module Block = struct
     val block_size : int
     val encrypt : key:key -> string -> string
     val decrypt : key:key -> string -> string
+    val encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    val decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    val unsafe_encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    val unsafe_decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
   end
 
   module type CBC = sig
@@ -134,17 +138,43 @@ module Modes = struct
 
     let of_secret = Core.of_secret
 
-    let (encrypt, decrypt) =
-      let ecb xform key src =
-        let n = String.length src in
-        if n mod block_size <> 0 then invalid_arg "ECB: length %u" n;
-        let dst = Bytes.create n in
-        xform ~key ~blocks:(n / block_size) src 0 dst 0 ;
-        Bytes.unsafe_to_string dst
-      in
-      (fun ~key:(key, _) src -> ecb Core.encrypt key src),
-      (fun ~key:(_, key) src -> ecb Core.decrypt key src)
+    let unsafe_ecb xform key src src_off dst dst_off len =
+      xform ~key ~blocks:(len / block_size) src src_off dst dst_off
 
+    let ecb xform key src src_off dst dst_off len =
+      if len mod block_size <> 0 then
+        invalid_arg "ECB: length %u not of block size" len;
+      if String.length src - src_off < len then
+        invalid_arg "ECB: source length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "ECB: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      unsafe_ecb xform key src src_off dst dst_off len
+
+    let encrypt_into ~key:(key, _) src ~src_off dst ~dst_off len =
+      ecb Core.encrypt key src src_off dst dst_off len
+
+    let unsafe_encrypt_into ~key:(key, _) src ~src_off dst ~dst_off len =
+      unsafe_ecb Core.encrypt key src src_off dst dst_off len
+
+    let decrypt_into ~key:(_, key) src ~src_off dst ~dst_off len =
+      ecb Core.decrypt key src src_off dst dst_off len
+
+    let unsafe_decrypt_into ~key:(_, key) src ~src_off dst ~dst_off len =
+      unsafe_ecb Core.decrypt key src src_off dst dst_off len
+
+    let encrypt ~key src =
+      let len = String.length src in
+      let dst = Bytes.create len in
+      encrypt_into ~key src ~src_off:0 dst ~dst_off:0 len;
+      Bytes.unsafe_to_string dst
+
+    let decrypt ~key src =
+      let len = String.length src in
+      let dst = Bytes.create len in
+      decrypt_into ~key src ~src_off:0 dst ~dst_off:0 len;
+      Bytes.unsafe_to_string dst
   end
 
   module CBC_of (Core : Block.Core) : Block.CBC = struct

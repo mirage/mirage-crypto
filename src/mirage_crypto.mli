@@ -157,12 +157,70 @@ module Block : sig
   module type ECB = sig
 
     type key
+
     val of_secret : string -> key
+    (** Construct the encryption key corresponding to [secret].
+
+        @raise Invalid_argument if the length of [secret] is not in
+        {{!key_sizes}[key_sizes]}. *)
 
     val key_sizes  : int array
+    (** Key sizes allowed with this cipher. *)
+
     val block_size : int
+    (** The size of a single block. *)
+
     val encrypt : key:key -> string -> string
+    (** [encrypt ~key src] encrypts [src] into a freshly allocated buffer of the
+        same size using [key].
+
+        @raise Invalid_argument if the length of [src] is not a multiple of
+        {!block_size}. *)
+
     val decrypt : key:key -> string -> string
+    (** [decrypt ~key src] decrypts [src] into a freshly allocated buffer of the
+        same size using [key].
+
+        @raise Invalid_argument if the length of [src] is not a multiple of
+        {!block_size}. *)
+
+    val encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    (** [encrypt_into ~key src ~src_off dst dst_off len] encrypts [len] octets
+        from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        @raise Invalid_argument if [len] is not a multiple of {!block_size}.
+        @raise Invalid_argument if [String.length src - src_off < len].
+        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+
+    val decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    (** [decrypt_into ~key src ~src_off dst dst_off len] decrypts [len] octets
+        from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        @raise Invalid_argument if [len] is not a multiple of {!block_size}.
+        @raise Invalid_argument if [String.length src - src_off < len].
+        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+
+    (**/**)
+    val unsafe_encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    (** [unsafe_encrypt_into ~key src ~src_off dst dst_off len] encrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at
+        [dst_off]. Since buffer lengths and block sizes are not checked, this
+        may cause memory issues if an invariant is violated:
+        {ul
+        {- [len] must be a multiple of {!block_size},}
+        {- [String.length src - src_off >= len],}
+        {- [Bytes.length dst - dst_off >= len].}} *)
+
+    val unsafe_decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+    (** [unsafe_decrypt_into ~key src ~src_off dst dst_off len] decrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at
+        [dst_off]. Since buffer lengths and block sizes are not checked, this
+        may cause memory issues if an invariant is violated:
+        {ul
+        {- [len] must be a multiple of {!block_size},}
+        {- [String.length src - src_off >= len],}
+        {- [Bytes.length dst - dst_off >= len].}} *)
+    (**/**)
   end
 
   (** {e Cipher-block chaining} mode. *)
