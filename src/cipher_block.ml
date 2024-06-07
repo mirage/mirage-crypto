@@ -347,6 +347,7 @@ module Modes = struct
     type key
     val derive  : string -> key
     val digesti : key:key -> (string Uncommon.iter) -> string
+    val digesti_off_len : key:key -> (string * int * int) Uncommon.iter -> string
     val tagsize : int
   end = struct
     type key = string
@@ -357,10 +358,15 @@ module Modes = struct
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs k;
       Bytes.unsafe_to_string k
+    let digesti_off_len ~key i =
+      let res = Bytes.make tagsize '\x00' in
+      i (fun (cs, off, len) -> Native.GHASH.ghash key res cs off len);
+      Bytes.unsafe_to_string res
     let digesti ~key i =
       let res = Bytes.make tagsize '\x00' in
-      i (fun cs -> Native.GHASH.ghash key res cs (String.length cs));
+      i (fun cs -> Native.GHASH.ghash key res cs 0 (String.length cs));
       Bytes.unsafe_to_string res
+
   end
 
   module GCM_of (C : Block.Core) : Block.GCM = struct
@@ -397,36 +403,74 @@ module Modes = struct
         CTR.ctr_of_octets @@
         GHASH.digesti ~key:hkey @@ iter2 nonce (pack64s 0L (bits64 nonce))
 
-    let tag ~key ~hkey ~ctr ?(adata = "") cdata =
-      CTR.encrypt ~key ~ctr @@
-        GHASH.digesti ~key:hkey @@
-          iter3 adata cdata (pack64s (bits64 adata) (bits64 cdata))
+    let unsafe_tag_into ~key ~hkey ~ctr ?(adata = "") cdata ~off ~len dst ~tag_off =
+      CTR.unsafe_encrypt_into ~key ~ctr
+        (GHASH.digesti_off_len ~key:hkey
+           (iter3 (adata, 0, String.length adata) (cdata, off, len)
+              (pack64s (bits64 adata) (Int64.of_int (len * 8)), 0, 16)))
+        ~src_off:0 dst ~dst_off:tag_off tag_size
 
-    let authenticate_encrypt_tag ~key:{ key; hkey } ~nonce ?adata data =
-      let ctr   = counter ~hkey nonce in
-      let cdata = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) data) in
-      let ctag  = tag ~key ~hkey ~ctr ?adata cdata in
-      cdata, ctag
+    let unsafe_authenticate_encrypt_into ~key:{ key; hkey } ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+      let ctr = counter ~hkey nonce in
+      CTR.(unsafe_encrypt_into ~key ~ctr:(add_ctr ctr 1L) src ~src_off dst ~dst_off len);
+      unsafe_tag_into ~key ~hkey ~ctr ?adata (Bytes.unsafe_to_string dst) ~off:dst_off ~len dst ~tag_off
+
+    let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+      if String.length src - src_off < len then
+        invalid_arg "GCM: source length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "GCM: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      if Bytes.length dst - tag_off < tag_size then
+        invalid_arg "GCM: dst length %u - tag_off %u < tag_size %u"
+          (Bytes.length dst) tag_off tag_size;
+      unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len
 
     let authenticate_encrypt ~key ~nonce ?adata data =
-      let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata data in
-      cdata ^ ctag
+      let l = String.length data in
+      let dst = Bytes.create (l + tag_size) in
+      unsafe_authenticate_encrypt_into ~key ~nonce ?adata data ~src_off:0 dst ~dst_off:0 ~tag_off:l l;
+      Bytes.unsafe_to_string dst
 
-    let authenticate_decrypt_tag ~key:{ key; hkey } ~nonce ?adata ~tag:tag_data cipher =
-      let ctr  = counter ~hkey nonce in
-      let data = CTR.(encrypt ~key ~ctr:(add_ctr ctr 1L) cipher) in
-      let ctag = tag ~key ~hkey ~ctr ?adata cipher in
-      if Eqaf.equal tag_data ctag then Some data else None
+    let authenticate_encrypt_tag ~key ~nonce ?adata data =
+      let r = authenticate_encrypt ~key ~nonce ?adata data in
+      String.sub r 0 (String.length data),
+      String.sub r (String.length data) tag_size
+
+    let unsafe_authenticate_decrypt_into ~key:{ key; hkey } ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
+      let ctr = counter ~hkey nonce in
+      CTR.(unsafe_encrypt_into ~key ~ctr:(add_ctr ctr 1L) src ~src_off dst ~dst_off len);
+      let ctag = Bytes.create tag_size in
+      unsafe_tag_into ~key ~hkey ~ctr ?adata src ~off:src_off ~len ctag ~tag_off:0;
+      Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag)
+
+    let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
+      if String.length src - src_off < len then
+        invalid_arg "GCM: source length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "GCM: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      if String.length src - tag_off < tag_size then
+        invalid_arg "GCM: src length %u - tag_off %u < tag_size %u"
+          (String.length src) tag_off tag_size;
+      unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len
 
     let authenticate_decrypt ~key ~nonce ?adata cdata =
       if String.length cdata < tag_size then
         None
       else
-        let cipher, tag =
-          String.sub cdata 0 (String.length cdata - tag_size),
-          String.sub cdata (String.length cdata - tag_size) tag_size
-        in
-        authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
+        let l = String.length cdata - tag_size in
+        let data = Bytes.create l in
+        if unsafe_authenticate_decrypt_into ~key ~nonce ?adata cdata ~src_off:0 ~tag_off:l data ~dst_off:0 l then
+          Some (Bytes.unsafe_to_string data)
+        else
+          None
+
+    let authenticate_decrypt_tag ~key ~nonce ?adata ~tag:tag_data cipher =
+      let cdata = cipher ^ tag_data in
+      authenticate_decrypt ~key ~nonce ?adata cdata
   end
 
   module CCM16_of (C : Block.Core) : Block.CCM16 = struct
@@ -465,6 +509,15 @@ module Modes = struct
           String.sub data (String.length data - tag_size) tag_size
         in
         authenticate_decrypt_tag ~key ~nonce ?adata ~tag data
+
+    let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+      assert false
+    let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off =
+      assert false
+    let unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+      assert false
+    let unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off =
+      assert false
   end
 end
 

@@ -74,8 +74,8 @@ module Poly1305 : sig
   (** [maci ~key iter] is the all-in-one mac computation:
       [get (feedi (empty ~key) iter)]. *)
 
-  val macl : key:string -> string list -> string
-  (** [macl ~key datas] computes the [mac] of [datas]. *)
+  val mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
+  (** [mac_into ~key datas dst dst_off] computes the [mac] of [datas]. *)
 end
 
 (** {1 Symmetric-key cryptography} *)
@@ -141,6 +141,65 @@ module type AEAD = sig
       returned.
 
       @raise Invalid_argument if [nonce] is not of the right size. *)
+
+  (** {1 Authenticated encryption and decryption into existing buffers} *)
+
+  val authenticate_encrypt_into : key:key -> nonce:string ->
+    ?adata:string -> string -> src_off:int -> bytes -> dst_off:int ->
+    tag_off:int -> int -> unit
+  (** [authenticate_encrypt_into ~key ~nonce ~adata msg ~src_off dst ~dst_off ~tag_off len]
+      encrypts [msg] starting at [src_off] with [key] and [nonce]. The output
+      is put into [dst] at [dst_off], the tag into [dst] at [tag_off].
+
+      @raise Invalid_argument if [nonce] is not of the right size.
+      @raise Invalid_argument if [String.length msg - src_off < len].
+      @raise Invalid_argument if [Bytes.length dst - dst_off < len].
+      @raise Invalid_argument if [Bytes.length dst - tag_off < tag_size].
+  *)
+
+  val authenticate_decrypt_into : key:key -> nonce:string ->
+    ?adata:string -> string -> src_off:int -> tag_off:int -> bytes ->
+    dst_off:int -> int -> bool
+  (** [authenticate_decrypt_into ~key ~nonce ~adata msg ~src_off ~tag_off dst ~dst_off]
+      computes the authentication tag using [key], [nonce], and [adata], and
+      decrypts the encrypted data from [msg] starting at [src_off] into [dst]
+      starting at [dst_off]. If the authentication tags match, [true] is
+      returned, and the decrypted data is in [dst].
+
+      @raise Invalid_argument if [nonce] is not of the right size.
+      @raise Invalid_argument if [String.length msg - src_off < len].
+      @raise Invalid_argument if [Bytes.length dst - dst_off < len].
+      @raise Invalid_argument if [String.length msg - tag_off < tag_size]. *)
+
+  (**/**)
+  val unsafe_authenticate_encrypt_into : key:key -> nonce:string ->
+    ?adata:string -> string -> src_off:int -> bytes -> dst_off:int ->
+    tag_off:int -> int -> unit
+  (** [unsafe_authenticate_encrypt_into] is {!authenticate_encrypt_into}, but
+      without bounds checks.
+
+      @raise Invalid_argument if [nonce] is not of the right size.
+
+      This may cause memory issues if an invariant is violated:
+      {ul
+      {- [String.length msg - src_off >= len].}
+      {- [Bytes.length dst - dst_off >= len].}
+      {- [Bytes.length dst - tag_off >= tag_size].}} *)
+
+  val unsafe_authenticate_decrypt_into : key:key -> nonce:string ->
+    ?adata:string -> string -> src_off:int -> tag_off:int -> bytes ->
+    dst_off:int -> int -> bool
+  (** [unsafe_authenticate_decrypt_into] is {!authenticate_decrypt_into}, but
+      without bounds checks.
+
+      @raise Invalid_argument if [nonce] is not of the right size.
+
+      This may cause memory issues if an invariant is violated:
+      {ul
+      {- [String.length msg - src_off >= len].}
+      {- [Bytes.length dst - dst_off >= len].}
+      {- [String.length msg - tag_off >= tag_size].}} *)
+  (**/**)
 end
 
 (** Block ciphers.

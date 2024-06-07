@@ -45,11 +45,11 @@ let throughput title f =
     Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
       size (bw /. mb) iters time
 
-let throughput_into title f =
+let throughput_into ?(add = 0) title f =
   Printf.printf "\n* [%s]\n%!" title ;
   sizes |> List.iter @@ fun size ->
     Gc.full_major () ;
-    let dst = Bytes.create size in
+    let dst = Bytes.create (size + add) in
     let (iters, time, bw) = burn (f dst) size in
     Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
       size (bw /. mb) iters time
@@ -356,9 +356,16 @@ let benchmarks = [
         fst ecdh_shares);
 
   bm "chacha20-poly1305" (fun name ->
-      let key = Mirage_crypto.Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      let key = Chacha20.of_secret (Mirage_crypto_rng.generate 32)
       and nonce = Mirage_crypto_rng.generate 8 in
-      throughput name (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce)) ;
+      throughput_into ~add:Chacha20.tag_size name
+        (fun dst cs -> Chacha20.authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs))) ;
+
+  bm "chacha20-poly1305-unsafe" (fun name ->
+      let key = Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      and nonce = Mirage_crypto_rng.generate 8 in
+      throughput_into ~add:Chacha20.tag_size name
+        (fun dst cs -> Chacha20.unsafe_authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs))) ;
 
   bm "aes-128-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
@@ -415,7 +422,14 @@ let benchmarks = [
   bm "aes-128-gcm" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
     and nonce = Mirage_crypto_rng.generate 12 in
-    throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce cs));
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs - AES.GCM.tag_size) (String.length cs)));
+
+  bm "aes-128-gcm-unsafe" (fun name ->
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 12 in
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.unsafe_authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs - AES.GCM.tag_size) (String.length cs)));
 
   bm "aes-128-ghash" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
