@@ -316,7 +316,7 @@ module MGF1 (H : Digestif.S) = struct
 
   let mask ~seed buf =
     let mgf_data = mgf ~seed (String.length buf) in
-    xor_into buf ~src_off:0 mgf_data ~dst_off:0 (String.length buf);
+    unsafe_xor_into buf ~src_off:0 mgf_data ~dst_off:0 (String.length buf);
     mgf_data
 end
 

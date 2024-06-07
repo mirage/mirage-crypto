@@ -35,7 +35,7 @@ module Uncommon : sig
   val iter3 : 'a -> 'a -> 'a -> ('a -> unit) -> unit
 
   val xor : string -> string -> string
-  val xor_into : string -> src_off:int -> bytes -> dst_off:int -> int -> unit
+  val unsafe_xor_into : string -> src_off:int -> bytes -> dst_off:int -> int -> unit
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
 end

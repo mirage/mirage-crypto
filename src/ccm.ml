@@ -89,7 +89,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
   in
 
   let cbc iv src_off block dst_off =
-    xor_into iv ~src_off block ~dst_off block_size ;
+    unsafe_xor_into iv ~src_off block ~dst_off block_size ;
     cipher ~key (Bytes.unsafe_to_string block) ~src_off:dst_off block ~dst_off
   in
 
@@ -117,14 +117,14 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
       Bytes.unsafe_blit dst dst_off buf 0 x;
       ctrblock ctr buf ;
       Bytes.unsafe_blit buf 0 dst dst_off x ;
-      xor_into src ~src_off dst ~dst_off x ;
+      unsafe_xor_into src ~src_off dst ~dst_off x ;
       Bytes.unsafe_blit_string cbcblock cbc_off buf 0 x;
       Bytes.unsafe_fill buf x (block_size - x) '\x00';
       cbc (Bytes.unsafe_to_string buf) cbc_off iv 0 ;
       iv
     | _ ->
       ctrblock ctr dst ;
-      xor_into src ~src_off dst ~dst_off block_size ;
+      unsafe_xor_into src ~src_off dst ~dst_off block_size ;
       cbc cbcblock cbc_off iv 0 ;
       loop iv (succ ctr) src (src_off + block_size) dst (dst_off + block_size)
   in
@@ -135,7 +135,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
 let crypto_t t nonce cipher key =
   let ctr = gen_ctr nonce 0 in
   cipher ~key (Bytes.unsafe_to_string ctr) ~src_off:0 ctr ~dst_off:0 ;
-  xor_into (Bytes.unsafe_to_string ctr) ~src_off:0 t ~dst_off:0 (Bytes.length t)
+  unsafe_xor_into (Bytes.unsafe_to_string ctr) ~src_off:0 t ~dst_off:0 (Bytes.length t)
 
 let valid_nonce nonce =
   let nsize = String.length nonce in
