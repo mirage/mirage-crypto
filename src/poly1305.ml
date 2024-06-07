@@ -1,5 +1,4 @@
 module type S = sig
-  type mac = string
   type 'a iter = 'a Uncommon.iter
 
   type t
@@ -10,13 +9,12 @@ module type S = sig
   val feedi : t -> string iter -> t
   val get : t -> string
 
-  val mac : key:string -> string -> mac
-  val maci : key:string -> string iter -> mac
-  val macl : key:string -> string list -> mac
+  val mac : key:string -> string -> string
+  val maci : key:string -> string iter -> string
+  val macl : key:string -> string list -> string
 end
 
 module It : S = struct
-  type mac = string
   type 'a iter = 'a Uncommon.iter
 
   module P = Native.Poly1305

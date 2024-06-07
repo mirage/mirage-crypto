@@ -45,8 +45,6 @@ end
 
 (** The poly1305 message authentication code *)
 module Poly1305 : sig
-  type mac = string
-
   type 'a iter = ('a -> unit) -> unit
 
   type t
@@ -66,18 +64,18 @@ module Poly1305 : sig
   val feedi : t -> string iter -> t
   (** [feedi t iter] feeds iter into [t]. *)
 
-  val get : t -> mac
+  val get : t -> string
   (** [get t] is the mac corresponding to [t]. *)
 
-  val mac : key:string -> string -> mac
+  val mac : key:string -> string -> string
   (** [mac ~key msg] is the all-in-one mac computation:
       [get (feed (empty ~key) msg)]. *)
 
-  val maci : key:string -> string iter -> mac
+  val maci : key:string -> string iter -> string
   (** [maci ~key iter] is the all-in-one mac computation:
       [get (feedi (empty ~key) iter)]. *)
 
-  val macl : key:string -> string list -> mac
+  val macl : key:string -> string list -> string
   (** [macl ~key datas] computes the [mac] of [datas]. *)
 end
 
