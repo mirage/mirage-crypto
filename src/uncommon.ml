@@ -18,13 +18,13 @@ type 'a iter = ('a -> unit) -> unit
 let iter2 a b   f = f a; f b
 let iter3 a b c f = f a; f b; f c
 
-let xor_into src ?(src_off = 0) dst ?(dst_off = 0) n =
+let xor_into src ~src_off dst ~dst_off n =
   Native.xor_into_bytes src src_off dst dst_off n
 
 let xor a b =
   assert (String.length a = String.length b);
   let b' = Bytes.of_string b in
-  xor_into a b' (Bytes.length b');
+  xor_into a ~src_off:0 b' ~dst_off:0 (Bytes.length b');
   Bytes.unsafe_to_string b'
 
 (* revise once OCaml 4.13 is the lower bound *)

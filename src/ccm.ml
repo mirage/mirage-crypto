@@ -135,7 +135,7 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
 let crypto_t t nonce cipher key =
   let ctr = gen_ctr nonce 0 in
   cipher ~key (Bytes.unsafe_to_string ctr) ~src_off:0 ctr ~dst_off:0 ;
-  xor_into (Bytes.unsafe_to_string ctr) t (Bytes.length t)
+  xor_into (Bytes.unsafe_to_string ctr) ~src_off:0 t ~dst_off:0 (Bytes.length t)
 
 let valid_nonce nonce =
   let nsize = String.length nonce in
