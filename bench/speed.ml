@@ -373,12 +373,34 @@ let benchmarks = [
   bm "aes-128-cbc-e" (fun name ->
     let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
     and iv  = Mirage_crypto_rng.generate 16 in
-    throughput name (fun cs -> AES.CBC.encrypt ~key ~iv cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.CBC.encrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-e-unsafe" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput_into name
+      (fun dst cs -> AES.CBC.unsafe_encrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-e-unsafe-inplace" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput name
+      (fun cs ->
+         let b = Bytes.unsafe_of_string cs in
+         AES.CBC.unsafe_encrypt_into_inplace ~key ~iv b ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-cbc-d" (fun name ->
     let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
     and iv  = Mirage_crypto_rng.generate 16 in
-    throughput name (fun cs -> AES.CBC.decrypt ~key ~iv cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.CBC.decrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-d-unsafe" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput_into name
+      (fun dst cs -> AES.CBC.unsafe_decrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-ctr" (fun name ->
     let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret

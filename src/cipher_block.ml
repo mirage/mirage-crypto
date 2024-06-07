@@ -44,7 +44,19 @@ module Block = struct
 
     val encrypt : key:key -> iv:string -> string -> string
     val decrypt : key:key -> iv:string -> string -> string
-    val next_iv : iv:string -> string -> string
+    val next_iv : ?off:int -> string -> iv:string -> string
+
+    val encrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    val decrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+
+    val unsafe_encrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    val unsafe_decrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    val unsafe_encrypt_into_inplace : key:key -> iv:string ->
+      bytes -> dst_off:int -> int -> unit
   end
 
   module type CTR = sig
@@ -186,40 +198,71 @@ module Modes = struct
 
     let of_secret = Core.of_secret
 
-    let bounds_check ~iv cs =
-      if String.length iv <> block then invalid_arg "CBC: IV length %u" (String.length iv);
-      if String.length cs mod block <> 0 then
-        invalid_arg "CBC: argument length %u" (String.length cs)
+    let bounds_check ?(off = 0) ~iv cs =
+      if String.length iv <> block then
+        invalid_arg "CBC: IV length %u not of block size" (String.length iv);
+      if (String.length cs - off) mod block <> 0 then
+        invalid_arg "CBC: argument length %u (off %u) not of block size"
+          (String.length cs) off
 
-    let next_iv ~iv cs =
-      bounds_check ~iv cs ;
-      if String.length cs > 0 then
+    let next_iv ?(off = 0) cs ~iv =
+      bounds_check ~iv cs ~off ;
+      if String.length cs > off then
         String.sub cs (String.length cs - block_size) block_size
       else iv
 
-    let encrypt ~key:(key, _) ~iv src =
-      bounds_check ~iv src ;
-      let dst = Bytes.of_string src in
+    let unsafe_encrypt_into_inplace ~key:(key, _) ~iv dst ~dst_off len =
       let rec loop iv iv_i dst_i = function
-        0 -> ()
-      | b -> Native.xor_into_bytes iv iv_i dst dst_i block ;
-             Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string dst) dst_i dst dst_i ;
-             loop (Bytes.unsafe_to_string dst) dst_i (dst_i + block) (b - 1)
+        | 0 -> ()
+        | b ->
+          Native.xor_into_bytes iv iv_i dst dst_i block ;
+          Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string dst) dst_i dst dst_i ;
+          loop (Bytes.unsafe_to_string dst) dst_i (dst_i + block) (b - 1)
       in
-      loop iv 0 0 (Bytes.length dst / block) ;
+      loop iv 0 dst_off (len / block)
+
+    let unsafe_encrypt_into ~key ~iv src ~src_off dst ~dst_off len =
+      Bytes.unsafe_blit_string src src_off dst dst_off len;
+      unsafe_encrypt_into_inplace ~key ~iv dst ~dst_off len
+
+    let encrypt_into ~key ~iv src ~src_off dst ~dst_off len =
+      bounds_check ~off:src_off ~iv src;
+      if String.length src - src_off < len then
+        invalid_arg "CBC: src has insufficient length (%u - src_off:%u < len %u)"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "CBC: dst has insufficient length (%u - dst_off:%u < len %u)"
+          (Bytes.length dst) dst_off len;
+      unsafe_encrypt_into ~key ~iv src ~src_off dst ~dst_off len
+
+    let encrypt ~key ~iv src =
+      let dst = Bytes.create (String.length src) in
+      encrypt_into ~key ~iv src ~src_off:0 dst ~dst_off:0 (String.length src);
       Bytes.unsafe_to_string dst
 
-    let decrypt ~key:(_, key) ~iv src =
-      bounds_check ~iv src ;
-      let msg = Bytes.create (String.length src)
-      and b   = String.length src / block in
+    let unsafe_decrypt_into ~key:(_, key) ~iv src ~src_off dst ~dst_off len =
+      let b = len / block in
       if b > 0 then begin
-        Core.decrypt ~key ~blocks:b src 0 msg 0 ;
-        Native.xor_into_bytes iv 0 msg 0 block ;
-        Native.xor_into_bytes src 0 msg block ((b - 1) * block) ;
-      end ;
-      Bytes.unsafe_to_string msg
+        Core.decrypt ~key ~blocks:b src src_off dst dst_off ;
+        Native.xor_into_bytes iv 0 dst dst_off block ;
+        Native.xor_into_bytes src src_off dst (dst_off + block) ((b - 1) * block) ;
+      end
 
+    let decrypt_into ~key ~iv src ~src_off dst ~dst_off len =
+      bounds_check ~off:src_off ~iv src;
+      if String.length src - src_off < len then
+        invalid_arg "CBC: src has insufficient length (%u - src_off:%u < len %u)"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "CBC: dst has insufficient length (%u - dst_off:%u < len %u)"
+          (Bytes.length dst) dst_off len;
+      unsafe_decrypt_into ~key ~iv src ~src_off dst ~dst_off len
+
+    let decrypt ~key ~iv src =
+      let len = String.length src in
+      let msg = Bytes.create len in
+      decrypt_into ~key ~iv src ~src_off:0 msg ~dst_off:0 len;
+      Bytes.unsafe_to_string msg
   end
 
   module CTR_of (Core : Block.Core) (Ctr : Counters.S) :

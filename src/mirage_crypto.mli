@@ -253,8 +253,8 @@ module Block : sig
         @raise Invalid_argument if [iv] is not [block_size], or [msg] is not
         [k * block_size] long. *)
 
-    val next_iv : iv:string -> string -> string
-    (** [next_iv ~iv ciphertext] is the first [iv] {e following} the
+    val next_iv : ?off:int -> string -> iv:string -> string
+    (** [next_iv ~iv ciphertext ~off] is the first [iv] {e following} the
         encryption that used [iv] to produce [ciphertext].
 
         For protocols which perform inter-message chaining, this is the [iv]
@@ -266,9 +266,73 @@ module Block : sig
 {[encrypt ~iv msg1 || encrypt ~iv:(next_iv ~iv (encrypt ~iv msg1)) msg2
   == encrypt ~iv (msg1 || msg2)]}
 
-        @raise Invalid_argument if the length of [iv] is not [block_size], or
-        the length of [ciphertext] is not [k * block_size] for some [k]. *)
-  end
+        @raise Invalid_argument if the length of [iv] is not [block_size].
+        @raise Invalid_argument if the length of [ciphertext] is not a multiple
+        of [block_size]. *)
+
+    val encrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [encrypt_into ~key ~iv src ~src_off dst dst_off len] encrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        @raise Invalid_argument if the length of [iv] is not {!block_size}.
+        @raise Invalid_argument if [len] is not a multiple of {!block_size}.
+        @raise Invalid_argument if [String.length src - src_off < len].
+        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+
+    val decrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [decrypt_into ~key ~iv src ~src_off dst dst_off len] decrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        @raise Invalid_argument if the length of [iv] is not {!block_size}.
+        @raise Invalid_argument if [len] is not a multiple of {!block_size}.
+        @raise Invalid_argument if [String.length src - src_off < len].
+        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+
+    (**/**)
+    val unsafe_encrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [unsafe_encrypt_into ~key ~iv src ~src_off dst dst_off len] encrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        It is unsafe since buffer lengths are not checks. This may casue memory
+        issues if an invariant is violated:
+        {ul
+        {- the length of [iv] must be {!block_size},}
+        {- [len] must be a multiple of {!block_size},}
+        {- [String.length src - src_off >= len],}
+        {- [Bytes.length dst - dst_off >= len].}} *)
+
+    val unsafe_decrypt_into : key:key -> iv:string -> string -> src_off:int ->
+      bytes -> dst_off:int -> int -> unit
+    (** [unsafe_decrypt_into ~key ~iv src ~src_off dst dst_off len] decrypts [len]
+        octets from [src] starting at [src_off] into [dst] starting at [dst_off].
+
+        It is unsafe since buffer lengths are not checks. This may casue memory
+        issues if an invariant is violated:
+        {ul
+        {- the length of [iv] must be {!block_size},}
+        {- [len] must be a multiple of {!block_size},}
+        {- [String.length src - src_off >= len],}
+        {- [Bytes.length dst - dst_off >= len].}} *)
+
+    val unsafe_encrypt_into_inplace : key:key -> iv:string ->
+      bytes -> dst_off:int -> int -> unit
+    (** [unsafe_encrypt_into_inplace ~key ~iv dst dst_off len] encrypts [len]
+        octets from [dst] starting at [dst_off] into [dst] starting at [dst_off].
+
+        The [dst] buffer must contain the message to be encrypted.
+
+        It is unsafe since buffer lengths are not checks. This may casue memory
+        issues if an invariant is violated:
+        {ul
+        {- the length of [iv] must be {!block_size},}
+        {- [len] must be a multiple of {!block_size},}
+        {- [String.length src - src_off >= len],}
+        {- [Bytes.length dst - dst_off >= len].}} *)
+    (**/**)
+end
 
   (** {e Counter} mode. *)
   module type CTR = sig
