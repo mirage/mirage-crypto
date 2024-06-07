@@ -38,7 +38,6 @@ module Uncommon : sig
   val xor_into : string -> src_off:int -> bytes -> dst_off:int -> int -> unit
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
-  val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
 end
 
 (**/**)

@@ -120,7 +120,7 @@ let cpu_rng_bootstrap =
   | Some insn ->
     let cpu_rng_bootstrap id =
       let r = cpu_rng insn () in
-      if r = 0 then failwith "bad CPU RNG value";
+      if r = 0 then failwith "Mirage_crypto_rng.Entropy: 0 is a bad CPU RNG value";
       let buf = Bytes.create 10 in
       Bytes.set_int64_le buf 2 (Int64.of_int r);
       write_header id buf;
