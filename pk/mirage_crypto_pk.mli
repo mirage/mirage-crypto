@@ -9,8 +9,6 @@
     worse than [powm]. Additionally, blinding is applied to RSA and DSA by
     default. *)
 
-type bits = int
-
 (** {b RSA} public-key cryptography algorithm. *)
 module Rsa : sig
 
@@ -64,10 +62,10 @@ module Rsa : sig
       [dp = d mod (p - 1)], [dq = d mod (q - 1)],
       and [d = e ^ -1 mod (p - 1) (q - 1)]. *)
 
-  val pub_bits : pub -> bits
+  val pub_bits : pub -> int
   (** Bit-size of a public key. *)
 
-  val priv_bits : priv -> bits
+  val priv_bits : priv -> int
   (** Bit-size of a private key. *)
 
   val priv_of_primes : e:Z.t -> p:Z.t -> q:Z.t ->
@@ -134,7 +132,7 @@ module Rsa : sig
 
   (** {1 Key generation} *)
 
-  val generate : ?g:Mirage_crypto_rng.g -> ?e:Z.t -> bits:bits -> unit -> priv
+  val generate : ?g:Mirage_crypto_rng.g -> ?e:Z.t -> bits:int -> unit -> priv
   (** [generate ~g ~e ~bits ()] is a new {{!type-priv}private key}. The new key is
       guaranteed to be well formed, see {!val-priv}.
 
@@ -187,7 +185,7 @@ module Rsa : sig
         was produced with the given [key] as per {{!sig_encode}sig_encode}, or
         [None] *)
 
-    val min_key : [< Digestif.hash' > `MD5 `SHA1 `SHA224 `SHA256 `SHA384 `SHA512 ] -> bits
+    val min_key : [< Digestif.hash' > `MD5 `SHA1 `SHA224 `SHA256 `SHA384 `SHA512 ] -> int
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
 
     val sign : ?crt_hardening:bool -> ?mask:mask ->
@@ -319,7 +317,7 @@ module Dsa : sig
       specified and [true] (defaults to [false]), only FIPS-specified bit length
       for [p] and [q] are accepted. *)
 
-  type keysize = [ `Fips1024 | `Fips2048 | `Fips3072 | `Exactly of bits * bits ]
+  type keysize = [ `Fips1024 | `Fips2048 | `Fips3072 | `Exactly of int * int ]
   (** Key size request. Three {e Fips} variants refer to FIPS-standardized
       L-values ([p] size) and imply the corresponding N ([q] size); The last
       variants specifies L and N directly. *)
@@ -409,7 +407,7 @@ module Dh : sig
   type secret = private { group : group ; x : Z.t }
   (** A private key. *)
 
-  val modulus_size : group -> bits
+  val modulus_size : group -> int
   (** Bit size of the modulus. *)
 
   val key_of_secret : group -> s:string -> secret * string
@@ -418,7 +416,7 @@ module Dh : sig
 
       @raise Invalid_key if [s] is degenerate. *)
 
-  val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:bits -> group -> secret * string
+  val gen_key : ?g:Mirage_crypto_rng.g -> ?bits:int -> group -> secret * string
   (** Generate a random {!secret} and the corresponding public key.
       [bits] is the exact bit-size of {!secret} and defaults to a value
       dependent on the {!type-group}'s [p].
@@ -433,7 +431,7 @@ module Dh : sig
       It is [None] if these invariants do not hold for [public]:
       [1 < public < p-1] && [public <> gg]. *)
 
-  val gen_group : ?g:Mirage_crypto_rng.g -> bits:bits -> unit -> group
+  val gen_group : ?g:Mirage_crypto_rng.g -> bits:int -> unit -> group
   (** [gen_group ~g ~bits ()] generates a random {!type-group} with modulus size
       [bits]. Uses a safe prime [p = 2q + 1] (with [q] prime) for the modulus
       and [2] for the generator, such that [2^q = 1 mod p].
@@ -481,7 +479,7 @@ end
 module Z_extra : sig
   (** {1 Conversion to and from string} *)
 
-  val of_octets_be : ?bits:bits -> string -> Z.t
+  val of_octets_be : ?bits:int -> string -> Z.t
   (** [of_octets_be ~bits buf] interprets the bit pattern of [buf] as a
       {{!Z.t}[t]} in big-endian.
 
