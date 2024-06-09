@@ -1,3 +1,17 @@
+(* Pfortuna is a re-implementation of Fortuna with a mutex. The goal of this
+   module is to provide a global and domain-safe RNG. The implementation use
+   [Miou.Mutex] instead of [Mutex] - [Pfortuna] is only available as part of
+   the [mirage-crypto-rng-miou-unix] package. Thus, in the context of Miou,
+   [Pfortuna] can be used and recommended in place of [Fortuna], so that the
+   user can generate random numbers in parallel in several domains.
+
+   {[
+     let () = Miou_unix.run @@ fun () ->
+       let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
+       ...
+       Mirage_crypto_rng_miou_unix.kill rng
+   ]} *)
+
 open Mirage_crypto
 open Mirage_crypto.Uncommon
 
