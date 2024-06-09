@@ -486,38 +486,70 @@ module Modes = struct
     let (key_sizes, block_size) = C.(key, block)
 
     let cipher ~key src ~src_off dst ~dst_off =
-      if String.length src - src_off < block_size || Bytes.length dst - dst_off < block_size then
-        invalid_arg "src len %u, dst len %u" (String.length src - src_off) (Bytes.length dst - dst_off);
       C.encrypt ~key ~blocks:1 src src_off dst dst_off
 
-    let authenticate_encrypt_tag ~key ~nonce ?(adata = "") cs =
-      Ccm.generation_encryption ~cipher ~key ~nonce ~maclen:tag_size ~adata cs
+    let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =
+      Ccm.unsafe_generation_encryption_into ~cipher ~key ~nonce ~maclen:tag_size
+        ~adata src ~src_off dst ~dst_off ~tag_off len
+
+    let valid_nonce nonce =
+      let nsize = String.length nonce in
+      if nsize < 7 || nsize > 13 then
+        invalid_arg "CCM: nonce length not between 7 and 13: %u" nsize
+
+    let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+      if String.length src - src_off < len then
+        invalid_arg "CCM: source length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "CCM: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      if Bytes.length dst - tag_off < tag_size then
+        invalid_arg "CCM: dst length %u - tag_off %u < tag_size %u"
+          (Bytes.length dst) tag_off tag_size;
+      valid_nonce nonce;
+      unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len
 
     let authenticate_encrypt ~key ~nonce ?adata cs =
-      let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata cs in
-      cdata ^ ctag
+      valid_nonce nonce;
+      let l = String.length cs in
+      let dst = Bytes.create (l + tag_size) in
+      unsafe_authenticate_encrypt_into ~key ~nonce ?adata cs ~src_off:0 dst ~dst_off:0 ~tag_off:l l;
+      Bytes.unsafe_to_string dst
 
-    let authenticate_decrypt_tag ~key ~nonce ?(adata = "") ~tag cs =
-      Ccm.decryption_verification ~cipher ~key ~nonce ~maclen:tag_size ~adata ~tag cs
+    let authenticate_encrypt_tag ~key ~nonce ?adata cs =
+      let res = authenticate_encrypt ~key ~nonce ?adata cs in
+      String.sub res 0 (String.length cs), String.sub res (String.length cs) tag_size
+
+    let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag_off dst ~dst_off len =
+      Ccm.unsafe_decryption_verification_into ~cipher ~key ~nonce ~maclen:tag_size ~adata src ~src_off ~tag_off dst ~dst_off len
+
+    let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
+      if String.length src - src_off < len then
+        invalid_arg "CCM: source length %u - src_off %u < len %u"
+          (String.length src) src_off len;
+      if Bytes.length dst - dst_off < len then
+        invalid_arg "CCM: dst length %u - dst_off %u < len %u"
+          (Bytes.length dst) dst_off len;
+      if String.length src - tag_off < tag_size then
+        invalid_arg "CCM: src length %u - tag_off %u < tag_size %u"
+          (String.length src) tag_off tag_size;
+      valid_nonce nonce;
+      unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len
 
     let authenticate_decrypt ~key ~nonce ?adata data =
       if String.length data < tag_size then
         None
       else
-        let data, tag =
-          String.sub data 0 (String.length data - tag_size),
-          String.sub data (String.length data - tag_size) tag_size
-        in
-        authenticate_decrypt_tag ~key ~nonce ?adata ~tag data
+        let dlen = String.length data - tag_size in
+        let dst = Bytes.create dlen in
+        if authenticate_decrypt_into ~key ~nonce ?adata data ~src_off:0 ~tag_off:dlen dst ~dst_off:0 dlen then
+          Some (Bytes.unsafe_to_string dst)
+        else
+          None
 
-    let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
-      assert false
-    let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off =
-      assert false
-    let unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
-      assert false
-    let unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off =
-      assert false
+    let authenticate_decrypt_tag ~key ~nonce ?adata ~tag cs =
+      authenticate_decrypt ~key ~nonce ?adata (cs ^ tag)
   end
 end
 

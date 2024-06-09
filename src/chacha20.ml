@@ -100,11 +100,6 @@ let mac_into ~key ~adata src ~src_off len dst ~dst_off =
                     len_buf, 0, String.length len_buf ]
     dst ~dst_off
 
-let mac ~key ~adata ciphertext =
-  let r = Bytes.create tag_size in
-  mac_into ~key ~adata ciphertext ~src_off:0 (String.length ciphertext) r ~dst_off:0;
-  Bytes.unsafe_to_string r
-
 let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
