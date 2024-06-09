@@ -25,7 +25,3 @@ let xor a b =
   let b' = Bytes.of_string b in
   xor_into a ~src_off:0 b' ~dst_off:0 (Bytes.length b');
   Bytes.unsafe_to_string b'
-
-(* revise once OCaml 4.13 is the lower bound *)
-let string_get_uint8 buf idx =
-    Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx

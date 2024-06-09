@@ -197,10 +197,6 @@ let encrypt ~key              = reformat (pub_bits key)  (encrypt_z ~key)
 let decrypt ?(crt_hardening=false) ?(mask=`Yes) ~key =
   reformat (priv_bits key) (decrypt_z ~crt_hardening ~mask ~key)
 
-(* OCaml 4.13 *)
-let string_get_uint8 buf idx =
-  Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
-
 let bx00, bx01 = "\x00", "\x01"
 
 module PKCS1 = struct
@@ -214,7 +210,7 @@ module PKCS1 = struct
     let rec go nonce i j =
       if i = n then Bytes.unsafe_to_string buf else
       if j = k then go Mirage_crypto_rng.(generate ?g k) i 0 else
-      match string_get_uint8 nonce j with
+      match String.get_uint8 nonce j with
       | b when f b -> Bytes.set_uint8 buf i b ; go nonce (succ i) (succ j)
       | _          -> go nonce i (succ j) in
     go Mirage_crypto_rng.(generate ?g k) 0 0
@@ -226,9 +222,9 @@ module PKCS1 = struct
   let unpad ~mark ~is_pad buf =
     let f = not &. is_pad in
     let i = ct_find_uint8 ~default:2 ~off:2 ~f buf in
-    let c1 = string_get_uint8 buf 0 = 0x00
-    and c2 = string_get_uint8 buf 1 = mark
-    and c3 = string_get_uint8 buf i = 0x00
+    let c1 = String.get_uint8 buf 0 = 0x00
+    and c2 = String.get_uint8 buf 1 = mark
+    and c3 = String.get_uint8 buf i = 0x00
     and c4 = min_pad <= i - 2 in
     if c1 && c2 && c3 && c4 then
       Some (String.sub buf (i + 1) (String.length buf - i - 1))
@@ -264,11 +260,6 @@ module PKCS1 = struct
   let decrypt ?(crt_hardening = false) ?mask ~key msg =
     unpadded unpad_02 (decrypt ~crt_hardening ?mask ~key) (priv_bits key) msg
 
-  (* OCaml 4.13 contains starts_with *)
-  let is_prefix asn msg =
-    String.length msg >= String.length asn &&
-    String.equal asn (String.sub msg 0 (String.length asn))
-
   let asn_of_hash, detect =
     let map = [
       `MD5, "\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\x05\x00\x04\x10" ;
@@ -280,7 +271,7 @@ module PKCS1 = struct
     ]
     in
     (fun h -> List.assoc h map),
-    (fun buf -> List.find_opt (fun (_, d) -> is_prefix d buf) map)
+    (fun buf -> List.find_opt (fun (_, d) -> String.starts_with ~prefix:d buf) map)
 
   let sign ?(crt_hardening = true) ?mask ~hash ~key msg =
     let module H = (val Digestif.module_of_hash' (hash :> Digestif.hash')) in
@@ -353,8 +344,8 @@ module OAEP (H : Digestif.S) = struct
     let db = Bytes.unsafe_to_string (MGF.mask ~seed:(Bytes.unsafe_to_string (MGF.mask ~seed:mdb ms)) mdb) in
     let i  = ct_find_uint8 ~default:0 ~off:hlen ~f:((<>) 0x00) db in
     let c1 = Eqaf.equal (String.sub db 0 hlen) H.(digest_string label |> to_raw_string)
-    and c2 = string_get_uint8 b0 0 = 0x00
-    and c3 = string_get_uint8 db i = 0x01 in
+    and c2 = String.get_uint8 b0 0 = 0x00
+    and c3 = String.get_uint8 db i = 0x01 in
     if c1 && c2 && c3 then Some (String.sub db (i + 1) (String.length db - i - 1)) else None
 
   let encrypt ?g ?label ~key msg =
@@ -402,7 +393,7 @@ module PSS (H: Digestif.S) = struct
   let emsa_pss_verify slen emlen em msg =
     let mdb = String.sub em 0 (String.length em - hlen - 1)
     and h = String.sub em (String.length em - hlen - 1) hlen
-    and bxx = string_get_uint8 em (String.length em - 1)
+    and bxx = String.get_uint8 em (String.length em - 1)
     in
     let db   = MGF.mask ~seed:h mdb in
     Bytes.set_uint8 db 0 (Bytes.get_uint8 db 0 land b0mask emlen) ;
@@ -410,9 +401,9 @@ module PSS (H: Digestif.S) = struct
     let salt = String.sub db (String.length db - slen) slen in
     let h'   = digest ~salt:salt msg
     and i    = ct_find_uint8 ~default:0 ~f:((<>) 0x00) db in
-    let c1 = lnot (b0mask emlen) land string_get_uint8 mdb 0 = 0x00
+    let c1 = lnot (b0mask emlen) land String.get_uint8 mdb 0 = 0x00
     and c2 = i = String.length em - hlen - slen - 2
-    and c3 = string_get_uint8 db  i = 0x01
+    and c3 = String.get_uint8 db  i = 0x01
     and c4 = bxx = 0xbc
     and c5 = Eqaf.equal h h' in
     c1 && c2 && c3 && c4 && c5
