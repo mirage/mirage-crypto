@@ -1,7 +1,5 @@
 type source = int * string
 
-type bits = int
-
 exception Unseeded_generator
 
 exception No_default_generator

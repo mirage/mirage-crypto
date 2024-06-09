@@ -64,8 +64,6 @@
 
 (** {1 Interface} *)
 
-type bits = int
-
 type g
 (** A generator (PRNG) with its state. *)
 

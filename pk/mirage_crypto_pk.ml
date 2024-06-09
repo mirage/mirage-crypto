@@ -1,5 +1,3 @@
-type bits = int
-
 module Dh = Dh
 module Dsa = Dsa
 module Rsa = Rsa
