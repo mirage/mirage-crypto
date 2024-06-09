@@ -21,7 +21,7 @@ module ARC4 = struct
     let rec loop j = function
       | 256 -> ()
       | i ->
-          let x = string_get_uint8 buf (i mod len) in
+          let x = String.get_uint8 buf (i mod len) in
           let si = s.(i) in
           let j = (j + si + x) land 0xff in
           let sj = s.(j) in
@@ -43,7 +43,7 @@ module ARC4 = struct
           let sj = s.(j) in
           s.(i) <- sj ; s.(j) <- si ;
           let k  = s.((si + sj) land 0xff) in
-          Bytes.set_uint8 res n (k lxor string_get_uint8 buf n);
+          Bytes.set_uint8 res n (k lxor String.get_uint8 buf n);
           mix i j (succ n)
     in
     let key' = mix i j 0 in

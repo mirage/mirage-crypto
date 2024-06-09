@@ -89,8 +89,7 @@ module Counters = struct
   module C64be = struct
     type ctr = int64
     let size = 8
-    (* Until OCaml 4.13 is lower bound*)
-    let of_octets cs = Bytes.get_int64_be (Bytes.unsafe_of_string cs) 0
+    let of_octets cs = String.get_int64_be cs 0
     let add = Int64.add
     let unsafe_count_into t buf ~blocks =
       let tmp = Bytes.create 8 in
@@ -277,16 +276,10 @@ module Modes = struct
       Bytes.set_int64_be cs 8 b;
       Bytes.unsafe_to_string cs
 
-    (* OCaml 4.13 *)
-    let string_get_int64 s idx =
-      Bytes.get_int64_be (Bytes.unsafe_of_string s) idx
-    let string_get_int32 s idx =
-      Bytes.get_int32_be (Bytes.unsafe_of_string s) idx
-
     let counter ~hkey nonce = match String.length nonce with
       | 0 -> invalid_arg "GCM: invalid nonce of length 0"
       | 12 ->
-        let (w1, w2) = string_get_int64 nonce 0, string_get_int32 nonce 8 in
+        let (w1, w2) = String.get_int64_be nonce 0, String.get_int32_be nonce 8 in
         (w1, Int64.(shift_left (of_int32 w2) 32 |> add 1L))
       | _  ->
         CTR.ctr_of_octets @@

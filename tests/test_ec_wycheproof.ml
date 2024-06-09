@@ -4,14 +4,6 @@ open Mirage_crypto_ec
 
 let ( let* ) = Result.bind
 
-let concat_map f l =
-  (* adapt once OCaml 4.10 is lower bound *)
-  List.map f l |> List.concat
-
-let string_get_uint8 d off =
-  (* adapt once OCaml 4.13 is lower bound *)
-  Bytes.get_uint8 (Bytes.unsafe_of_string d) off
-
 let hex = Alcotest.testable Wycheproof.pp_hex Wycheproof.equal_hex
 
 module Asn = struct
@@ -155,8 +147,8 @@ let ecdh_tests file =
   let groups : ecdh_test_group list =
     List.map ecdh_test_group_exn data.testGroups
   in
-  concat_map (fun (group : ecdh_test_group) ->
-      concat_map (to_ecdh_tests group.curve) group.tests)
+  List.concat_map (fun (group : ecdh_test_group) ->
+      List.concat_map (to_ecdh_tests group.curve) group.tests)
     groups
 
 let make_ecdsa_test curve key hash (tst : dsa_test) =
@@ -219,7 +211,7 @@ let ecdsa_tests file =
   let groups : ecdsa_test_group list =
     List.map ecdsa_test_group_exn data.testGroups
   in
-  concat_map to_ecdsa_tests groups
+  List.concat_map to_ecdsa_tests groups
 
 let to_x25519_test (x : ecdh_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment
@@ -262,7 +254,7 @@ let x25519_tests =
   let groups : ecdh_test_group list =
     List.map ecdh_test_group_exn data.testGroups
   in
-  concat_map (fun (group : ecdh_test_group) ->
+  List.concat_map (fun (group : ecdh_test_group) ->
       List.map to_x25519_test group.tests)
     groups
 
@@ -297,7 +289,7 @@ let ed25519_tests =
   let groups : eddsa_test_group list =
     List.map eddsa_test_group_exn data.testGroups
   in
-  concat_map (fun (group : eddsa_test_group) ->
+  List.concat_map (fun (group : eddsa_test_group) ->
       let keys = to_ed25519_keys group.key in
       List.map (to_ed25519_test keys) group.tests)
     groups

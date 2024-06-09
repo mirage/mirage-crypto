@@ -2,37 +2,24 @@ open Mirage_crypto.Uncommon
 
 let bit_bound z = Z.size z * 64
 
-(* revise once OCaml 4.13 is the lower bound *)
-let string_get_int64_be buf idx =
-  Bytes.get_int64_be (Bytes.unsafe_of_string buf) idx
-
-let string_get_int32_be buf idx =
-  Bytes.get_int32_be (Bytes.unsafe_of_string buf) idx
-
-let string_get_uint16_be buf idx =
-  Bytes.get_uint16_be (Bytes.unsafe_of_string buf) idx
-
-let string_get_uint8 buf idx =
-  Bytes.get_uint8 (Bytes.unsafe_of_string buf) idx
-
 let of_octets_be ?bits buf =
   let rec loop acc i = function
     | b when b >= 64 ->
-      let x = string_get_int64_be buf i in
+      let x = String.get_int64_be buf i in
       let x = Z.of_int64_unsigned Int64.(shift_right_logical x 8) in
       loop Z.(x + acc lsl 56) (i + 7) (b - 56)
     | b when b >= 32 ->
-      let x = string_get_int32_be buf i in
+      let x = String.get_int32_be buf i in
       let x = Z.of_int32_unsigned Int32.(shift_right_logical x 8) in
       loop Z.(x + acc lsl 24) (i + 3) (b - 24)
     | b when b >= 16 ->
-      let x = Z.of_int (string_get_uint16_be buf i) in
+      let x = Z.of_int (String.get_uint16_be buf i) in
       loop Z.(x + acc lsl 16) (i + 2) (b - 16)
     | b when b >= 8  ->
-      let x = Z.of_int (string_get_uint8 buf i) in
+      let x = Z.of_int (String.get_uint8 buf i) in
       loop Z.(x + acc lsl 8 ) (i + 1) (b - 8 )
     | b when b > 0   ->
-      let x = string_get_uint8 buf i and b' = 8 - b in
+      let x = String.get_uint8 buf i and b' = 8 - b in
       Z.(of_int x asr b' + acc lsl b)
     | _              -> acc in
   loop Z.zero 0 @@ match bits with
