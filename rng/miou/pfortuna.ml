@@ -10,7 +10,10 @@
        let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
        ...
        Mirage_crypto_rng_miou_unix.kill rng
-   ]} *)
+   ]}
+
+   NOTE: when modifying this file, please also check whether rng/fortuna.ml
+   needs to be updated. *)
 
 open Mirage_crypto
 open Mirage_crypto.Uncommon
