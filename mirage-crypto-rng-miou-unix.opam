@@ -20,6 +20,7 @@ depends: [
   "mirage-crypto-rng" {=version}
   "duration"
   "mtime"
+  "digestif" {>= "1.2.0"}
   "ohex" {with-test & >= "0.2.0"}
 ]
 description: """
