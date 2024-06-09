@@ -1,8 +1,6 @@
 open Mirage
 
-let main = foreign "Unikernel.Main" (random @-> job)
-
-let () =
+let main =
   let packages = [
     package "mirage-crypto-rng" ;
     package "mirage-crypto-pk" ;
@@ -11,4 +9,7 @@ let () =
     package "ohex" ;
   ]
   in
-  register ~packages "crypto-test" [main $ default_random]
+  main ~packages "Unikernel.Main" (random @-> job)
+
+let () =
+  register "crypto-test" [main $ default_random]
