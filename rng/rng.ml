@@ -11,7 +11,7 @@ let setup_rng =
    collection and periodic reseeding as a background task, do the \
    following:\
    \n  If you are using MirageOS, use the random device in config.ml: \
-   `let main = Mirage.foreign \"Unikernel.Main\" (random @-> job)`, \
+   `let main = Mirage.main \"Unikernel.Main\" (random @-> job)`, \
    and `let () = register \"my_unikernel\" [main $ default_random]`. \
    \n  If you are using Lwt, execute \
    `Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)` \

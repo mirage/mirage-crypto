@@ -36,7 +36,7 @@
     stream of entropy.
 
     [mirage-crypto-rng-eio] package differs slightly from other rng packages.
-    Instead of the [initilize] function a [run] function is provided with
+    Instead of the [initialize] function a [run] function is provided with
     similar behaviour, i.e. RNG setup, entropy collection and periodic reseeding.
 
     Although this module exposes a more fine-grained interface, e.g. allowing
