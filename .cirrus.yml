@@ -1,5 +1,5 @@
 freebsd_instance:
-  image_family: freebsd-13-2
+  image_family: freebsd-14-1
 
 freebsd_task:
   env:
@@ -14,20 +14,8 @@ freebsd_task:
     - opam env
 
   pin_packages_script:
-    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-lwt.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-rng-async.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
+    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-lwt.opam ./mirage-crypto-rng-mirage.opam ./mirage-crypto-ec.opam ./mirage-crypto-pk.opam
 
-  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec,mirage-crypto-rng-async
+  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage,mirage-crypto-pk,mirage-crypto-ec
 
   test_mirage_script: eval `opam env` && ./.test-mirage.sh
-
-freebsd_eio_task:
-  pkg_install_script: pkg install -y ocaml-opam gmake pkgconf bash
-
-  ocaml_script:
-    - opam init -a --comp=5.0.0
-    - opam env
-
-  pin_packages_script:
-    - opam install -y --deps-only -t ./mirage-crypto.opam ./mirage-crypto-rng.opam ./mirage-crypto-rng-eio.opam
-
-  test_script: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-eio

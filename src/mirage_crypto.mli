@@ -35,18 +35,15 @@ module Uncommon : sig
   val iter3 : 'a -> 'a -> 'a -> ('a -> unit) -> unit
 
   val xor : string -> string -> string
-  val xor_into : string -> ?src_off:int -> bytes -> ?dst_off:int -> int -> unit
+  val xor_into : string -> src_off:int -> bytes -> dst_off:int -> int -> unit
 
   val invalid_arg : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
-  val failwith : ('a, Format.formatter, unit, unit, unit, 'b) format6 -> 'a
 end
 
 (**/**)
 
 (** The poly1305 message authentication code *)
 module Poly1305 : sig
-  type mac = string
-
   type 'a iter = ('a -> unit) -> unit
 
   type t
@@ -66,18 +63,18 @@ module Poly1305 : sig
   val feedi : t -> string iter -> t
   (** [feedi t iter] feeds iter into [t]. *)
 
-  val get : t -> mac
+  val get : t -> string
   (** [get t] is the mac corresponding to [t]. *)
 
-  val mac : key:string -> string -> mac
+  val mac : key:string -> string -> string
   (** [mac ~key msg] is the all-in-one mac computation:
       [get (feed (empty ~key) msg)]. *)
 
-  val maci : key:string -> string iter -> mac
+  val maci : key:string -> string iter -> string
   (** [maci ~key iter] is the all-in-one mac computation:
       [get (feedi (empty ~key) iter)]. *)
 
-  val macl : key:string -> string list -> mac
+  val macl : key:string -> string list -> string
   (** [macl ~key datas] computes the [mac] of [datas]. *)
 end
 

@@ -10,6 +10,7 @@ echo $version >> mirage-crypto-rng-mirage.opam
 echo $version >> mirage-crypto-rng.opam
 echo $version >> mirage-crypto.opam
 echo $version >> mirage-crypto-pk.opam
+opam pin add -yn mirage-random.3.99 --dev
 (mirage configure -t unix -f mirage/config.ml && gmake depend && dune build --root . mirage/dist/ && mirage/dist/crypto-test) || exit 1
 (mirage configure -t hvt -f mirage/config.ml && gmake depend && dune build --root . mirage/dist/) || exit 1
 if [ $(uname -m) = "amd64" ] || [ $(uname -m) = "x86_64" ]; then
