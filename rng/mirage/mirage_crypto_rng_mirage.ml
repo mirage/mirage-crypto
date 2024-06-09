@@ -27,6 +27,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+module type S = sig
+  type g = Mirage_crypto_rng.g
+  module Entropy :
+    sig
+      type source = Mirage_crypto_rng.Entropy.source
+      val sources : unit -> source list
+      val pp_source : Format.formatter -> source -> unit
+      val register_source : string -> source
+    end
+
+  val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
+  val generate : ?g:g -> int -> string
+
+  val accumulate : g option -> Entropy.source -> [`Acc of string -> unit]
+end
+
 let src = Logs.Src.create "mirage-crypto-rng-mirage" ~doc:"Mirage crypto RNG mirage"
 module Log = (val Logs.src_log src : Logs.LOG)
 
