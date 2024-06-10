@@ -1,4 +1,4 @@
-module Main (R : Mirage_random.S) = struct
+module Main (R : Mirage_crypto_rng_mirage.S) = struct
   let start _r =
     Logs.info (fun m -> m "using Fortuna, entropy sources: %a"
                   Fmt.(list ~sep:(any ", ") Mirage_crypto_rng.Entropy.pp_source)
