@@ -28,6 +28,7 @@ jobs:
             *.opam
             !mirage-crypto-rng-async.opam
             !mirage-crypto-rng-eio.opam
+            !mirage-crypto-rng-miou-unix.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies

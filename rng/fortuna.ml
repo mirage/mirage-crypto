@@ -1,3 +1,6 @@
+(* NOTE: when modifying this file, please also check whether
+   rng/miou/pfortuna.ml needs to be updated. *)
+
 open Mirage_crypto
 open Mirage_crypto.Uncommon
 

@@ -1,0 +1,5 @@
+(library
+ (name mirage_crypto_rng_miou_unix)
+ (public_name mirage-crypto-rng-miou-unix)
+ (libraries miou miou.unix mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix digestif duration mtime.clock.os logs)
+ (modules mirage_crypto_rng_miou_unix pfortuna))
