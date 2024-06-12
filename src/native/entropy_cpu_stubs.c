@@ -111,14 +111,23 @@ static inline uint32_t read_virtual_count (void)
 #endif /* arm */
 
 #if defined (__aarch64__)
-#define	isb() __asm__ __volatile__("isb" : : : "memory")
+#if defined(__ocaml_freestanding__) || defined(__ocaml_solo5__)
 static inline uint64_t read_virtual_count(void)
 {
   uint64_t c;
-  isb();
-  __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(c));
+  __asm__ __volatile__("mrs %0, PMCCNTR_EL0":"=r"(c));
   return c;
 }
+#else
+/* see https://github.com/mirage/mirage-crypto/issues/216 */
+#include <time.h>
+static inline uint64_t read_virtual_count (void)
+{
+  struct timespec now;
+  clock_gettime (CLOCK_MONOTONIC, &now);
+  return now.tv_nsec;
+}
+#endif /* __ocaml_freestanding__ || __ocaml_solo5__ */
 #endif /* aarch64 */
 
 #if defined (__powerpc64__)
