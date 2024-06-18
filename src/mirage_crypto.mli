@@ -148,7 +148,7 @@ module type AEAD = sig
     ?adata:string -> string -> src_off:int -> bytes -> dst_off:int ->
     tag_off:int -> int -> unit
   (** [authenticate_encrypt_into ~key ~nonce ~adata msg ~src_off dst ~dst_off ~tag_off len]
-      encrypts [msg] starting at [src_off] with [key] and [nonce]. The output
+      encrypts [len] bytes of [msg] starting at [src_off] with [key] and [nonce]. The output
       is put into [dst] at [dst_off], the tag into [dst] at [tag_off].
 
       @raise Invalid_argument if [nonce] is not of the right size.
@@ -160,9 +160,9 @@ module type AEAD = sig
   val authenticate_decrypt_into : key:key -> nonce:string ->
     ?adata:string -> string -> src_off:int -> tag_off:int -> bytes ->
     dst_off:int -> int -> bool
-  (** [authenticate_decrypt_into ~key ~nonce ~adata msg ~src_off ~tag_off dst ~dst_off]
+  (** [authenticate_decrypt_into ~key ~nonce ~adata msg ~src_off ~tag_off dst ~dst_off len]
       computes the authentication tag using [key], [nonce], and [adata], and
-      decrypts the encrypted data from [msg] starting at [src_off] into [dst]
+      decrypts the [len] bytes encrypted data from [msg] starting at [src_off] into [dst]
       starting at [dst_off]. If the authentication tags match, [true] is
       returned, and the decrypted data is in [dst].
 
