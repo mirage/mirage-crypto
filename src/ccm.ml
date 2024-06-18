@@ -10,7 +10,7 @@ let encode_len buf ~off size value =
     | 0 -> Bytes.set_uint8 buf off num
     | m ->
       Bytes.set_uint8 buf (off + m) (num land 0xff);
-      ass (num lsr 8) (pred m)
+      (ass [@tailcall]) (num lsr 8) (pred m)
   in
   ass value (pred size)
 
@@ -91,25 +91,25 @@ let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off 
     cipher ~key (Bytes.unsafe_to_string block) ~src_off:dst_off block ~dst_off
   in
 
-  let cbcprep =
+  let iv =
     let rec doit iv iv_off block block_off =
       match Bytes.length block - block_off with
       | 0 -> Bytes.sub iv iv_off block_size
       | _ ->
          cbc (Bytes.unsafe_to_string iv) iv_off block block_off;
-         doit block block_off block (block_off + block_size)
+         (doit [@tailcall]) block block_off block (block_off + block_size)
     in
     doit (Bytes.make block_size '\x00') 0 cbcheader 0
   in
 
-  let rec loop iv ctr src src_off dst dst_off len =
+  let rec loop ctr src src_off dst dst_off len =
     let cbcblock, cbc_off =
       match mode with
       | Encrypt -> src, src_off
       | Decrypt -> Bytes.unsafe_to_string dst, dst_off
     in
     if len = 0 then
-      iv
+      ()
     else if len < block_size then begin
       let buf = Bytes.make block_size '\x00' in
       Bytes.unsafe_blit dst dst_off buf 0 len ;
@@ -118,16 +118,16 @@ let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off 
       unsafe_xor_into src ~src_off dst ~dst_off len ;
       Bytes.unsafe_blit_string cbcblock cbc_off buf 0 len ;
       Bytes.unsafe_fill buf len (block_size - len) '\x00';
-      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0 ;
-      iv
+      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0
     end else begin
       ctrblock ctr dst ;
       unsafe_xor_into src ~src_off dst ~dst_off block_size ;
       cbc cbcblock cbc_off iv 0 ;
-      loop iv (succ ctr) src (src_off + block_size) dst (dst_off + block_size) (len - block_size)
+      (loop [@tailcall]) (succ ctr) src (src_off + block_size) dst (dst_off + block_size) (len - block_size)
     end
   in
-  loop cbcprep 1 src src_off dst dst_off len
+  loop 1 src src_off dst dst_off len;
+  iv
 
 let crypto_core ~cipher ~mode ~key ~nonce ~adata data =
   let datalen = String.length data in

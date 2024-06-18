@@ -234,7 +234,7 @@ module Modes = struct
         | b ->
           Native.xor_into_bytes iv iv_i dst dst_i block ;
           Core.encrypt ~key ~blocks:1 (Bytes.unsafe_to_string dst) dst_i dst dst_i ;
-          loop (Bytes.unsafe_to_string dst) dst_i (dst_i + block) (b - 1)
+          (loop [@tailcall]) (Bytes.unsafe_to_string dst) dst_i (dst_i + block) (b - 1)
       in
       loop iv 0 dst_off (len / block)
 

@@ -65,7 +65,7 @@ let crypt_into ~key ~nonce ~ctr src ~src_off dst ~dst_off len =
       chacha20_block state (dst_off + i) dst ;
       Native.xor_into_bytes src (src_off + i) dst (dst_off + i) block ;
       inc state;
-      loop (i + block) (n - 1)
+      (loop [@tailcall]) (i + block) (n - 1)
   in
   loop 0 block_count
 
