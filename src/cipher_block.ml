@@ -214,16 +214,16 @@ module Modes = struct
 
     let of_secret = Core.of_secret
 
-    let block_size_check ?(off = 0) ~iv cs =
+    let check_block_size ~iv len =
       if String.length iv <> block then
         invalid_arg "CBC: IV length %u not of block size" (String.length iv);
-      if (String.length cs - off) mod block <> 0 then
-        invalid_arg "CBC: argument length %u (off %u) not of block size"
-          (String.length cs) off
+      if len mod block <> 0 then
+        invalid_arg "CBC: argument length %u not of block size"
+          len
     [@@inline]
 
     let next_iv ?(off = 0) cs ~iv =
-      block_size_check ~iv cs ~off ;
+      check_block_size ~iv (String.length cs - off) ;
       if String.length cs > off then
         String.sub cs (String.length cs - block_size) block_size
       else iv
@@ -243,7 +243,7 @@ module Modes = struct
       unsafe_encrypt_into_inplace ~key ~iv dst ~dst_off len
 
     let encrypt_into ~key ~iv src ~src_off dst ~dst_off len =
-      block_size_check ~off:src_off ~iv src;
+      check_block_size ~iv len;
       check_offset ~tag:"CBC" ~buf:"src" ~off:src_off ~len (String.length src);
       check_offset ~tag:"CBC" ~buf:"dst" ~off:dst_off ~len (Bytes.length dst);
       unsafe_encrypt_into ~key ~iv src ~src_off dst ~dst_off len
@@ -262,7 +262,7 @@ module Modes = struct
       end
 
     let decrypt_into ~key ~iv src ~src_off dst ~dst_off len =
-      block_size_check ~off:src_off ~iv src;
+      check_block_size ~iv len;
       check_offset ~tag:"CBC" ~buf:"src" ~off:src_off ~len (String.length src);
       check_offset ~tag:"CBC" ~buf:"dst" ~off:dst_off ~len (Bytes.length dst);
       unsafe_decrypt_into ~key ~iv src ~src_off dst ~dst_off len
