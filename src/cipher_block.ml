@@ -363,7 +363,7 @@ module Modes = struct
 
   module GCM_of (C : Block.Core) : Block.GCM = struct
 
-    let _ = assert (C.block = 16)
+    assert (C.block = 16)
     module CTR = CTR_of (C) (Counters.C128be32)
 
     type key = { key : C.ekey ; hkey : GHASH.key }
@@ -455,9 +455,9 @@ module Modes = struct
 
   module CCM16_of (C : Block.Core) : Block.CCM16 = struct
 
-    let _ = assert (C.block = 16)
+    assert (C.block = 16)
 
-    let tag_size = 16
+    let tag_size = C.block
 
     type key = C.ekey
 
@@ -469,8 +469,8 @@ module Modes = struct
       C.encrypt ~key ~blocks:1 src src_off dst dst_off
 
     let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =
-      Ccm.unsafe_generation_encryption_into ~cipher ~key ~nonce ~maclen:tag_size
-        ~adata src ~src_off dst ~dst_off ~tag_off len
+      Ccm.unsafe_generation_encryption_into ~cipher ~key ~nonce ~adata
+        src ~src_off dst ~dst_off ~tag_off len
 
     let valid_nonce nonce =
       let nsize = String.length nonce in
@@ -496,7 +496,7 @@ module Modes = struct
       String.sub res 0 (String.length cs), String.sub res (String.length cs) tag_size
 
     let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag_off dst ~dst_off len =
-      Ccm.unsafe_decryption_verification_into ~cipher ~key ~nonce ~maclen:tag_size ~adata src ~src_off ~tag_off dst ~dst_off len
+      Ccm.unsafe_decryption_verification_into ~cipher ~key ~nonce ~adata src ~src_off ~tag_off dst ~dst_off len
 
     let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
       check_offset ~tag:"CCM" ~buf:"src" ~off:src_off ~len (String.length src);

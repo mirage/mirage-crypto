@@ -74,8 +74,8 @@ let prepare_header nonce adata plen tlen =
 
 type mode = Encrypt | Decrypt
 
-let crypto_core_into ~cipher ~mode ~key ~nonce ~maclen ~adata src ~src_off dst ~dst_off len =
-  let cbcheader = prepare_header nonce adata len maclen in
+let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off len =
+  let cbcheader = prepare_header nonce adata len block_size in
 
   let small_q = 15 - String.length nonce in
   let ctr_flag_val = flags 0 0 (small_q - 1) in
@@ -127,15 +127,12 @@ let crypto_core_into ~cipher ~mode ~key ~nonce ~maclen ~adata src ~src_off dst ~
       loop iv (succ ctr) src (src_off + block_size) dst (dst_off + block_size) (len - block_size)
     end
   in
-  let last = loop cbcprep 1 src src_off dst dst_off len in
-  (* assert (maclen = Bytes.length last); *)
-  (* assert (block_size = maclen); *)
-  last
+  loop cbcprep 1 src src_off dst dst_off len
 
-let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
+let crypto_core ~cipher ~mode ~key ~nonce ~adata data =
   let datalen = String.length data in
   let dst = Bytes.create datalen in
-  let t = crypto_core_into ~cipher ~mode ~key ~nonce ~maclen ~adata data ~src_off:0 dst ~dst_off:0 datalen in
+  let t = crypto_core_into ~cipher ~mode ~key ~nonce ~adata data ~src_off:0 dst ~dst_off:0 datalen in
   dst, t
 
 let crypto_t t nonce cipher key =
@@ -143,13 +140,13 @@ let crypto_t t nonce cipher key =
   cipher ~key (Bytes.unsafe_to_string ctr) ~src_off:0 ctr ~dst_off:0 ;
   unsafe_xor_into (Bytes.unsafe_to_string ctr) ~src_off:0 t ~dst_off:0 (Bytes.length t)
 
-let unsafe_generation_encryption_into ~cipher ~key ~nonce ~maclen ~adata src ~src_off dst ~dst_off ~tag_off len =
-  let t = crypto_core_into ~cipher ~mode:Encrypt ~key ~nonce ~maclen ~adata src ~src_off dst ~dst_off len in
+let unsafe_generation_encryption_into ~cipher ~key ~nonce ~adata src ~src_off dst ~dst_off ~tag_off len =
+  let t = crypto_core_into ~cipher ~mode:Encrypt ~key ~nonce ~adata src ~src_off dst ~dst_off len in
   crypto_t t nonce cipher key ;
-  Bytes.unsafe_blit t 0 dst tag_off maclen
+  Bytes.unsafe_blit t 0 dst tag_off block_size
 
-let unsafe_decryption_verification_into ~cipher ~key ~nonce ~maclen ~adata src ~src_off ~tag_off dst ~dst_off len =
-  let tag = String.sub src tag_off maclen in
-  let t = crypto_core_into ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata src ~src_off dst ~dst_off len in
+let unsafe_decryption_verification_into ~cipher ~key ~nonce ~adata src ~src_off ~tag_off dst ~dst_off len =
+  let tag = String.sub src tag_off block_size in
+  let t = crypto_core_into ~cipher ~mode:Decrypt ~key ~nonce ~adata src ~src_off dst ~dst_off len in
   crypto_t t nonce cipher key ;
   Eqaf.equal tag (Bytes.unsafe_to_string t)
