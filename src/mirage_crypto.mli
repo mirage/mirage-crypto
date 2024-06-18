@@ -248,16 +248,16 @@ module Block : sig
         from [src] starting at [src_off] into [dst] starting at [dst_off].
 
         @raise Invalid_argument if [len] is not a multiple of {!block_size}.
-        @raise Invalid_argument if [String.length src - src_off < len].
-        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len].
+        @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len]. *)
 
     val decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
     (** [decrypt_into ~key src ~src_off dst dst_off len] decrypts [len] octets
         from [src] starting at [src_off] into [dst] starting at [dst_off].
 
         @raise Invalid_argument if [len] is not a multiple of {!block_size}.
-        @raise Invalid_argument if [String.length src - src_off < len].
-        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len].
+        @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len]. *)
 
     (**/**)
     val unsafe_encrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
@@ -266,8 +266,8 @@ module Block : sig
         This may cause memory issues if an invariant is violated:
         {ul
         {- [len] must be a multiple of {!block_size},}
-        {- [String.length src - src_off >= len],}
-        {- [Bytes.length dst - dst_off >= len].}} *)
+        {- [src_off >= 0 && String.length src - src_off >= len],}
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len].}} *)
 
     val unsafe_decrypt_into : key:key -> string -> src_off:int -> bytes -> dst_off:int -> int -> unit
     (** [unsafe_decrypt_into] is {!decrypt_into}, but without bounds checks.
@@ -275,8 +275,8 @@ module Block : sig
         This may cause memory issues if an invariant is violated:
         {ul
         {- [len] must be a multiple of {!block_size},}
-        {- [String.length src - src_off >= len],}
-        {- [Bytes.length dst - dst_off >= len].}} *)
+        {- [src_off >= 0 && String.length src - src_off >= len],}
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len].}} *)
     (**/**)
   end
 
@@ -334,8 +334,8 @@ module Block : sig
 
         @raise Invalid_argument if the length of [iv] is not {!block_size}.
         @raise Invalid_argument if [len] is not a multiple of {!block_size}.
-        @raise Invalid_argument if [String.length src - src_off < len].
-        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len].
+        @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len]. *)
 
     val decrypt_into : key:key -> iv:string -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -344,8 +344,8 @@ module Block : sig
 
         @raise Invalid_argument if the length of [iv] is not {!block_size}.
         @raise Invalid_argument if [len] is not a multiple of {!block_size}.
-        @raise Invalid_argument if [String.length src - src_off < len].
-        @raise Invalid_argument if [Bytes.length dst - dst_off < len]. *)
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len].
+        @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len]. *)
 
     (**/**)
     val unsafe_encrypt_into : key:key -> iv:string -> string -> src_off:int ->
@@ -356,8 +356,8 @@ module Block : sig
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
-        {- [String.length src - src_off >= len],}
-        {- [Bytes.length dst - dst_off >= len].}} *)
+        {- [src_off >= 0 && String.length src - src_off >= len],}
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len].}} *)
 
     val unsafe_decrypt_into : key:key -> iv:string -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -367,8 +367,8 @@ module Block : sig
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
-        {- [String.length src - src_off >= len],}
-        {- [Bytes.length dst - dst_off >= len].}} *)
+        {- [src_off >= 0 && String.length src - src_off >= len],}
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len].}} *)
 
     val unsafe_encrypt_into_inplace : key:key -> iv:string ->
       bytes -> dst_off:int -> int -> unit
@@ -379,8 +379,8 @@ module Block : sig
         {ul
         {- the length of [iv] must be {!block_size},}
         {- [len] must be a multiple of {!block_size},}
-        {- [String.length src - src_off >= len],}
-        {- [Bytes.length dst - dst_off >= len].}} *)
+        {- [src_off >= 0 && String.length src - src_off >= len],}
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len].}} *)
     (**/**)
 end
 
@@ -459,8 +459,8 @@ end
         key stream into [dst] at [dst_off], and then xors it with [src] at
         [src_off].
 
-        @raise Invalid_argument if [Bytes.length dst - off < len].
-        @raise Invalid_argument if [String.length src - off < len]. *)
+        @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len].
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len]. *)
 
     val decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -472,7 +472,7 @@ end
 
         This may cause memory issues if the invariant is violated:
         {ul
-        {- [Bytes.length buf - off >= len].}} *)
+        {- [off >= 0 && Bytes.length buf - off >= len].}} *)
 
     val unsafe_encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -480,8 +480,8 @@ end
 
         This may cause memory issues if an invariant is violated:
         {ul
-        {- [Bytes.length dst - off >= len],}
-        {- [String.length src - off < len].}} *)
+        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len],}
+        {- [src_off >= 0 && String.length src - src_off >= len].}} *)
 
     val unsafe_decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
