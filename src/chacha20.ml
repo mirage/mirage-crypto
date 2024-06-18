@@ -93,11 +93,11 @@ let mac_into ~key ~adata src ~src_off len dst ~dst_off =
     Bytes.unsafe_to_string data
   in
   let p1 = pad16 (String.length adata) and p2 = pad16 len in
-  P.mac_into ~key [ adata, 0, String.length adata ;
-                    p1, 0, String.length p1 ;
-                    src, src_off, len ;
-                    p2, 0, String.length p2 ;
-                    len_buf, 0, String.length len_buf ]
+  P.unsafe_mac_into ~key [ adata, 0, String.length adata ;
+                           p1, 0, String.length p1 ;
+                           src, src_off, len ;
+                           p2, 0, String.length p2 ;
+                           len_buf, 0, String.length len_buf ]
     dst ~dst_off
 
 let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =

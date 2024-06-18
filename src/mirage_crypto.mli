@@ -76,6 +76,11 @@ module Poly1305 : sig
 
   val mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
   (** [mac_into ~key datas dst dst_off] computes the [mac] of [datas]. *)
+
+  (**/**)
+  val unsafe_mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
+  (** [unsafe_mac_into ~key datas dst dst_off] is {!mac_into} without bounds checks. *)
+  (**/**)
 end
 
 (** {1 Symmetric-key cryptography} *)

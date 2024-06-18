@@ -12,6 +12,7 @@ module type S = sig
   val mac : key:string -> string -> string
   val maci : key:string -> string iter -> string
   val mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
+  val unsafe_mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
 end
 
 module It : S = struct
@@ -54,8 +55,25 @@ module It : S = struct
 
   let maci ~key iter = feedi (empty ~key) iter |> final
 
-  let mac_into ~key datas dst ~dst_off =
+  let unsafe_mac_into ~key datas dst ~dst_off =
     let ctx = empty ~key in
     List.iter (fun (d, off, len) -> P.update ctx d off len) datas;
+    P.finalize ctx dst dst_off
+
+  let mac_into ~key datas dst ~dst_off =
+    if Bytes.length dst - dst_off < mac_size then
+      Uncommon.invalid_arg "Poly1305: dst length %u - off %u < len %u"
+        (Bytes.length dst) dst_off mac_size;
+    if dst_off < 0 then
+      Uncommon.invalid_arg "Poly1305: dst_off %u < 0" dst_off;
+    let ctx = empty ~key in
+    List.iter (fun (d, off, len) ->
+        if off < 0 then
+          Uncommon.invalid_arg "Poly1305: d off %u < 0" off;
+        if String.length d - off < len then
+          Uncommon.invalid_arg "Poly1305: d length %u - off %u < len %u"
+            (String.length d) off len;
+        P.update ctx d off len)
+      datas;
     P.finalize ctx dst dst_off
 end
