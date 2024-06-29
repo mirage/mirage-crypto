@@ -1,8 +1,10 @@
-## unreleased
+## v1.0.0 (2024-06-29)
 
 ### Breaking changes
 
 * mirage-crypto: Poly1305 API now uses string (#203 @hannesm)
+* mirage-crypto: Poly1305 no longer has type alias "type mac = string"
+  (#232 @hannesm)
 * mirage-crypto: the API uses string instead of cstruct (#214 @reynir @hannesm)
 * mirage-crypto: Hash module has been removed. Use digestif if you need hash
   functions (#213 @hannesm)
@@ -21,6 +23,11 @@
   `generate_into : ?g -> bytes -> ?off:int -> int -> unit` is provided
   (#212 @hannesm @reynir)
 * mirage-crypto-ec: remove NIST P224 support (#209 @hannesm @Firobe)
+* mirage-crypto: in Uncommon.xor_into the arguments ~src_off and ~dst_off are
+  required now (#232 @hannesm), renamed to unsafe_xor_into
+  (98f01b14f5ebf98ba0e7e9c2ba97ec518f90fddc)
+* mirage-crypto-pk, mirage-crypto-rng: remove type alias "type bits = int"
+  (#236 @hannesm)
 
 ### Bugfixes
 
@@ -41,6 +48,10 @@
 
 ### Other changes
 
+* mirage-crypto: add {de,en}crypt_into functions (and unsafe variants) to allow
+  less buffer allocations (#231 @hannesm)
+* mirage-crypto-rng-miou: new package which adds rng support with miou
+  (#227 @dinosaure)
 * PERFORMANCE mirage-crypto: ChaCha20/Poly1305 use string instead of Cstruct.t,
   ChaCha20 interface unchanged, performance improvement roughly 2x
   (#203 @hannesm @reynir)
@@ -48,6 +59,8 @@
   hashes (#212 #215 @reynir @hannesm)
 * mirage-crypto-rng: use a set for entropy sources instead of a list
   (#218 @hannesm)
+* mirage-crypto-rng-mirage: provide a module type S (for use instead of
+  mirage-random in mirage) (#234 @hannesm)
 
 ## v0.11.3 (2024-02-26)
 
