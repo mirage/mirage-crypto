@@ -26,7 +26,7 @@ module ARC4 = struct
           let j = (j + si + x) land 0xff in
           let sj = s.(j) in
           s.(i) <- sj ; s.(j) <- si ;
-          loop j (succ i)
+          (loop [@tailcall]) j (succ i)
     in
     ( loop 0 0 ; (0, 0, s) )
 
@@ -44,7 +44,7 @@ module ARC4 = struct
           s.(i) <- sj ; s.(j) <- si ;
           let k  = s.((si + sj) land 0xff) in
           Bytes.set_uint8 res n (k lxor String.get_uint8 buf n);
-          mix i j (succ n)
+          (mix [@tailcall]) i j (succ n)
     in
     let key' = mix i j 0 in
     { key = key' ; message = Bytes.unsafe_to_string res }

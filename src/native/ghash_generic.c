@@ -101,9 +101,9 @@ CAMLprim value mc_ghash_init_key_generic (value key, value m) {
 }
 
 CAMLprim value
-mc_ghash_generic (value m, value hash, value src, value len) {
+mc_ghash_generic (value m, value hash, value src, value off, value len) {
   __ghash ((__uint128_t *) Bp_val (m), (uint64_t *) Bp_val (hash),
-           _st_uint8 (src), Int_val (len) );
+           _st_uint8_off (src, off), Int_val (len) );
   return Val_unit;
 }
 

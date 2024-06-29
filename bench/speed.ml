@@ -45,6 +45,15 @@ let throughput title f =
     Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
       size (bw /. mb) iters time
 
+let throughput_into ?(add = 0) title f =
+  Printf.printf "\n* [%s]\n%!" title ;
+  sizes |> List.iter @@ fun size ->
+    Gc.full_major () ;
+    let dst = Bytes.create (size + add) in
+    let (iters, time, bw) = burn (f dst) size in
+    Printf.printf "    % 5d:  %04f MB/s  (%d iters in %.03f s)\n%!"
+      size (bw /. mb) iters time
+
 let count_period = 10.
 
 let count f n =
@@ -347,55 +356,128 @@ let benchmarks = [
         fst ecdh_shares);
 
   bm "chacha20-poly1305" (fun name ->
-      let key = Mirage_crypto.Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      let key = Chacha20.of_secret (Mirage_crypto_rng.generate 32)
       and nonce = Mirage_crypto_rng.generate 8 in
-      throughput name (Mirage_crypto.Chacha20.authenticate_encrypt ~key ~nonce)) ;
+      throughput_into ~add:Chacha20.tag_size name
+        (fun dst cs -> Chacha20.authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs))) ;
+
+  bm "chacha20-poly1305-unsafe" (fun name ->
+      let key = Chacha20.of_secret (Mirage_crypto_rng.generate 32)
+      and nonce = Mirage_crypto_rng.generate 8 in
+      throughput_into ~add:Chacha20.tag_size name
+        (fun dst cs -> Chacha20.unsafe_authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs))) ;
 
   bm "aes-128-ecb" (fun name ->
     let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
-    throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.ECB.encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-192-ecb" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
+    throughput_into name (fun dst cs -> AES.ECB.encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-192-ecb-unsafe" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
+    throughput_into name (fun dst cs -> AES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-256-ecb" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 32) in
+    throughput_into name (fun dst cs -> AES.ECB.encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-256-ecb-unsafe" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 32) in
+    throughput_into name (fun dst cs -> AES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-ecb-unsafe" (fun name ->
+    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 16) in
+    throughput_into name
+      (fun dst cs -> AES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-cbc-e" (fun name ->
     let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
     and iv  = Mirage_crypto_rng.generate 16 in
-    throughput name (fun cs -> AES.CBC.encrypt ~key ~iv cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.CBC.encrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-e-unsafe" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput_into name
+      (fun dst cs -> AES.CBC.unsafe_encrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-e-unsafe-inplace" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput name
+      (fun cs ->
+         let b = Bytes.unsafe_of_string cs in
+         AES.CBC.unsafe_encrypt_into_inplace ~key ~iv b ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-cbc-d" (fun name ->
     let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
     and iv  = Mirage_crypto_rng.generate 16 in
-    throughput name (fun cs -> AES.CBC.decrypt ~key ~iv cs)) ;
+    throughput_into name
+      (fun dst cs -> AES.CBC.decrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-cbc-d-unsafe" (fun name ->
+    let key = AES.CBC.of_secret (Mirage_crypto_rng.generate 16)
+    and iv  = Mirage_crypto_rng.generate 16 in
+    throughput_into name
+      (fun dst cs -> AES.CBC.unsafe_decrypt_into ~key ~iv cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-ctr" (fun name ->
     let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
     and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_octets in
-    throughput name (fun cs -> AES.CTR.encrypt ~key ~ctr cs)) ;
+    throughput_into name (fun dst cs -> AES.CTR.encrypt_into ~key ~ctr cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "aes-128-ctr-unsafe" (fun name ->
+    let key = Mirage_crypto_rng.generate 16 |> AES.CTR.of_secret
+    and ctr = Mirage_crypto_rng.generate 16 |> AES.CTR.ctr_of_octets in
+    throughput_into name (fun dst cs -> AES.CTR.unsafe_encrypt_into ~key ~ctr cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "aes-128-gcm" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
     and nonce = Mirage_crypto_rng.generate 12 in
-    throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce cs));
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs)));
+
+  bm "aes-128-gcm-unsafe" (fun name ->
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 12 in
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.unsafe_authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs)));
 
   bm "aes-128-ghash" (fun name ->
     let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
     and nonce = Mirage_crypto_rng.generate 12 in
-    throughput name (fun cs -> AES.GCM.authenticate_encrypt ~key ~nonce ~adata:cs ""));
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.authenticate_encrypt_into ~key ~nonce ~adata:cs "" ~src_off:0 dst ~dst_off:0 ~tag_off:0 0));
+
+  bm "aes-128-ghash-unsafe" (fun name ->
+    let key = AES.GCM.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 12 in
+    throughput_into ~add:AES.GCM.tag_size name
+      (fun dst cs -> AES.GCM.unsafe_authenticate_encrypt_into ~key ~nonce ~adata:cs "" ~src_off:0 dst ~dst_off:0 ~tag_off:0 0));
 
   bm "aes-128-ccm" (fun name ->
     let key   = AES.CCM16.of_secret (Mirage_crypto_rng.generate 16)
     and nonce = Mirage_crypto_rng.generate 10 in
-    throughput name (fun cs -> AES.CCM16.authenticate_encrypt ~key ~nonce cs));
+    throughput_into ~add:AES.CCM16.tag_size name
+      (fun dst cs -> AES.CCM16.authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs)));
 
-  bm "aes-192-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
-    throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
-
-  bm "aes-256-ecb" (fun name ->
-    let key = AES.ECB.of_secret (Mirage_crypto_rng.generate 32) in
-    throughput name (fun cs -> AES.ECB.encrypt ~key cs)) ;
+  bm "aes-128-ccm-unsafe" (fun name ->
+    let key   = AES.CCM16.of_secret (Mirage_crypto_rng.generate 16)
+    and nonce = Mirage_crypto_rng.generate 10 in
+    throughput_into ~add:AES.CCM16.tag_size name
+      (fun dst cs -> AES.CCM16.unsafe_authenticate_encrypt_into ~key ~nonce cs ~src_off:0 dst ~dst_off:0 ~tag_off:(String.length cs) (String.length cs)));
 
   bm "d3des-ecb" (fun name ->
     let key = DES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
-    throughput name (fun cs -> DES.ECB.encrypt ~key cs)) ;
+    throughput_into name (fun dst cs -> DES.ECB.encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
+
+  bm "d3des-ecb-unsafe" (fun name ->
+    let key = DES.ECB.of_secret (Mirage_crypto_rng.generate 24) in
+    throughput_into name (fun dst cs -> DES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "fortuna" (fun name ->
     let open Mirage_crypto_rng.Fortuna in

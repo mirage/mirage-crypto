@@ -11,7 +11,8 @@ module type S = sig
 
   val mac : key:string -> string -> string
   val maci : key:string -> string iter -> string
-  val macl : key:string -> string list -> string
+  val mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
+  val unsafe_mac_into : key:string -> (string * int * int) list -> bytes -> dst_off:int -> unit
 end
 
 module It : S = struct
@@ -31,7 +32,7 @@ module It : S = struct
     ctx
 
   let update ctx data =
-    P.update ctx data (String.length data)
+    P.update ctx data 0 (String.length data)
 
   let feed ctx cs =
     let t = dup ctx in
@@ -45,7 +46,7 @@ module It : S = struct
 
   let final ctx =
     let res = Bytes.create mac_size in
-    P.finalize ctx res;
+    P.finalize ctx res 0;
     Bytes.unsafe_to_string res
 
   let get ctx = final (dup ctx)
@@ -54,8 +55,25 @@ module It : S = struct
 
   let maci ~key iter = feedi (empty ~key) iter |> final
 
-  let macl ~key datas =
+  let unsafe_mac_into ~key datas dst ~dst_off =
     let ctx = empty ~key in
-    List.iter (update ctx) datas;
-    final ctx
+    List.iter (fun (d, off, len) -> P.update ctx d off len) datas;
+    P.finalize ctx dst dst_off
+
+  let mac_into ~key datas dst ~dst_off =
+    if Bytes.length dst - dst_off < mac_size then
+      Uncommon.invalid_arg "Poly1305: dst length %u - off %u < len %u"
+        (Bytes.length dst) dst_off mac_size;
+    if dst_off < 0 then
+      Uncommon.invalid_arg "Poly1305: dst_off %u < 0" dst_off;
+    let ctx = empty ~key in
+    List.iter (fun (d, off, len) ->
+        if off < 0 then
+          Uncommon.invalid_arg "Poly1305: d off %u < 0" off;
+        if String.length d - off < len then
+          Uncommon.invalid_arg "Poly1305: d length %u - off %u < len %u"
+            (String.length d) off len;
+        P.update ctx d off len)
+      datas;
+    P.finalize ctx dst dst_off
 end

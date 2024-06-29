@@ -10,7 +10,7 @@ let encode_len buf ~off size value =
     | 0 -> Bytes.set_uint8 buf off num
     | m ->
       Bytes.set_uint8 buf (off + m) (num land 0xff);
-      ass (num lsr 8) (pred m)
+      (ass [@tailcall]) (num lsr 8) (pred m)
   in
   ass value (pred size)
 
@@ -74,10 +74,8 @@ let prepare_header nonce adata plen tlen =
 
 type mode = Encrypt | Decrypt
 
-let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
-  let datalen = String.length data in
-  let cbcheader = prepare_header nonce adata datalen maclen in
-  let dst = Bytes.create datalen in
+let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off len =
+  let cbcheader = prepare_header nonce adata len block_size in
 
   let small_q = 15 - String.length nonce in
   let ctr_flag_val = flags 0 0 (small_q - 1) in
@@ -93,65 +91,62 @@ let crypto_core ~cipher ~mode ~key ~nonce ~maclen ~adata data =
     cipher ~key (Bytes.unsafe_to_string block) ~src_off:dst_off block ~dst_off
   in
 
-  let cbcprep =
+  let iv =
     let rec doit iv iv_off block block_off =
       match Bytes.length block - block_off with
       | 0 -> Bytes.sub iv iv_off block_size
       | _ ->
          cbc (Bytes.unsafe_to_string iv) iv_off block block_off;
-         doit block block_off block (block_off + block_size)
+         (doit [@tailcall]) block block_off block (block_off + block_size)
     in
     doit (Bytes.make block_size '\x00') 0 cbcheader 0
   in
 
-  let rec loop iv ctr src src_off dst dst_off=
+  let rec loop ctr src src_off dst dst_off len =
     let cbcblock, cbc_off =
       match mode with
       | Encrypt -> src, src_off
       | Decrypt -> Bytes.unsafe_to_string dst, dst_off
     in
-    match String.length src - src_off with
-    | 0 -> iv
-    | x when x < block_size ->
+    if len = 0 then
+      ()
+    else if len < block_size then begin
       let buf = Bytes.make block_size '\x00' in
-      Bytes.unsafe_blit dst dst_off buf 0 x;
+      Bytes.unsafe_blit dst dst_off buf 0 len ;
       ctrblock ctr buf ;
-      Bytes.unsafe_blit buf 0 dst dst_off x ;
-      unsafe_xor_into src ~src_off dst ~dst_off x ;
-      Bytes.unsafe_blit_string cbcblock cbc_off buf 0 x;
-      Bytes.unsafe_fill buf x (block_size - x) '\x00';
-      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0 ;
-      iv
-    | _ ->
+      Bytes.unsafe_blit buf 0 dst dst_off len ;
+      unsafe_xor_into src ~src_off dst ~dst_off len ;
+      Bytes.unsafe_blit_string cbcblock cbc_off buf 0 len ;
+      Bytes.unsafe_fill buf len (block_size - len) '\x00';
+      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0
+    end else begin
       ctrblock ctr dst ;
       unsafe_xor_into src ~src_off dst ~dst_off block_size ;
       cbc cbcblock cbc_off iv 0 ;
-      loop iv (succ ctr) src (src_off + block_size) dst (dst_off + block_size)
+      (loop [@tailcall]) (succ ctr) src (src_off + block_size) dst (dst_off + block_size) (len - block_size)
+    end
   in
-  let last = loop cbcprep 1 data 0 dst 0 in
-  let t = Bytes.sub last 0 maclen in
-  (dst, t)
+  loop 1 src src_off dst dst_off len;
+  iv
+
+let crypto_core ~cipher ~mode ~key ~nonce ~adata data =
+  let datalen = String.length data in
+  let dst = Bytes.create datalen in
+  let t = crypto_core_into ~cipher ~mode ~key ~nonce ~adata data ~src_off:0 dst ~dst_off:0 datalen in
+  dst, t
 
 let crypto_t t nonce cipher key =
   let ctr = gen_ctr nonce 0 in
   cipher ~key (Bytes.unsafe_to_string ctr) ~src_off:0 ctr ~dst_off:0 ;
   unsafe_xor_into (Bytes.unsafe_to_string ctr) ~src_off:0 t ~dst_off:0 (Bytes.length t)
 
-let valid_nonce nonce =
-  let nsize = String.length nonce in
-  if nsize < 7 || nsize > 13 then
-    invalid_arg "CCM: nonce length not between 7 and 13: %u" nsize
-
-let generation_encryption ~cipher ~key ~nonce ~maclen ~adata data =
-  valid_nonce nonce;
-  let cdata, t = crypto_core ~cipher ~mode:Encrypt ~key ~nonce ~maclen ~adata data in
+let unsafe_generation_encryption_into ~cipher ~key ~nonce ~adata src ~src_off dst ~dst_off ~tag_off len =
+  let t = crypto_core_into ~cipher ~mode:Encrypt ~key ~nonce ~adata src ~src_off dst ~dst_off len in
   crypto_t t nonce cipher key ;
-  Bytes.unsafe_to_string cdata, Bytes.unsafe_to_string t
+  Bytes.unsafe_blit t 0 dst tag_off block_size
 
-let decryption_verification ~cipher ~key ~nonce ~maclen ~adata ~tag data =
-  valid_nonce nonce;
-  let cdata, t = crypto_core ~cipher ~mode:Decrypt ~key ~nonce ~maclen ~adata data in
+let unsafe_decryption_verification_into ~cipher ~key ~nonce ~adata src ~src_off ~tag_off dst ~dst_off len =
+  let tag = String.sub src tag_off block_size in
+  let t = crypto_core_into ~cipher ~mode:Decrypt ~key ~nonce ~adata src ~src_off dst ~dst_off len in
   crypto_t t nonce cipher key ;
-  match Eqaf.equal tag (Bytes.unsafe_to_string t) with
-  | true  -> Some (Bytes.unsafe_to_string cdata)
-  | false -> None
+  Eqaf.equal tag (Bytes.unsafe_to_string t)

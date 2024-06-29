@@ -20,8 +20,8 @@ end
 
 module Poly1305 = struct
   external init     : bytes -> string -> unit = "mc_poly1305_init" [@@noalloc]
-  external update   : bytes -> string -> int -> unit = "mc_poly1305_update" [@@noalloc]
-  external finalize : bytes -> bytes -> unit = "mc_poly1305_finalize" [@@noalloc]
+  external update   : bytes -> string -> int -> int -> unit = "mc_poly1305_update" [@@noalloc]
+  external finalize : bytes -> bytes -> int -> unit = "mc_poly1305_finalize" [@@noalloc]
   external ctx_size : unit -> int = "mc_poly1305_ctx_size" [@@noalloc]
   external mac_size : unit -> int = "mc_poly1305_mac_size" [@@noalloc]
 end
@@ -29,7 +29,7 @@ end
 module GHASH = struct
   external keysize : unit -> int = "mc_ghash_key_size" [@@noalloc]
   external keyinit : string -> bytes -> unit = "mc_ghash_init_key" [@@noalloc]
-  external ghash : string -> bytes -> string -> int -> unit = "mc_ghash" [@@noalloc]
+  external ghash : string -> bytes -> string -> int -> int -> unit = "mc_ghash" [@@noalloc]
   external mode : unit -> int = "mc_ghash_mode" [@@noalloc]
 end
 
@@ -37,9 +37,9 @@ end
  * Unsolved: bounds-checked XORs are slowing things down considerably... *)
 external xor_into_bytes : string -> int -> bytes -> int -> int -> unit = "mc_xor_into_bytes" [@@noalloc]
 
-external count8be   : bytes -> bytes -> blocks:int -> unit = "mc_count_8_be"    [@@noalloc]
-external count16be  : bytes -> bytes -> blocks:int -> unit = "mc_count_16_be"   [@@noalloc]
-external count16be4 : bytes -> bytes -> blocks:int -> unit = "mc_count_16_be_4" [@@noalloc]
+external count8be   : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_8_be"    [@@noalloc]
+external count16be  : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_16_be"   [@@noalloc]
+external count16be4 : ctr:bytes -> bytes -> off:int -> blocks:int -> unit = "mc_count_16_be_4" [@@noalloc]
 
 external misc_mode : unit -> int = "mc_misc_mode" [@@noalloc]
 

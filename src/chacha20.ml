@@ -42,77 +42,121 @@ let init ctr ~key ~nonce =
   Bytes.unsafe_blit_string nonce 0 state nonce_off (String.length nonce) ;
   state, inc
 
-let crypt ~key ~nonce ?(ctr = 0L) data =
+let crypt_into ~key ~nonce ~ctr src ~src_off dst ~dst_off len =
   let state, inc = init ctr ~key ~nonce in
-  let l = String.length data in
-  let block_count = l // block in
+  let block_count = len // block in
   let last_len =
-    let last = l mod block in
+    let last = len mod block in
     if last = 0 then block else last
   in
-  let res = Bytes.create l in
   let rec loop i = function
     | 0 -> ()
     | 1 ->
       if last_len = block then begin
-        chacha20_block state i res ;
-        Native.xor_into_bytes data i res i block
+        chacha20_block state (dst_off + i) dst ;
+        Native.xor_into_bytes src (src_off + i) dst (dst_off + i) block
       end else begin
         let buf = Bytes.create block in
         chacha20_block state 0 buf ;
-        Native.xor_into_bytes data i buf 0 last_len ;
-        Bytes.unsafe_blit buf 0 res i last_len
+        Native.xor_into_bytes src (src_off + i) buf 0 last_len ;
+        Bytes.unsafe_blit buf 0 dst (dst_off + i) last_len
       end
     | n ->
-      chacha20_block state i res ;
-      Native.xor_into_bytes data i res i block ;
+      chacha20_block state (dst_off + i) dst ;
+      Native.xor_into_bytes src (src_off + i) dst (dst_off + i) block ;
       inc state;
-      loop (i + block) (n - 1)
+      (loop [@tailcall]) (i + block) (n - 1)
   in
-  loop 0 block_count ;
+  loop 0 block_count
+
+let crypt ~key ~nonce ?(ctr = 0L) data =
+  let l = String.length data in
+  let res = Bytes.create l in
+  crypt_into ~key ~nonce ~ctr data ~src_off:0 res ~dst_off:0 l;
   Bytes.unsafe_to_string res
 
 module P = Poly1305.It
 
+let tag_size = P.mac_size
+
 let generate_poly1305_key ~key ~nonce =
   crypt ~key ~nonce (String.make 32 '\000')
 
-let mac ~key ~adata ciphertext =
-  let pad16 b =
-    let len = String.length b mod 16 in
+let mac_into ~key ~adata src ~src_off len dst ~dst_off =
+  let pad16 l =
+    let len = l mod 16 in
     if len = 0 then "" else String.make (16 - len) '\000'
-  and len =
+  and len_buf =
     let data = Bytes.create 16 in
     Bytes.set_int64_le data 0 (Int64.of_int (String.length adata));
-    Bytes.set_int64_le data 8 (Int64.of_int (String.length ciphertext));
+    Bytes.set_int64_le data 8 (Int64.of_int len);
     Bytes.unsafe_to_string data
   in
-  P.macl ~key [ adata ; pad16 adata ; ciphertext ; pad16 ciphertext ; len ]
+  let p1 = pad16 (String.length adata) and p2 = pad16 len in
+  P.unsafe_mac_into ~key [ adata, 0, String.length adata ;
+                           p1, 0, String.length p1 ;
+                           src, src_off, len ;
+                           p2, 0, String.length p2 ;
+                           len_buf, 0, String.length len_buf ]
+    dst ~dst_off
 
-let authenticate_encrypt_tag ~key ~nonce ?(adata = "") data =
+let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
-  let ciphertext = crypt ~key ~nonce ~ctr:1L data in
-  let mac = mac ~key:poly1305_key ~adata ciphertext in
-  ciphertext, mac
+  crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
+  mac_into ~key:poly1305_key ~adata (Bytes.unsafe_to_string dst) ~src_off:dst_off len dst ~dst_off:tag_off
+
+let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
+  if String.length src - src_off < len then
+    invalid_arg "Chacha20: src length %u - src_off %u < len %u"
+      (String.length src) src_off len;
+  if Bytes.length dst - dst_off < len then
+    invalid_arg "Chacha20: dst length %u - dst_off %u < len %u"
+      (Bytes.length dst) dst_off len;
+  if Bytes.length dst - tag_off < tag_size then
+    invalid_arg "Chacha20: dst length %u - tag_off %u < tag_size %u"
+      (Bytes.length dst) tag_off tag_size;
+  unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len
 
 let authenticate_encrypt ~key ~nonce ?adata data =
-  let cdata, ctag = authenticate_encrypt_tag ~key ~nonce ?adata data in
-  cdata ^ ctag
+  let l = String.length data in
+  let dst = Bytes.create (l + tag_size) in
+  unsafe_authenticate_encrypt_into ~key ~nonce ?adata data ~src_off:0 dst ~dst_off:0 ~tag_off:l l;
+  Bytes.unsafe_to_string dst
 
-let authenticate_decrypt_tag ~key ~nonce ?(adata = "") ~tag data =
+let authenticate_encrypt_tag ~key ~nonce ?adata data =
+  let r = authenticate_encrypt ~key ~nonce ?adata data in
+  String.sub r 0 (String.length data), String.sub r (String.length data) tag_size
+
+let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag_off dst ~dst_off len =
   let poly1305_key = generate_poly1305_key ~key ~nonce in
-  let ctag = mac ~key:poly1305_key ~adata data in
-  let plain = crypt ~key ~nonce ~ctr:1L data in
-  if Eqaf.equal tag ctag then Some plain else None
+  let ctag = Bytes.create tag_size in
+  mac_into ~key:poly1305_key ~adata src ~src_off len ctag ~dst_off:0;
+  crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
+  Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag)
+
+let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
+  if String.length src - src_off < len then
+    invalid_arg "Chacha20: src length %u - src_off %u < len %u"
+      (String.length src) src_off len;
+  if Bytes.length dst - dst_off < len then
+    invalid_arg "Chacha20: dst length %u - dst_off %u < len %u"
+      (Bytes.length dst) dst_off len;
+  if String.length src - tag_off < tag_size then
+    invalid_arg "Chacha20: src length %u - tag_off %u < tag_size %u"
+      (String.length src) tag_off tag_size;
+  unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len
 
 let authenticate_decrypt ~key ~nonce ?adata data =
-  if String.length data < P.mac_size then
+  if String.length data < tag_size then
     None
   else
-    let cipher, tag =
-      let p = String.length data - P.mac_size in
-      String.sub data 0 p, String.sub data p P.mac_size
-    in
-    authenticate_decrypt_tag ~key ~nonce ?adata ~tag cipher
+    let l = String.length data - tag_size in
+    let r = Bytes.create l in
+    if unsafe_authenticate_decrypt_into ~key ~nonce ?adata data ~src_off:0 ~tag_off:l r ~dst_off:0 l then
+      Some (Bytes.unsafe_to_string r)
+    else
+      None
 
-let tag_size = P.mac_size
+let authenticate_decrypt_tag ~key ~nonce ?adata ~tag data =
+  let cdata = data ^ tag in
+  authenticate_decrypt ~key ~nonce ?adata cdata
