@@ -38,6 +38,7 @@ module type Dh = sig
   type secret
   val secret_of_octets : ?compress:bool -> string ->
     (secret * string, error) result
+  val secret_to_octets : secret -> string
   val gen_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit ->
     secret * string
   val key_exchange : secret -> string -> (string, error) result
@@ -505,6 +506,9 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
     | Ok p -> Ok (p, share ?compress p)
     | Error _ as e -> e
 
+  let secret_to_octets s =
+    S.to_octets s
+
   let rec generate_private_key ?g () =
     let candidate = Mirage_crypto_rng.generate ?g Param.byte_length in
     match S.of_octets candidate with
@@ -952,6 +956,8 @@ module X25519 = struct
       Ok (s, public s)
     else
       Error `Invalid_length
+
+  let secret_to_octets s = s
 
   let is_zero =
     let zero = String.make key_len '\000' in

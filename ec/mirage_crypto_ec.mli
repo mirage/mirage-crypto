@@ -38,6 +38,10 @@ module type Dh = sig
       the shared part will be compressed. May result in an error if the buffer
       had an invalid length or was not in bounds. *)
 
+  val secret_to_octets : secret -> string
+  (** [secret_to_octets secret] encodes the provided secret into a freshly
+      allocated buffer. *)
+
   val gen_key : ?compress:bool -> ?g:Mirage_crypto_rng.g -> unit ->
     secret * string
   (** [gen_key ~compress ~g ()] generates a private and a public key for
