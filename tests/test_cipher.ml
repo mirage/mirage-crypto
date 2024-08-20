@@ -470,6 +470,158 @@ let ccm_regressions =
     let cipher = authenticate_encrypt ~adata ~key ~nonce plaintext in
     assert_oct_equal ~msg:"CCM encrypt of >=65280 adata" expected cipher
   in
+  let regr_tls =
+    let key = of_secret (vx "063a 96fd 15f9 82d5  5aad 5bf9 d098 7546") in
+    (* discovered while moving ocaml-tls to string *)
+    let nonce = vx "81cd 4758 1880 9de0  c655 7c31"
+    and adata = vx "1703 0300 17"
+    and data = vx "0800 0002 0000 16"
+    and expected = vx "94ca 065a c948 c5d6  92fd 5fab c850 0611  a07c 4f6e 0710 90"
+    in
+    let a _ =
+      let cipher = authenticate_encrypt ~adata ~key ~nonce data in
+      assert_oct_equal ~msg:"TLS regression 0" expected cipher
+    and b _ =
+      match authenticate_decrypt ~key ~nonce ~adata expected with
+      | None -> assert_failure "TLS regression 0, decrypt broken"
+      | Some x -> assert_oct_equal ~msg:"TLS regression 0 decrypt" x data
+    in
+    let nonce = vx "81cd 4758 1880 9de0  c655 7c30"
+    and adata = vx "1703 0302 85"
+    and data = vx {|
+0b00 0270 0000 026c  0002 6730 8202 6330
+8201 cc02 0900 cb6c  4e84 4b58 a1d4 300d
+|}
+    and expected = vx {|
+1e59 904e e6d5 c2ac  e538 78d7 e24f 6e46
+6169 f8e2 d3dd 8b5d  788c 78ff ea9f e1d0
+9885 ac1a c6d9 fb88  b66a 3a11 5ba5 6e7c
+        |}
+    in
+    let c _ =
+      let cipher = authenticate_encrypt ~adata ~key ~nonce data in
+      assert_oct_equal ~msg:"TLS regression 1" expected cipher
+    and d _ =
+      match authenticate_decrypt ~key ~nonce ~adata expected with
+      | None -> assert_failure "TLS regression 1, decrypt broken"
+      | Some x -> assert_oct_equal ~msg:"TLS regression 1 decrypt" x data
+    in
+    let data = vx {|
+0b00 0270 0000 026c  0002 6730 8202 6330
+8201 cc02 0900 cb6c  4e84 4b58 a1d4 300d
+8201 cc02 0900
+|}
+    and expected = vx {|
+1e59 904e e6d5 c2ac  e538 78d7 e24f 6e46
+6169 f8e2 d3dd 8b5d  788c 78ff ea9f e1d0
+7c8d 9993 6bfd cf76  9799 473b 58f4 ed69
+d7a4 df7a 2d6b
+      |}
+    in
+    let e _ =
+      let cipher = authenticate_encrypt ~adata ~key ~nonce data in
+      assert_oct_equal ~msg:"TLS regression 2" expected cipher
+    and f _ =
+      match authenticate_decrypt ~key ~nonce ~adata expected with
+      | None -> assert_failure "TLS regression 2, decrypt broken"
+      | Some x -> assert_oct_equal ~msg:"TLS regression 2 decrypt" x data
+    in
+    let data = vx {|
+0b00 0270 0000 026c  0002 6730 8202 6330
+8201 cc02 0900 cb6c  4e84 4b58 a1d4 300d
+0609 2a86 4886 f70d  0101 0505 0030 7631
+0b30 0906 0355 0406  1302 4155 3113 3011
+0603 5504 080c 0a53  6f6d 652d 5374 6174
+6531 2130 1f06 0355  040a 0c18 496e 7465
+726e 6574 2057 6964  6769 7473 2050 7479
+204c 7464 3115 3013  0603 5504 030c 0c59
+4f55 5220 4e41 4d45  2121 2131 1830 1606
+092a 8648 86f7 0d01  0901 1609 6d65 4062
+6172 2e64 6530 1e17  0d31 3430 3231 3732
+3230 3834 355a 170d  3135 3032 3137 3232
+3038 3435 5a30 7631  0b30 0906 0355 0406
+1302 4155 3113 3011  0603 5504 080c 0a53
+6f6d 652d 5374 6174  6531 2130 1f06 0355
+040a 0c18 496e 7465  726e 6574 2057 6964
+6769 7473 2050 7479  204c 7464 3115 3013
+0603 5504 030c 0c59  4f55 5220 4e41 4d45
+2121 2131 1830 1606  092a 8648 86f7 0d01
+0901 1609 6d65 4062  6172 2e64 6530 819f
+300d 0609 2a86 4886  f70d 0101 0105 0003
+818d 0030 8189 0281  8100 b640 48de e6bc
+2194 3da2 ab5e b6f8  d837 007f 417c 0fe3
+3492 c3aa 2f55 3e4d  5e31 4346 89c2 6f2b
+e68e 00d2 88b0 e3ab  f6fe 1188 45d9 4989
+8512 f192 cbe4 9fd5  b083 1f01 cb2d 274d
+b3a6 38f5 befb 3ce8  1ab6 b559 3934 4404
+4fed d6ca 154f 76bf  bd52 5608 bb55 0a39
+bbd2 ed12 e6d7 1f9f  84ba 21aa 5e21 8015
+0267 1aab 049a f864  0da1 0203 0100 0130
+0d06 092a 8648 86f7  0d01 0105 0500 0381
+8100 8a38 669a 4896  9dc9 4729 6d44 2d7f
+0320 82d2 db21 e537  4cdd 6ef6 e7cc 1da0
+fde5 11ed 3c52 52f0  a673 dc68 9fdc 5fca
+cc1b 85df e22b 7bef  2adb 56b5 3732 e981
+1063 794d 6e23 9f8f  a267 215b a7a4 d3dc
+e505 e799 ec5c 38cd  1c16 ee75 e0d5 a46b
+8f4c 8e82 6505 6153  9a84 305d f19a 5a24
+1be5 55f8 7083 4e09  4d41 cf9f 74b3 342e
+8345 0000 16
+        |}
+    and expected = vx {|
+1e59 904e e6d5 c2ac  e538 78d7 e24f 6e46
+6169 f8e2 d3dd 8b5d  788c 78ff ea9f e1d0
+f885 7f17 2a7b f163  d29e 0a8e 8636 418f
+a9da 651b f2ba 36aa  a1a4 14d0 6a9a f991
+0836 eb93 80b9 bbe2  1f20 98d9 be0b c16f
+d58c c98d 4082 dadd  f575 57a4 43f7 af31
+c1b7 1eeb 2590 a887  e31c 590a 7e56 798c
+69aa 4576 fde6 63d2  1b62 d00d 98f6 4015
+dae7 8454 b96a f7f9  774f f539 24bf efe6
+4629 ee35 4c81 32d4  43df ffa9 17a2 6306
+fd07 f9ab b462 2bcd  bb0a 3750 af1a 3525
+66ad 6c67 b647 2ca7  d6b5 b13e ea34 d90d
+5731 a599 e608 d037  bc77 40aa b305 84ad
+8d78 43fc 7f55 70a2  fbbb 1b30 a14a 2f5f
+b3c3 2584 1f9e 7f3f  3dfa 19e2 9539 a1be
+ead8 e051 d847 915b  ed23 87ab 7082 7df4
+71a0 e0a6 46db a780  1e7b fb98 dac4 0af1
+c3eb 42d4 3a6c 3c71  f55a b377 e4de ff20
+14d7 b47c 8743 f291  56f3 6d8c 45d1 7cb3
+0321 e2cf 8ffd babf  a129 ea0d cc1b 7a0d
+b1ec 448d 0e3b 4386  9cc2 2b5a 5569 2930
+ea33 080e 9168 3696  b224 6238 34fc 3e25
+7895 6af3 cd60 f3c8  6643 3d6f 5736 4e78
+6aca 8b2d 1575 2d34  4533 79bd e27e 9c46
+f9f4 be4a 2fe3 f377  3acf 7b6e e4f0 3eb0
+ec85 95a6 ed04 2316  fe4e 2a54 25aa c40a
+c464 4128 0e35 1003  9f5d abfa e8e9 dc73
+f709 f29b f930 0bdc  d941 981b c5b3 8295
+97a5 c7e9 481d ce99  c6b6 5dfb 672d 3fdb
+38bb a6be d7f8 9863  345d c3a8 77f3 6b77
+f309 5c3b b9df fa40  8d42 ff79 6724 23da
+8f24 c9b0 e02d 4794  581f e185 32e6 94bb
+5b6a 6d5c 3b80 4c83  a0d8 0b42 d575 4fc3
+4353 a78d fdb5 003c  4f0b 437d 75fb 5886
+a76a 35f5 892d a10b  ce33 3ce6 ffd9 f09c
+7264 5b09 c50a 7013  344c 11a1 ab92 5728
+43e1 bc8c 8c1b 3fad  4a02 25a9 cb96 5fd2
+1962 4b0c b46b 9f8f  1225 b18c 2572 6297
+c890 238f 22d6 2bb0  7678 568a 3c9b 75e5
+b8fc 10f3 13c7 aa16  8165 a29c 67f1 46f4
+6e44 8e84 f5
+|}
+    in
+    let g _ =
+      let cipher = authenticate_encrypt ~adata ~key ~nonce data in
+      assert_oct_equal ~msg:"TLS regression 3" expected cipher
+    and h _ =
+      match authenticate_decrypt ~key ~nonce ~adata expected with
+      | None -> assert_failure "TLS regression 3, decrypt broken"
+      | Some x -> assert_oct_equal ~msg:"TLS regression 3 decrypt" x data
+    in
+    [ a ; b ; c ; d ; e ; f ; g ; h ]
+  in
   [
     test_case no_vs_empty_ad ;
     test_case short_nonce_enc ;
@@ -478,7 +630,7 @@ let ccm_regressions =
     test_case long_nonce_enc ;
     test_case enc_dec_empty_message ;
     test_case long_adata ;
-  ]
+  ] @ List.map test_case regr_tls
 
 let gcm_regressions =
   let open AES.GCM in
