@@ -1,3 +1,8 @@
+## v1.0.1 (2024-08-20)
+
+* mirage-crypto: fix CCM implementation, discovered while porting TLS to
+  mirage-crypto 1.0.0 (@hannesm @dinosaure @reynir #242)
+
 ## v1.0.0 (2024-06-29)
 
 ### Breaking changes
