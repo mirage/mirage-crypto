@@ -1,5 +1,7 @@
-## v1.0.1 (2024-08-20)
+## v1.1.0 (2024-08-20)
 
+* FEATURE mirage-crypto-ec: provide Dh.secret_to_octets (requested in #243 by
+  @palainp, implemented by @hannesm #244)
 * mirage-crypto: fix CCM implementation, discovered while porting TLS to
   mirage-crypto 1.0.0 (@hannesm @dinosaure @reynir #242)
 
