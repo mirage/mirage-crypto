@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Mirage_crypto_rng_eio (mirage-crypto-rng-eio.Mirage_crypto_rng_eio)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.2"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../index.html">mirage-crypto-rng-eio</a> &#x00BB; Mirage_crypto_rng_eio</nav><header class="odoc-preamble"><h1>Module <code><span>Mirage_crypto_rng_eio</span></code></h1><p><b>RNG</b> seeding on <b>Eio backends</b>.</p><p>This module initializes a given random number generator with <code>getrandom()</code> and a CPU RNG. <code>Eio.Stdenv.secure_random</code> is used as the <code>getrandom()</code> implementation.</p></header><div class="odoc-content"><div class="odoc-spec"><div class="spec type anchored" id="type-env"><a href="#type-env" class="anchor"></a><code><span><span class="keyword">type</span> <span>'a env</span></span><span> =
+  <span>&lt; clock : <span><span>[&gt;  ]</span> <span class="xref-unresolved">Eio</span>.Time.clock</span>
+  ; mono_clock : <span><span>[&gt;  ]</span> <span class="xref-unresolved">Eio</span>.Time.Mono.t</span>
+  ; secure_random : <span><span>[&gt;  ]</span> <span class="xref-unresolved">Eio</span>.Flow.source</span>.. &gt;</span> <span class="keyword">as</span> 'a</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-run"><a href="#val-run" class="anchor"></a><code><span><span class="keyword">val</span> run : 
+  <span><span class="optlabel">?g</span>:<span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?sleep</span>:int64 <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="type-var">'a</span> <a href="../../mirage-crypto-rng/Mirage_crypto_rng/index.html#type-generator">Mirage_crypto_rng.generator</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="type-var">_</span> <a href="#type-env">env</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<span>unit <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'b</span>)</span> <span class="arrow">&#45;&gt;</span></span>
+  <span class="type-var">'b</span></span></code></div><div class="spec-doc"><p><code>run ~g ~sleep gen env fn</code> will bring the RNG into a working state. The argument <code>sleep</code> is measured in ns (default 1s), and is used to sleep between collection of entropy from the CPU RNG. Every <code>10 * sleep</code> getrandom is used to collect entropy.</p><p><b>Note</b> In a multi-domain setting <code>run</code> ensures that entropy collection, feeding and RNG setup are limited to one domain.</p><p><code>fn</code> is the main function that will have access to a running RNG.</p><p><code>g</code> <code>gen</code> denotes random number generator scheme to be used, eg <code>Mirage_crypto_rng.Fortuna</code>.</p><p><code>[
+      open Mirage_crypto_rng
+      let () =
+        Eio_main.run @@ fun env -&gt;
+        Mirage_crypto_rng_eio.run (module Fortuna) env @@ fun () -&gt;
+        let random_num = Mirage_crypto_rng.generate 32 in
+        Printf.printf &quot;Random number: %S%!&quot; (Cstruct.to_string random_num)
+    ]</code></p></div></div></div></body></html>
