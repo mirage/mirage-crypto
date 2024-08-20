@@ -79,11 +79,11 @@ let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off 
 
   let small_q = 15 - String.length nonce in
   let ctr_flag_val = flags 0 0 (small_q - 1) in
-  let ctrblock i block =
-    Bytes.set_uint8 block 0 ctr_flag_val;
-    Bytes.unsafe_blit_string nonce 0 block 1 (String.length nonce);
-    encode_len block ~off:(String.length nonce + 1) small_q i;
-    cipher ~key (Bytes.unsafe_to_string block) ~src_off:0 block ~dst_off:0
+  let ctrblock i block dst_off =
+    Bytes.set_uint8 block dst_off ctr_flag_val;
+    Bytes.unsafe_blit_string nonce 0 block (dst_off + 1) (String.length nonce);
+    encode_len block ~off:(dst_off + String.length nonce + 1) small_q i;
+    cipher ~key (Bytes.unsafe_to_string block) ~src_off:dst_off block ~dst_off
   in
 
   let cbc iv src_off block dst_off =
@@ -113,14 +113,14 @@ let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off 
     else if len < block_size then begin
       let buf = Bytes.make block_size '\x00' in
       Bytes.unsafe_blit dst dst_off buf 0 len ;
-      ctrblock ctr buf ;
+      ctrblock ctr buf 0 ;
       Bytes.unsafe_blit buf 0 dst dst_off len ;
       unsafe_xor_into src ~src_off dst ~dst_off len ;
       Bytes.unsafe_blit_string cbcblock cbc_off buf 0 len ;
       Bytes.unsafe_fill buf len (block_size - len) '\x00';
-      cbc (Bytes.unsafe_to_string buf) cbc_off iv 0
+      cbc (Bytes.unsafe_to_string buf) 0 iv 0
     end else begin
-      ctrblock ctr dst ;
+      ctrblock ctr dst dst_off ;
       unsafe_xor_into src ~src_off dst ~dst_off block_size ;
       cbc cbcblock cbc_off iv 0 ;
       (loop [@tailcall]) (succ ctr) src (src_off + block_size) dst (dst_off + block_size) (len - block_size)
