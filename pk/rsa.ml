@@ -53,12 +53,6 @@ type priv = {
   p : Z.t ; q : Z.t ; dp : Z.t ; dq : Z.t ; q' : Z.t
 }
 
-let valid_prime name p =
-  guard Z.(p > zero && is_odd p && Z_extra.pseudoprime p)
-    (`Msg ("invalid prime " ^ name))
-
-let rprime a b = Z.(gcd a b = one)
-
 let valid_e ~e ~p ~q =
   let* () =
     guard (rprime e (Z.pred p) && rprime e (Z.pred q))
