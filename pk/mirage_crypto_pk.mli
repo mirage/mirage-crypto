@@ -518,3 +518,55 @@ module Z_extra : sig
   (** [gen_r ~g low high] picks a value from the interval [\[low, high - 1\]]
       uniformly at random. *)
 end
+
+(** {b Paillier Encryption algorith} Paillier Encryption algorith. *)
+module Paillier : sig
+
+  (** {1 Paillier Encryption algorithm} *)
+
+  type priv = private {
+    g  : Z.t ; (** Generator *)
+    n  : Z.t ; (** Modulus *)
+    n2 : Z.t ; (** Modulus squared *)
+    p  : Z.t ; (** First prime *)
+    q  : Z.t ; (** Second prime *)
+    lambda : Z.t ; (** Carmichael's totient function *)
+    mu : Z.t ; (** Inverse of totient function *)
+  }
+
+  val priv : p:Z.t -> q:Z.t -> (priv, [> `Msg of string ]) result
+  (** [priv ~p ~q] constructs a private Paillier keys from the given
+      numbers. Will result in an error if parameters are ill-formed: same as
+      {!val-pub}. *)
+
+  type pub = private {
+    g : Z.t ; (** Generator *)
+    n  : Z.t ; (** Modulus *)
+    n2 : Z.t ; (** Modulus squared *)
+  }
+  (** Public key, a subset of {{!type-priv}private key}. *)
+
+  val pub : g:Z.t -> n:Z.t -> (pub, [> `Msg of string ]) result
+  (** [pub ~g ~n] constructs a public Paillier key from the given
+      numbers. Will result in an error if the parameters are not well-formed. *)
+
+  val pub_of_priv : priv -> pub
+  (** Extract the public component from a private key. *)
+
+  val pub_bits : pub -> int
+  (** [pub_bits ~pub] returns the number of bits in the public key *)
+
+  val priv_bits : priv -> int
+  (** [priv_bits ~priv] returns the number of bits in the private key *)
+
+  val generate : ?g:Mirage_crypto_rng.g -> bits:int -> unit -> pub*priv
+  (** [generate g bits] is a fresh {{!type-priv}private} key. *)
+
+  val encrypt : pub_key:pub -> msg:Z.t -> ?r:Z.t -> unit -> Z.t
+  (** [encrypt msg pub ~r ()] encrypts the message [msg] using the public key
+  [r] is a random value used to ensure that the encryption is unpredictable.
+  @raise Invalid_argument if [msg] is negative. *)
+
+  val decrypt : priv_key:priv -> c:Z.t -> Z.t
+  (** [decrypt ciphertext priv] decrypts the ciphertext using the private key. *)
+end
