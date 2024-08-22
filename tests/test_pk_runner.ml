@@ -6,6 +6,7 @@ let suite =
     "DHE" >::: Test_dh.suite;
     "DSA" >::: Test_dsa.suite;
     "RSA" >::: Test_rsa.suite;
+    "Paillier" >::: Test_paillier.suite;
   ]
 
 let () =

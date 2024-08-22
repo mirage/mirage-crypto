@@ -22,7 +22,7 @@
  (libraries test_common mirage-crypto-pk mirage-crypto-rng.unix randomconv
    ounit2)
  (package mirage-crypto-pk)
- (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
+ (modules test_numeric test_dh test_dsa test_rsa test_paillier test_pk_runner))
 
 (test
  (name test_entropy_collection)
