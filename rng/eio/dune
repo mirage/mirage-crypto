@@ -1,4 +1,4 @@
 (library
  (name mirage_crypto_rng_eio)
  (public_name mirage-crypto-rng-eio)
- (libraries eio logs mirage-crypto-rng duration mtime))
+ (libraries eio logs mirage-crypto-rng duration mtime cstruct))
