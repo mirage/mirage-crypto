@@ -57,7 +57,7 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
  * have decided to go with the more modern Windows API with bcrypt,
  * and make Windows 10 our minimum supported version of mirage-crypto.
  */
-#include <Windows.h>
+#include <windows.h>
 #include <ntstatus.h>
 #include <bcrypt.h>
 
