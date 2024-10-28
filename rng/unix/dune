@@ -20,6 +20,7 @@
  (libraries mirage-crypto-rng unix logs)
  (foreign_stubs
   (language c)
+  (include_dirs ../../src/native)
   (names mc_getrandom_stubs))
  (c_library_flags
   (:include rng_c_flags.sexp)))

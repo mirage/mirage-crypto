@@ -486,6 +486,11 @@ let benchmarks = [
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
         generate_into ~g buf ~off:0 (Bytes.length buf))) ;
+
+  bm "getrandom" (fun name ->
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        Mirage_crypto_rng_unix.getrandom_into buf ~off:0 ~len:(Bytes.length buf))) ;
 ]
 
 let help () =

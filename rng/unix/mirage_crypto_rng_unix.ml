@@ -3,11 +3,14 @@ open Mirage_crypto_rng
 let src = Logs.Src.create "mirage-crypto-rng.unix" ~doc:"Mirage crypto RNG Unix"
 module Log = (val Logs.src_log src : Logs.LOG)
 
-external getrandom_buf : bytes -> int -> unit = "mc_getrandom" [@@noalloc]
+external getrandom_buf : bytes -> int -> int -> unit = "mc_getrandom" [@@noalloc]
+
+let getrandom_into buf ~off ~len =
+  getrandom_buf buf off len
 
 let getrandom size =
   let buf = Bytes.create size in
-  getrandom_buf buf size;
+  getrandom_into buf ~off:0 ~len:size;
   Bytes.unsafe_to_string buf
 
 let getrandom_init i =
