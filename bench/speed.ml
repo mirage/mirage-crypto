@@ -502,6 +502,15 @@ let benchmarks = [
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
         Mirage_crypto_rng_unix.getrandom_into buf ~off:0 ~len:(Bytes.length buf))) ;
+
+  bm "urandom-channel" (fun name ->
+    In_channel.with_open_bin "/dev/urandom" @@ fun ic ->
+    let m = Mutex.create () in
+    let finally () = Mutex.unlock m in
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        Mutex.lock m;
+        Fun.protect ~finally (fun () -> really_input ic buf 0 (Bytes.length buf))));
 ]
 
 let help () =
