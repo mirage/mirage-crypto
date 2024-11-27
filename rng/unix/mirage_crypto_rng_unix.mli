@@ -15,3 +15,13 @@ val getrandom : int -> string
 (** [getrandom_into buf ~off ~len] fills [buf] with random data ([len] octets),
     starting at [off]. *)
 val getrandom_into : bytes -> off:int -> len:int -> unit
+
+module Urandom : Mirage_crypto_rng.Generator
+
+module Getentropy : Mirage_crypto_rng.Generator
+
+val use_default : unit -> unit
+
+val use_dev_urandom : unit -> unit
+
+val use_getentropy : unit -> unit

@@ -16,6 +16,19 @@
 
 (** {b TL;DR} Don't forget to seed; don't maintain your own [g].
 
+    For common operations on Unix (independent of your asynchronous task
+    library, you can use /dev/urandom or getentropy(3) (actually getrandom(3) on
+    Linux, getentropy() on macOS and BSD systems, BCryptGenRandom on Windows).
+
+    Please ensure to call [Mirage_crypto_rng_unix.use_default], or
+    [Mirage_crypto_rng_unix.use_dev_urandom] (if you only want to use
+    /dev/urandom), or [Mirage_crypto_rng_unix.use_getentropy] (if you only want
+    to use getentropy).
+
+    For fine-grained control (doing entropy harvesting, etc.), please continue
+    reading the documentation below. Please be aware that the feeding of Fortuna
+    and producing random numbers is not thread-safe (it is on Miou_unix).
+
     The RNGs here are merely the deterministic part of a full random number
     generation suite. For proper operation, they need to be seeded with a
     high-quality entropy source.

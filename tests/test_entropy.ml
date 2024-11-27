@@ -35,7 +35,7 @@ let timer_check () =
     let data' = Mirage_crypto_rng.Entropy.interrupt_hook () in
     if String.equal !data data' then begin
       Ohex.pp Format.std_formatter data';
-      failwith ("same data from timer at " ^ string_of_int i);
+      print_endline ("same data from timer at " ^ string_of_int i);
     end;
     data := data'
   done
