@@ -21,6 +21,7 @@ module Urandom : Mirage_crypto_rng.Generator
 module Getentropy : Mirage_crypto_rng.Generator
 
 val use_default : unit -> unit
+(** [use_default ()] initializes with [Urandom] or resorts to [Getentropy] otherwise. *)
 
 val use_dev_urandom : unit -> unit
 
