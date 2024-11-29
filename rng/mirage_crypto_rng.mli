@@ -26,8 +26,8 @@
     to use getentropy).
 
     For fine-grained control (doing entropy harvesting, etc.), please continue
-    reading the documentation below. Please be aware that the feeding of Fortuna
-    and producing random numbers is not thread-safe (it is on Miou_unix).
+    reading the documentation below. {b Please be aware that the feeding of Fortuna
+    and producing random numbers is not thread-safe} (it is on Miou_unix via Pfortuna).
 
     The RNGs here are merely the deterministic part of a full random number
     generation suite. For proper operation, they need to be seeded with a
