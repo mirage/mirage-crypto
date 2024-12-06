@@ -7,6 +7,7 @@ let create ?time:_ () =
   let ic = In_channel.open_bin "/dev/urandom"
   and mutex = Mutex.create ()
   in
+  at_exit (fun () -> In_channel.close ic);
   (ic, mutex)
 
 let generate_into ~g:(ic, m) buf ~off len =
