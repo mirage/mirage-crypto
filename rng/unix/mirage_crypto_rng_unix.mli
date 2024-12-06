@@ -12,10 +12,6 @@ val initialize : ?g:'a -> 'a Mirage_crypto_rng.generator -> unit
 (** [getrandom size] returns a buffer of [size] filled with random bytes. *)
 val getrandom : int -> string
 
-(** [getrandom_into buf ~off ~len] fills [buf] with random data ([len] octets),
-    starting at [off]. *)
-val getrandom_into : bytes -> off:int -> len:int -> unit
-
 module Urandom : Mirage_crypto_rng.Generator
 
 module Getentropy : Mirage_crypto_rng.Generator

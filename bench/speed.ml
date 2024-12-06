@@ -480,12 +480,10 @@ let benchmarks = [
     throughput_into name (fun dst cs -> DES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "fortuna" (fun name ->
-    let open Mirage_crypto_rng.Fortuna in
-    let g = create () in
-    reseed ~g "abcd" ;
+    Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
-        generate_into ~g buf ~off:0 (Bytes.length buf))) ;
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
 
   bm "pfortuna" (fun name ->
     let open Mirage_crypto_rng_miou_unix.Pfortuna in
@@ -498,19 +496,17 @@ let benchmarks = [
         generate_into ~g buf ~off:0 (Bytes.length buf));
     Mirage_crypto_rng_miou_unix.kill rng) ;
 
-  bm "getrandom" (fun name ->
+  bm "getentropy" (fun name ->
+    Mirage_crypto_rng_unix.use_getentropy ();
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
-        Mirage_crypto_rng_unix.getrandom_into buf ~off:0 ~len:(Bytes.length buf))) ;
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
 
-  bm "urandom-channel" (fun name ->
-    In_channel.with_open_bin "/dev/urandom" @@ fun ic ->
-    let m = Mutex.create () in
-    let finally () = Mutex.unlock m in
+  bm "urandom" (fun name ->
+    Mirage_crypto_rng_unix.use_dev_urandom ();
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
-        Mutex.lock m;
-        Fun.protect ~finally (fun () -> really_input ic buf 0 (Bytes.length buf))));
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
 ]
 
 let help () =
