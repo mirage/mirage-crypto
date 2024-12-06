@@ -2,4 +2,11 @@
  (names speed)
  (modules speed)
  (libraries mirage-crypto mirage-crypto-rng mirage-crypto-rng.unix
-   mirage-crypto-pk mirage-crypto-ec mirage-crypto-rng-miou-unix))
+   mirage-crypto-pk mirage-crypto-ec))
+
+; marking as "(optional)" leads to OCaml-CI failures
+; marking with "(package mirage-crypto-rng-miou-unix)" only has an effect with a "public_name"
+;(executables
+; (names miou)
+; (modules miou)
+; (libraries mirage-crypto-rng-miou-unix))
