@@ -41,7 +41,9 @@
  (name test_entropy)
  (modules test_entropy)
  (package mirage-crypto-rng)
- (libraries mirage-crypto-rng ohex))
+ (libraries mirage-crypto-rng ohex)
+ (enabled_if (<> %{architecture} "arm64")))
+ ; see https://github.com/mirage/mirage-crypto/issues/216
 
 (test
  (name test_ec)

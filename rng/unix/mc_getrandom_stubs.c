@@ -2,6 +2,8 @@
 # include <unistd.h>
 #endif
 
+#include "mirage_crypto.h"
+
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/unixsupport.h>
@@ -72,7 +74,7 @@ void raw_getrandom(uint8_t *data, uint32_t len) {
 #error "Retrieving random data not supported on this platform"
 #endif
 
-CAMLprim value mc_getrandom (value buf, value len) {
-  raw_getrandom(Bytes_val(buf), Int_val(len));
+CAMLprim value mc_getrandom (value buf, value off, value len) {
+  raw_getrandom(_bp_uint8_off(buf, off), Int_val(len));
   return Val_unit;
 }

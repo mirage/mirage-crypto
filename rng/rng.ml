@@ -5,7 +5,12 @@ exception Unseeded_generator
 exception No_default_generator
 
 let setup_rng =
-  "\nTo initialize the RNG with a default generator, and set up entropy \
+  "\nPlease setup your default random number generator. On Unix, the best \
+   path is to call [Mirage_crypto_rng_unix.use_default ()].\
+   \nBut you can use Fortuna (or any other RNG) and setup the seeding \
+   (done by default in MirageOS): \
+   \n\
+   \nTo initialize the RNG with a default generator, and set up entropy \
    collection and periodic reseeding as a background task, do the \
    following:\
    \n  If you are using MirageOS, use the random device in config.ml: \
