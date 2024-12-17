@@ -28,3 +28,4 @@ description: """
 Mirage-crypto-rng-eio feeds the entropy source for Mirage_crypto_rng-based
 random number generator implementations, in an eio-friendly way.
 """
+x-maintenance-intent: [ "(latest)" ]

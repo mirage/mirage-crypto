@@ -30,3 +30,4 @@ Mirage-crypto-rng provides a random number generator interface, and
 implementations: Fortuna, HMAC-DRBG, getrandom/getentropy based (in the unix
 sublibrary)
 """
+x-maintenance-intent: [ "(latest)" ]

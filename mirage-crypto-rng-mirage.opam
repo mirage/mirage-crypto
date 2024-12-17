@@ -30,3 +30,4 @@ depends: [
 description: """
 Mirage-crypto-rng-mirage provides entropy collection code for the RNG.
 """
+x-maintenance-intent: [ "(latest)" ]

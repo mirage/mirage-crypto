@@ -27,3 +27,4 @@ conflicts: [
 description: """
 Mirage-crypto provides symmetric ciphers (DES, AES, RC4, ChaCha20/Poly1305).
 """
+x-maintenance-intent: [ "(latest)" ]

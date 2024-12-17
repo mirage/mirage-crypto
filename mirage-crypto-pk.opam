@@ -31,3 +31,4 @@ conflicts: [
 description: """
 Mirage-crypto-pk provides public-key cryptography (RSA, DSA, DH).
 """
+x-maintenance-intent: [ "(latest)" ]

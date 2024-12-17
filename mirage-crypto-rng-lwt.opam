@@ -24,3 +24,4 @@ depends: [
 description: """
 Mirage-crypto-rng-lwt provides entropy collection code for the RNG using Lwt.
 """
+x-maintenance-intent: [ "(latest)" ]

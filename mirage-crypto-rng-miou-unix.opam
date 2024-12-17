@@ -27,3 +27,4 @@ description: """
 Mirage-crypto-rng-miou-unix feeds the entropy source for Mirage_crypto_rng-based
 random number generator implementations, in an miou.unix-friendly way.
 """
+x-maintenance-intent: [ "(latest)" ]
