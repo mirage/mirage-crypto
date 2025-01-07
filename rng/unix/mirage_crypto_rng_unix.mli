@@ -22,12 +22,12 @@ module Urandom : Mirage_crypto_rng.Generator
 module Getentropy : Mirage_crypto_rng.Generator
 
 (** [use_default ()] initializes the RNG [Mirage_crypto_rng.default_generator]
-    with [Urandom] or resorts to [Getentropy] if the urandom failed to open the
-    /dev/urandom device. *)
+    with a sensible default, at the moment using [Getentropy]. *)
 val use_default : unit -> unit
 
-(** [use_dev_random ()] initializes the RNG [Mirage_crypto_rng.default_generator]
-    with the [Urandom] generator. *)
+(** [use_dev_random ()] initializes the RNG
+    [Mirage_crypto_rng.default_generator] with the [Urandom] generator. This
+    raises an exception if "/dev/urandom" cannot be opened. *)
 val use_dev_urandom : unit -> unit
 
 (** [use_getentropy ()] initializes the RNG [Mirage_crypto_rng.default_generator]

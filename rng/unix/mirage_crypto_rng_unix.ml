@@ -12,9 +12,7 @@ let use_getentropy () =
   let g = create (module Getentropy) in
   set_default_generator g
 
-let use_default () =
-  try use_dev_urandom () with
-  | _ -> use_getentropy ()
+let use_default () = use_getentropy ()
 
 let src = Logs.Src.create "mirage-crypto-rng.unix" ~doc:"Mirage crypto RNG Unix"
 module Log = (val Logs.src_log src : Logs.LOG)
