@@ -1,7 +1,8 @@
 
 type g = In_channel.t * Mutex.t
 
-let block = 2048
+(* The OCaml runtime always reads at least IO_BUFFER_SIZE from an input channel, which is currently 64 KiB *)
+let block = 65536
 
 let create ?time:_ () =
   let ic = In_channel.open_bin "/dev/urandom"
