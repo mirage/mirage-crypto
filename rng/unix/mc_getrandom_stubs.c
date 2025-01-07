@@ -75,6 +75,6 @@ void raw_getrandom(uint8_t *data, size_t len) {
 #endif
 
 CAMLprim value mc_getrandom (value buf, value off, value len) {
-  raw_getrandom(_bp_uint8_off(buf, off), Int_val(len));
+  raw_getrandom(_bp_uint8_off(buf, off), Long_val(len));
   return Val_unit;
 }
