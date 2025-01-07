@@ -169,10 +169,13 @@ module type Generator = sig
   (** Create a new, unseeded {{!g}g}. *)
 
   val generate_into : g:g -> bytes -> off:int -> int -> unit
+  [@@alert unsafe "Does not do bounds checks. Use Mirage_crypto_rng.generate_into instead."]
   (** [generate_into ~g buf ~off n] produces [n] uniformly distributed random
       bytes into [buf] at offset [off], updating the state of [g].
 
-      @raise Invalid_argument if buffer is too small (it must be: Bytes.length buf - off >= n)
+      Assumes that [buf] is at least [off + n] bytes long. Also assumes that
+      [off] and [n] are positive integers. Caution: do not use in your
+      application, use [Mirage_crypto_rng.generate_into] instead.
   *)
 
   val reseed : g:g -> string -> unit
@@ -246,7 +249,11 @@ val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
 (** [generate_into ~g buf ~off len] invokes
     {{!Generator.generate_into}generate_into} on [g] or
     {{!generator}default generator}. The random data is put into [buf] starting
-    at [off] (defaults to 0) with [len] bytes. *)
+    at [off] (defaults to 0) with [len] bytes.
+
+    @raise Invalid_argument if buffer is too small (it must be: [Bytes.length
+      buf - off >= n]) or [off] or [n] are negative.
+*)
 
 val generate : ?g:g -> int -> string
 (** Invoke {!generate_into} on [g] or {{!generator}default generator} and a

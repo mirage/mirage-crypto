@@ -42,6 +42,7 @@ module type Generator = sig
   val block : int
   val create : ?time:(unit -> int64) -> unit -> g
   val generate_into : g:g -> bytes -> off:int -> int -> unit
+  [@@alert unsafe "Does not do bounds checks. Use Mirage_crypto_rng.generate_into instead."]
   val reseed : g:g -> string -> unit
   val accumulate : g:g -> source -> [`Acc of string -> unit]
   val seeded : g:g -> bool
@@ -78,7 +79,9 @@ let generate_into ?(g = default_generator ()) b ?(off = 0) n =
                  string_of_int n);
   if Bytes.length b - off < n then
     invalid_arg "buffer too short";
-  M.generate_into ~g b ~off n
+  begin[@alert "-unsafe"]
+    M.generate_into ~g b ~off n
+  end
 
 let generate ?g n =
   let data = Bytes.create n in
