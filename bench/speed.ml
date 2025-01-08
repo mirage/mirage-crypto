@@ -480,10 +480,12 @@ let benchmarks = [
     throughput_into name (fun dst cs -> DES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "fortuna" (fun name ->
-    Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
-    throughput name (fun buf ->
-        let buf = Bytes.unsafe_of_string buf in
-        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
+    begin[@alert "-deprecated"]
+      Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
+      throughput name (fun buf ->
+          let buf = Bytes.unsafe_of_string buf in
+          Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))
+    end);
 
   bm "getentropy" (fun name ->
     Mirage_crypto_rng_unix.use_getentropy ();

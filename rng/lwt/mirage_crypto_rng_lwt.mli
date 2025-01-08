@@ -9,3 +9,4 @@
     is used to collect entropy.
 *)
 val initialize : ?g:'a -> ?sleep:int64 -> 'a Mirage_crypto_rng.generator -> unit
+[@@deprecated "Use 'Mirage_crypto_rng_unix.use_default ()' instead."]

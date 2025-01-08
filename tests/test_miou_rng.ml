@@ -1,5 +1,9 @@
 let () = Miou_unix.run @@ fun () ->
-  let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
+  let rng =
+    begin[@alert "-deprecated"]
+      Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna))
+    end
+  in
   let random_num = Mirage_crypto_rng.generate 32 in
   assert (String.length random_num = 32);
   Printf.printf "32 bit random number: %s\n%!" (Ohex.encode random_num);
