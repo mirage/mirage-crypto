@@ -15,7 +15,10 @@ let setup_rng =
    following:\
    \n  If you are using MirageOS, use the random device in config.ml: \
    `let main = Mirage.main \"Unikernel.Main\" (random @-> job)`, \
-   and `let () = register \"my_unikernel\" [main $ default_random]`."
+   and `let () = register \"my_unikernel\" [main $ default_random]`. \
+   \n  If you are using miou, execute \
+   `Mirage_crypto_rng_miou_unix.initialize (module Mirage_crypto_rng.Fortuna)` \
+   at startup."
 
 let () = Printexc.register_printer (function
     | Unseeded_generator ->

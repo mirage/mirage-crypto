@@ -20,11 +20,7 @@ end
 
 let () =
   Miou_unix.run @@ fun () ->
-  let rng =
-    begin[@alert "-deprecated"]
-      Mirage_crypto_rng_miou_unix.initialize (module Printing_rng)
-    end
-  in
+  let rng = Mirage_crypto_rng_miou_unix.initialize (module Printing_rng) in
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
          Mirage_crypto_rng.Entropy.pp_source ppf x;

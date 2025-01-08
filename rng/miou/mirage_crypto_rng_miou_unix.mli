@@ -14,7 +14,6 @@ type rng
 (** Type of tasks seeding the RNG. *)
 
 val initialize : ?g:'a -> ?sleep:int64 -> 'a Mirage_crypto_rng.generator -> rng
-[@@deprecated "Use 'Mirage_crypto_rng_unix.use_default ()' instead."]
 (** [initialize ?g ?sleep (module Generator)] will allow the RNG to operate in a
     returned task. This task periodically launches sub-tasks that seed the
     engine (using [getrandom()], [getentropy()] or [BCryptGenRandom()] depending

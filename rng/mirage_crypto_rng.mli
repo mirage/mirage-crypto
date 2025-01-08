@@ -30,6 +30,18 @@
     Fortuna and producing random numbers is not thread-safe} (it is on Miou_unix
     via Pfortuna).
 
+    Suitable entropy feeding of generators are provided by other libraries
+    {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
+    and {{!Mirage_crypto_rng_miou_unix}mirage-crypto-miou-unix} (for Miou_unix).
+
+    The intention is that "initialize" in the respective sub-library is called
+    once, which sets the default generator and registers entropy
+    harvesting asynchronous tasks. The semantics is that the entropy is always
+    fed to the {{!default_generator}default generator}, which is not necessarily
+    the one set by "initialize". The reasoning behind this is that the default
+    generator should be used in most setting, and that should be fed a constant
+    stream of entropy.
+
     The RNGs here are merely the deterministic part of a full random number
     generation suite. For proper operation, they need to be seeded with a
     high-quality entropy source.
