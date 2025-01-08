@@ -114,11 +114,13 @@ module Entropy : sig
 
   val cpu_rng_bootstrap : (int -> string, [`Not_supported]) Result.t
   (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
-      RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
-      The [id] is used as prefix.
+      RNG (rdseed). On 32bit platforms, only 4 bytes are filled.
+      The [id] is used as prefix. If only rdrand is available, the return
+      value is the concatenation of 512 calls to rdrand.
 
-      @raise Failure if no CPU RNG is available, or if it doesn't return a
-      random value. *)
+      @raise Failure if rdrand fails 512 times, or if rdseed fails and rdrand
+      is not available.
+  *)
 
   val bootstrap : int -> string
   (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or

@@ -27,6 +27,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+let src = Logs.Src.create "mirage-crypto-rng-entropy" ~doc:"Mirage crypto RNG Entropy"
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let rdrand_calls = Atomic.make 0
 let rdrand_failures = Atomic.make 0
 let rdseed_calls = Atomic.make 0
@@ -128,23 +131,50 @@ let whirlwind_bootstrap id =
   Bytes.unsafe_to_string buf
 
 let cpu_rng_bootstrap =
+  let rdrand_bootstrap id =
+    let rec go acc = function
+      | 0 -> acc
+      | n ->
+        let buf = Bytes.create 10 in
+        let r = cpu_rng `Rdrand buf 2 in
+        write_header id buf;
+        if not r then
+          go acc (pred n)
+        else
+          go (Bytes.unsafe_to_string buf :: acc) (pred n)
+    in
+    let result = go [] 512 |> String.concat "" in
+    if String.length result = 0 then
+      failwith "Too many RDRAND failures"
+    else
+      result
+  in
   match random `Rdseed with
   | None -> Error `Not_supported
-  | Some insn ->
+  | Some `Rdseed ->
     let cpu_rng_bootstrap id =
       let buf = Bytes.create 10 in
-      let r = cpu_rng insn buf 2 in
-      if not r then failwith "Mirage_crypto_rng.Entropy: CPU RNG broken";
+      let r = cpu_rng `Rdseed buf 2 in
       write_header id buf;
-      Bytes.unsafe_to_string buf
+      if not r then
+        if List.mem `Rdrand Cpu_native.cpu_rng then
+          rdrand_bootstrap id
+        else
+          failwith "RDSEED failed, and RDRAND not available"
+      else
+        Bytes.unsafe_to_string buf
     in
     Ok cpu_rng_bootstrap
+  | Some `Rdrand -> Ok rdrand_bootstrap
 
 let bootstrap id =
   match cpu_rng_bootstrap with
   | Error `Not_supported -> whirlwind_bootstrap id
   | Ok cpu_rng_bootstrap ->
-    try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
+    try cpu_rng_bootstrap id with
+    | Failure f ->
+      Log.err (fun m -> m "CPU RNG bootstrap failed: %s, using whirlwind" f);
+      whirlwind_bootstrap id
 
 let interrupt_hook () =
   let buf = Bytes.create 4 in
