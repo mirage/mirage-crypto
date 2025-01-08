@@ -15,27 +15,13 @@
 #define random_t unsigned long long
 #define _rdseed_step _rdseed64_step
 #define _rdrand_step _rdrand64_step
-#define fill_bytes(buf, off, data) {                    \
-    (_bp_uint8_off(buf, off))[0] = (uint8_t)((data) >> 56);     \
-    (_bp_uint8_off(buf, off))[1] = (uint8_t)((data) >> 48);     \
-    (_bp_uint8_off(buf, off))[2] = (uint8_t)((data) >> 40);     \
-    (_bp_uint8_off(buf, off))[3] = (uint8_t)((data) >> 32);     \
-    (_bp_uint8_off(buf, off))[4] = (uint8_t)((data) >> 24);     \
-    (_bp_uint8_off(buf, off))[5] = (uint8_t)((data) >> 16);     \
-    (_bp_uint8_off(buf, off))[6] = (uint8_t)((data) >> 8);      \
-    (_bp_uint8_off(buf, off))[7] = (uint8_t)((data));           \
-  }
+#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 8)
 
 #elif defined (__i386__)
 #define random_t unsigned int
 #define _rdseed_step _rdseed32_step
 #define _rdrand_step _rdrand32_step
-#define fill_bytes(buf, off, data) {                    \
-    (_bp_uint8_off(buf, off))[0] = (uint8_t)((data) >> 24);     \
-    (_bp_uint8_off(buf, off))[1] = (uint8_t)((data) >> 16);     \
-    (_bp_uint8_off(buf, off))[2] = (uint8_t)((data) >> 8);      \
-    (_bp_uint8_off(buf, off))[3] = (uint8_t)((data));           \
-  }
+#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 4)
 
 #endif
 #endif /* __i386__ || __x86_64__ */
@@ -251,7 +237,7 @@ CAMLprim value mc_cpu_rdseed (value buf, value off) {
   int ok = 0;
   int i = RETRIES;
   do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
-  fill_bytes(buf, off, r);
+  fill_bytes(buf, off, &r);
   return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
@@ -265,7 +251,7 @@ CAMLprim value mc_cpu_rdrand (value buf, value off) {
   int ok = 0;
   int i = RETRIES;
   do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
-  fill_bytes(buf, off, r);
+  fill_bytes(buf, off, &r);
   return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
