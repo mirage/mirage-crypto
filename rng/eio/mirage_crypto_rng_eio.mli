@@ -39,3 +39,4 @@ val run
   -> 'a Mirage_crypto_rng.generator
   -> _ env
   -> (unit -> 'b) -> 'b
+[@@deprecated "Use 'Mirage_crypto_rng_unix.use_default ()' instead."]

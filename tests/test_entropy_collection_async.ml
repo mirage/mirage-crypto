@@ -28,7 +28,9 @@ module E = Mirage_crypto_rng_async
 
 
 let main () =
-  E.initialize (module Printing_rng);
+  begin[@alert "-deprecated"]
+    E.initialize (module Printing_rng);
+  end;
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter ~f:(fun x ->
          Mirage_crypto_rng.Entropy.pp_source ppf x;

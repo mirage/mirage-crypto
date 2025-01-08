@@ -16,19 +16,9 @@ let setup_rng =
    \n  If you are using MirageOS, use the random device in config.ml: \
    `let main = Mirage.main \"Unikernel.Main\" (random @-> job)`, \
    and `let () = register \"my_unikernel\" [main $ default_random]`. \
-   \n  If you are using Lwt, execute \
-   `Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)` \
-   at startup. \
-   \n  If you are using Async, execute \
-   `Mirage_crypto_rng_async.initialize (module Mirage_crypto_rng.Fortuna)` \
-   at startup. \
-   \n  If you are using Eio, execute in one of the fibers \
-   `Mirage_crypto_rng_eio.run (module Fortuna) env` (`env` from `Eio_main.run`).
-   \n  Otherwise, there is no periodic reseeding. For an initial seed from \
-   getrandom(), execute \
-   `Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna)`. \
-   You can use `Mirage_crypto_rng.accumulate` and `Mirage_crypto_rng.reseed` \
-   to reseed the RNG manually."
+   \n  If you are using miou, execute \
+   `Mirage_crypto_rng_miou_unix.initialize (module Mirage_crypto_rng.Fortuna)` \
+   at startup."
 
 let () = Printexc.register_printer (function
     | Unseeded_generator ->
