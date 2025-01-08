@@ -18,7 +18,10 @@ let getrandom delta source =
     let size = per_pool * pools None in
     let random = Mirage_crypto_rng_unix.getrandom size in
     let idx = ref 0 in
-    let fn () = incr idx; String.sub random (per_pool * (pred !idx)) per_pool in
+    let fn () =
+      incr idx;
+      Ok (String.sub random (per_pool * (pred !idx)) per_pool)
+    in
     Entropy.feed_pools None source fn in
   periodic fn delta
 

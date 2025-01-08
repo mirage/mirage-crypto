@@ -30,8 +30,8 @@
 module Cpu_native = struct
 
   external cycles : unit -> int  = "mc_cycle_counter" [@@noalloc]
-  external rdseed : unit -> int  = "mc_cpu_rdseed" [@@noalloc]
-  external rdrand : unit -> int  = "mc_cpu_rdrand" [@@noalloc]
+  external rdseed : bytes -> int -> bool  = "mc_cpu_rdseed" [@@noalloc]
+  external rdrand : bytes -> int -> bool  = "mc_cpu_rdrand" [@@noalloc]
   external rng_type : unit -> int  = "mc_cpu_rng_type" [@@noalloc]
 
   let cpu_rng =
@@ -119,10 +119,9 @@ let cpu_rng_bootstrap =
   | None -> Error `Not_supported
   | Some insn ->
     let cpu_rng_bootstrap id =
-      let r = cpu_rng insn () in
-      if r = 0 then failwith "Mirage_crypto_rng.Entropy: 0 is a bad CPU RNG value";
       let buf = Bytes.create 10 in
-      Bytes.set_int64_le buf 2 (Int64.of_int r);
+      let r = cpu_rng insn buf 2 in
+      if not r then failwith "Mirage_crypto_rng.Entropy: CPU RNG broken";
       write_header id buf;
       Bytes.unsafe_to_string buf
     in
@@ -150,7 +149,11 @@ let feed_pools g source f =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
   let `Acc handle = Rng.accumulate g source in
   for _i = 0 to pred (Rng.pools g) do
-    handle (f ())
+    match f () with
+    | Ok data -> handle data
+    | Error `No_random_available ->
+      (* should we log a message? *)
+      ()
   done
 
 let cpu_rng =
@@ -165,8 +168,10 @@ let cpu_rng =
       in
       let f () =
         let buf = Bytes.create 8 in
-        Bytes.set_int64_le buf 0 (Int64.of_int (randomf ()));
-        Bytes.unsafe_to_string buf
+        if randomf buf 0 then
+          Ok (Bytes.unsafe_to_string buf)
+        else
+          Error `No_random_available
       in
       fun () -> feed_pools g source f
     in

@@ -32,7 +32,7 @@ let periodically_feed_entropy env delta source =
     let idx = ref 0 in
     let f () =
       incr idx;
-      String.sub random (per_pool * (pred !idx)) per_pool
+      Ok (String.sub random (per_pool * (pred !idx)) per_pool)
     in
     Entropy.feed_pools None source f
   in

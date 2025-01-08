@@ -136,14 +136,14 @@ module Entropy : sig
 
   (** {1 Periodic pulled sources} *)
 
-  val feed_pools : g option -> source -> (unit -> string) -> unit
+  val feed_pools : g option -> source -> (unit -> (string, [ `No_random_available ]) result) -> unit
   (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
       [f] for each pool. *)
 
   val cpu_rng : (g option -> unit -> unit, [`Not_supported]) Result.t
   (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
       of [g]. It uses {!feed_pools} internally. If neither rdrand nor rdseed
-      are available, [fun () -> ()] is returned. *)
+      are available, [`Not_supported] is returned. *)
 
   (**/**)
   val id : source -> int
