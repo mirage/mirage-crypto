@@ -145,6 +145,18 @@ module Entropy : sig
       of [g]. It uses {!feed_pools} internally. If neither rdrand nor rdseed
       are available, [`Not_supported] is returned. *)
 
+  val rdrand_calls : unit -> int
+  (** [rdrand_calls ()] returns the number of rdrand calls. *)
+
+  val rdrand_failures : unit -> int
+  (** [rdrand_failures ()] returns the number of rdrand failures. *)
+
+  val rdseed_calls : unit -> int
+  (** [rdseed_calls ()] returns the number of rdseed calls. *)
+
+  val rdseed_failures : unit -> int
+  (** [rdseed_failures ()] returns the number of rdseed failures. *)
+
   (**/**)
   val id : source -> int
   (** [id source] is the identifier used for [source]. *)

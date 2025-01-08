@@ -27,6 +27,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+let rdrand_calls = Atomic.make 0
+let rdrand_failures = Atomic.make 0
+let rdseed_calls = Atomic.make 0
+let rdseed_failures = Atomic.make 0
+
 module Cpu_native = struct
 
   external cycles : unit -> int  = "mc_cycle_counter" [@@noalloc]
@@ -72,9 +77,17 @@ let sources () = S.elements (Atomic.get _sources)
 
 let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
-let cpu_rng = function
-  | `Rdseed -> Cpu_native.rdseed
-  | `Rdrand -> Cpu_native.rdrand
+let cpu_rng isn buf off = match isn with
+  | `Rdseed ->
+    Atomic.incr rdseed_calls;
+    let success = Cpu_native.rdseed buf off in
+    if not success then Atomic.incr rdseed_failures;
+    success
+  | `Rdrand ->
+    Atomic.incr rdrand_calls;
+    let success = Cpu_native.rdrand buf off in
+    if not success then Atomic.incr rdrand_failures;
+    success
 
 let random preferred =
   match Cpu_native.cpu_rng with
@@ -176,3 +189,8 @@ let cpu_rng =
       fun () -> feed_pools g source f
     in
     Ok cpu_rng
+
+let rdrand_calls () = Atomic.get rdrand_calls
+let rdrand_failures () = Atomic.get rdrand_failures
+let rdseed_calls () = Atomic.get rdseed_calls
+let rdseed_failures () = Atomic.get rdseed_failures
