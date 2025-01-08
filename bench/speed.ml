@@ -480,12 +480,22 @@ let benchmarks = [
     throughput_into name (fun dst cs -> DES.ECB.unsafe_encrypt_into ~key cs ~src_off:0 dst ~dst_off:0 (String.length cs))) ;
 
   bm "fortuna" (fun name ->
-    let open Mirage_crypto_rng.Fortuna in
-    let g = create () in
-    reseed ~g "abcd" ;
+    Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna);
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
-        generate_into ~g buf ~off:0 (Bytes.length buf))) ;
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
+
+  bm "getentropy" (fun name ->
+    Mirage_crypto_rng_unix.use_getentropy ();
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
+
+  bm "urandom" (fun name ->
+    Mirage_crypto_rng_unix.use_dev_urandom ();
+    throughput name (fun buf ->
+        let buf = Bytes.unsafe_of_string buf in
+        Mirage_crypto_rng.generate_into buf ~off:0 (Bytes.length buf))) ;
 ]
 
 let help () =

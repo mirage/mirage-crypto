@@ -5,7 +5,12 @@ exception Unseeded_generator
 exception No_default_generator
 
 let setup_rng =
-  "\nTo initialize the RNG with a default generator, and set up entropy \
+  "\nPlease setup your default random number generator. On Unix, the best \
+   path is to call [Mirage_crypto_rng_unix.use_default ()].\
+   \nBut you can use Fortuna (or any other RNG) and setup the seeding \
+   (done by default in MirageOS): \
+   \n\
+   \nTo initialize the RNG with a default generator, and set up entropy \
    collection and periodic reseeding as a background task, do the \
    following:\
    \n  If you are using MirageOS, use the random device in config.ml: \
@@ -37,6 +42,7 @@ module type Generator = sig
   val block : int
   val create : ?time:(unit -> int64) -> unit -> g
   val generate_into : g:g -> bytes -> off:int -> int -> unit
+  [@@alert unsafe "Does not do bounds checks. Use Mirage_crypto_rng.generate_into instead."]
   val reseed : g:g -> string -> unit
   val accumulate : g:g -> source -> [`Acc of string -> unit]
   val seeded : g:g -> bool
@@ -68,9 +74,14 @@ let get = function Some g -> g | None -> default_generator ()
 let generate_into ?(g = default_generator ()) b ?(off = 0) n =
   let Generator (g, _, m) = g in
   let module M = (val m) in
+  if off < 0 || n < 0 then
+    invalid_arg ("negative offset " ^ string_of_int off ^ " or length " ^
+                 string_of_int n);
   if Bytes.length b - off < n then
     invalid_arg "buffer too short";
-  M.generate_into ~g b ~off n
+  begin[@alert "-unsafe"]
+    M.generate_into ~g b ~off n
+  end
 
 let generate ?g n =
   let data = Bytes.create n in

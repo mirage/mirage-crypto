@@ -2,6 +2,8 @@
 # include <unistd.h>
 #endif
 
+#include "mirage_crypto.h"
+
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/unixsupport.h>
@@ -19,7 +21,7 @@
 # define getrandom(buf, len, flags) getrandom((buf), (len), (flags))
 # endif
 
-void raw_getrandom (uint8_t *data, uint32_t len) {
+void raw_getrandom (uint8_t *data, size_t len) {
   size_t off = 0;
   ssize_t r = 0;
   while (off < len) {
@@ -39,9 +41,9 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
 #endif
 #include <sys/param.h>
 
-void raw_getrandom (uint8_t *data, uint32_t len) {
+void raw_getrandom (uint8_t *data, size_t len) {
   size_t rlen = 0;
-  for (uint32_t i = 0; i <= len; i += 256) {
+  for (size_t i = 0; i <= len; i += 256) {
     rlen = MIN(256, len - i);
     if (getentropy(data + i, rlen) == -1) uerror("getentropy", Nothing);
   }
@@ -61,7 +63,7 @@ void raw_getrandom (uint8_t *data, uint32_t len) {
 #include <ntstatus.h>
 #include <bcrypt.h>
 
-void raw_getrandom(uint8_t *data, uint32_t len) {
+void raw_getrandom(uint8_t *data, size_t len) {
    NTSTATUS Status;
    Status = BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
    if (Status != STATUS_SUCCESS)
@@ -72,7 +74,7 @@ void raw_getrandom(uint8_t *data, uint32_t len) {
 #error "Retrieving random data not supported on this platform"
 #endif
 
-CAMLprim value mc_getrandom (value buf, value len) {
-  raw_getrandom(Bytes_val(buf), Int_val(len));
+CAMLprim value mc_getrandom (value buf, value off, value len) {
+  raw_getrandom(_bp_uint8_off(buf, off), Long_val(len));
   return Val_unit;
 }
