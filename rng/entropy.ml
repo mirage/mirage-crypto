@@ -27,11 +27,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+let src = Logs.Src.create "mirage-crypto-rng-entropy" ~doc:"Mirage crypto RNG Entropy"
+module Log = (val Logs.src_log src : Logs.LOG)
+
+let rdrand_calls = Atomic.make 0
+let rdrand_failures = Atomic.make 0
+let rdseed_calls = Atomic.make 0
+let rdseed_failures = Atomic.make 0
+
 module Cpu_native = struct
 
   external cycles : unit -> int  = "mc_cycle_counter" [@@noalloc]
-  external rdseed : unit -> int  = "mc_cpu_rdseed" [@@noalloc]
-  external rdrand : unit -> int  = "mc_cpu_rdrand" [@@noalloc]
+  external rdseed : bytes -> int -> bool  = "mc_cpu_rdseed" [@@noalloc]
+  external rdrand : bytes -> int -> bool  = "mc_cpu_rdrand" [@@noalloc]
   external rng_type : unit -> int  = "mc_cpu_rng_type" [@@noalloc]
 
   let cpu_rng =
@@ -72,9 +80,17 @@ let sources () = S.elements (Atomic.get _sources)
 
 let pp_source ppf (idx, name) = Format.fprintf ppf "[%d] %s" idx name
 
-let cpu_rng = function
-  | `Rdseed -> Cpu_native.rdseed
-  | `Rdrand -> Cpu_native.rdrand
+let cpu_rng isn buf off = match isn with
+  | `Rdseed ->
+    Atomic.incr rdseed_calls;
+    let success = Cpu_native.rdseed buf off in
+    if not success then Atomic.incr rdseed_failures;
+    success
+  | `Rdrand ->
+    Atomic.incr rdrand_calls;
+    let success = Cpu_native.rdrand buf off in
+    if not success then Atomic.incr rdrand_failures;
+    success
 
 let random preferred =
   match Cpu_native.cpu_rng with
@@ -115,24 +131,50 @@ let whirlwind_bootstrap id =
   Bytes.unsafe_to_string buf
 
 let cpu_rng_bootstrap =
+  let rdrand_bootstrap id =
+    let rec go acc = function
+      | 0 -> acc
+      | n ->
+        let buf = Bytes.create 10 in
+        let r = cpu_rng `Rdrand buf 2 in
+        write_header id buf;
+        if not r then
+          go acc (pred n)
+        else
+          go (Bytes.unsafe_to_string buf :: acc) (pred n)
+    in
+    let result = go [] 512 |> String.concat "" in
+    if String.length result = 0 then
+      failwith "Too many RDRAND failures"
+    else
+      result
+  in
   match random `Rdseed with
   | None -> Error `Not_supported
-  | Some insn ->
+  | Some `Rdseed ->
     let cpu_rng_bootstrap id =
-      let r = cpu_rng insn () in
-      if r = 0 then failwith "Mirage_crypto_rng.Entropy: 0 is a bad CPU RNG value";
       let buf = Bytes.create 10 in
-      Bytes.set_int64_le buf 2 (Int64.of_int r);
+      let r = cpu_rng `Rdseed buf 2 in
       write_header id buf;
-      Bytes.unsafe_to_string buf
+      if not r then
+        if List.mem `Rdrand Cpu_native.cpu_rng then
+          rdrand_bootstrap id
+        else
+          failwith "RDSEED failed, and RDRAND not available"
+      else
+        Bytes.unsafe_to_string buf
     in
     Ok cpu_rng_bootstrap
+  | Some `Rdrand -> Ok rdrand_bootstrap
 
 let bootstrap id =
   match cpu_rng_bootstrap with
   | Error `Not_supported -> whirlwind_bootstrap id
   | Ok cpu_rng_bootstrap ->
-    try cpu_rng_bootstrap id with Failure _ -> whirlwind_bootstrap id
+    try cpu_rng_bootstrap id with
+    | Failure f ->
+      Log.err (fun m -> m "CPU RNG bootstrap failed: %s, using whirlwind" f);
+      whirlwind_bootstrap id
 
 let interrupt_hook () =
   let buf = Bytes.create 4 in
@@ -150,7 +192,11 @@ let feed_pools g source f =
   let g = match g with None -> Some (Rng.default_generator ()) | Some g -> Some g in
   let `Acc handle = Rng.accumulate g source in
   for _i = 0 to pred (Rng.pools g) do
-    handle (f ())
+    match f () with
+    | Ok data -> handle data
+    | Error `No_random_available ->
+      (* should we log a message? *)
+      ()
   done
 
 let cpu_rng =
@@ -165,9 +211,16 @@ let cpu_rng =
       in
       let f () =
         let buf = Bytes.create 8 in
-        Bytes.set_int64_le buf 0 (Int64.of_int (randomf ()));
-        Bytes.unsafe_to_string buf
+        if randomf buf 0 then
+          Ok (Bytes.unsafe_to_string buf)
+        else
+          Error `No_random_available
       in
       fun () -> feed_pools g source f
     in
     Ok cpu_rng
+
+let rdrand_calls () = Atomic.get rdrand_calls
+let rdrand_failures () = Atomic.get rdrand_failures
+let rdseed_calls () = Atomic.get rdseed_calls
+let rdseed_failures () = Atomic.get rdseed_failures
