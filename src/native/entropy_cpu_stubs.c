@@ -205,8 +205,6 @@ enum cpu_rng_t {
 
 static int __cpu_rng = RNG_NONE;
 
-#define RETRIES 10
-
 static void detect (void) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
@@ -214,7 +212,7 @@ static void detect (void) {
   if (mc_detected_cpu_features.rdrand)
     /* AMD Ryzen 3000 bug where RDRAND always returns -1
        https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
-    for (int i = 0; i < RETRIES; i++)
+    for (int i = 0; i < 10; i++)
       if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
         __cpu_rng = RNG_RDRAND;
         break;
@@ -223,7 +221,7 @@ static void detect (void) {
   if (mc_detected_cpu_features.rdseed)
     /* RDSEED could return -1, thus we test it here
        https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
-    for (int i = 0; i < RETRIES; i++)
+    for (int i = 0; i < 100; i++)
       if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
         __cpu_rng |= RNG_RDSEED;
         break;
@@ -235,7 +233,7 @@ CAMLprim value mc_cpu_rdseed (value buf, value off) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
-  int i = RETRIES;
+  int i = 100;
   do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
   fill_bytes(buf, off, &r);
   return Val_bool (ok);
@@ -249,7 +247,7 @@ CAMLprim value mc_cpu_rdrand (value buf, value off) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
-  int i = RETRIES;
+  int i = 10;
   do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
   fill_bytes(buf, off, &r);
   return Val_bool (ok);
