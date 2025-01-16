@@ -1,0 +1,5 @@
+(library
+ (name mirage_crypto_rng_mirage)
+ (public_name mirage-crypto-rng-mirage2)
+ (libraries lwt mirage-runtime mirage-crypto-rng mirage-sleep mirage-mtime
+   duration logs))
