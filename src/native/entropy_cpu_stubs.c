@@ -241,7 +241,7 @@ CAMLprim value mc_cpu_rdseed (value buf, value off) {
   /* ARM: CPU-assisted randomness here. */
   (void)buf;
   (void)off;
-  return Val_bool (0);
+  return Val_false;
 #endif
 }
 
@@ -257,7 +257,7 @@ CAMLprim value mc_cpu_rdrand (value buf, value off) {
   /* ARM: CPU-assisted randomness here. */
   (void)buf;
   (void)off;
-  return Val_bool (0);
+  return Val_false;
 #endif
 }
 
