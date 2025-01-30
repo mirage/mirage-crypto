@@ -8,6 +8,7 @@
 
 (** [initialize ~g rng] will bring the RNG into a working state. *)
 val initialize : ?g:'a -> 'a Mirage_crypto_rng.generator -> unit
+[@@deprecated "Use 'Mirage_crypto_rng_unix.use_default ()' instead."]
 
 (** [getrandom size] returns a buffer of [size] filled with random bytes. *)
 val getrandom : int -> string

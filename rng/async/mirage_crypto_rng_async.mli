@@ -16,3 +16,4 @@ val initialize
   -> ?sleep:Time_ns.Span.t
   -> 'a Mirage_crypto_rng.generator
   -> unit
+[@@deprecated "Use 'Mirage_crypto_rng_unix.use_default ()' instead."]

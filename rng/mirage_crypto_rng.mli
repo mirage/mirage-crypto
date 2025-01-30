@@ -23,22 +23,15 @@
     Please ensure to call [Mirage_crypto_rng_unix.use_default], or
     [Mirage_crypto_rng_unix.use_dev_urandom] (if you only want to use
     /dev/urandom), or [Mirage_crypto_rng_unix.use_getentropy] (if you only want
-    to use getentropy).
+    to use getrandom/getentropy/BCryptGenRandom).
 
     For fine-grained control (doing entropy harvesting, etc.), please continue
-    reading the documentation below. {b Please be aware that the feeding of Fortuna
-    and producing random numbers is not thread-safe} (it is on Miou_unix via Pfortuna).
-
-    The RNGs here are merely the deterministic part of a full random number
-    generation suite. For proper operation, they need to be seeded with a
-    high-quality entropy source.
+    reading the documentation below. {b Please be aware that the feeding of
+    Fortuna and producing random numbers is not thread-safe} (it is on Miou_unix
+    via Pfortuna).
 
     Suitable entropy feeding of generators are provided by other libraries
-    {{!Mirage_crypto_rng_lwt}mirage-crypto-rng-lwt} (for Lwt),
-    {{!Mirage_crypto_rng_async}mirage-crypto-rng-async} (for Async),
     {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
-    {{!Mirage_crypto_rng_unix}mirage-crypto-rng.unix},
-    {{!Mirage_crypto_rng_eio}mirage-crypto-rng-eio} (for Eio),
     and {{!Mirage_crypto_rng_miou_unix}mirage-crypto-miou-unix} (for Miou_unix).
 
     The intention is that "initialize" in the respective sub-library is called
@@ -49,9 +42,9 @@
     generator should be used in most setting, and that should be fed a constant
     stream of entropy.
 
-    [mirage-crypto-rng-eio] package differs slightly from other rng packages.
-    Instead of the [initialize] function a [run] function is provided with
-    similar behaviour, i.e. RNG setup, entropy collection and periodic reseeding.
+    The RNGs here are merely the deterministic part of a full random number
+    generation suite. For proper operation, they need to be seeded with a
+    high-quality entropy source.
 
     Although this module exposes a more fine-grained interface, e.g. allowing
     manual seeding of generators, this is intended either for implementing
