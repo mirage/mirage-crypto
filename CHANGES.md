@@ -1,3 +1,21 @@
+## v1.2.0 (2025-01-30)
+
+Provide thread safety (Unix.fork and multi-domain safe) RNG generators by using
+getrandom/getentropy on UNIX (or /dev/urandom). In your UNIX applications,
+please use the "mirage-crypto-rng.unix" dependency and call
+"Mirage_crypto_rng_unix.use_default ()" (instead of depending on
+mirage-crypto-rng-{lwt,eio,async} and calling
+"Mirage_crypto_rng_{eio,lwt,async}.initialize".
+
+* mirage-crypto-rng: handle CPU_RNG failures (#255 @hannesm, addresses #251 #252
+  #253)
+* mirage-crypto-rng.unix: provide two generators: Urandom and Getentropy
+  (#250 @hannesm @reynir @edwintorok, addresses #249)
+* mirage-crypto-rng: deprecate the initialize for lwt, async, eio (and
+  advertise `Mirage_crypto_rng_unix.use_default ()` (#254 @hannesm)
+* mirage-crypto-rng-eio: declare the cstruct dependency (#247 @hannesm)
+* include "windows.h" (all lowercase) (#248 @mefyl)
+
 ## v1.1.0 (2024-08-20)
 
 * FEATURE mirage-crypto-ec: provide Dh.secret_to_octets (requested in #243 by
