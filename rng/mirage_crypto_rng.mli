@@ -107,11 +107,13 @@ module Entropy : sig
 
   val cpu_rng_bootstrap : (int -> string, [`Not_supported]) Result.t
   (** [cpu_rng_bootstrap id] returns 8 bytes of random data using the CPU
-      RNG (rdseed or rdrand). On 32bit platforms, only 4 bytes are filled.
-      The [id] is used as prefix.
+      RNG (rdseed). On 32bit platforms, only 4 bytes are filled.
+      The [id] is used as prefix. If only rdrand is available, the return
+      value is the concatenation of 512 calls to rdrand.
 
-      @raise Failure if no CPU RNG is available, or if it doesn't return a
-      random value. *)
+      @raise Failure if rdrand fails 512 times, or if rdseed fails and rdrand
+      is not available.
+  *)
 
   val bootstrap : int -> string
   (** [bootstrap id] is either [cpu_rng_bootstrap], if the CPU supports it, or
@@ -129,14 +131,26 @@ module Entropy : sig
 
   (** {1 Periodic pulled sources} *)
 
-  val feed_pools : g option -> source -> (unit -> string) -> unit
+  val feed_pools : g option -> source -> (unit -> (string, [ `No_random_available ]) result) -> unit
   (** [feed_pools g source f] feeds all pools of [g] using [source] by executing
       [f] for each pool. *)
 
   val cpu_rng : (g option -> unit -> unit, [`Not_supported]) Result.t
   (** [cpu_rng g] uses the CPU RNG (rdrand or rdseed) to feed all pools
       of [g]. It uses {!feed_pools} internally. If neither rdrand nor rdseed
-      are available, [fun () -> ()] is returned. *)
+      are available, [`Not_supported] is returned. *)
+
+  val rdrand_calls : unit -> int
+  (** [rdrand_calls ()] returns the number of rdrand calls. *)
+
+  val rdrand_failures : unit -> int
+  (** [rdrand_failures ()] returns the number of rdrand failures. *)
+
+  val rdseed_calls : unit -> int
+  (** [rdseed_calls ()] returns the number of rdseed calls. *)
+
+  val rdseed_failures : unit -> int
+  (** [rdseed_failures ()] returns the number of rdseed failures. *)
 
   (**/**)
   val id : source -> int

@@ -15,11 +15,13 @@
 #define random_t unsigned long long
 #define _rdseed_step _rdseed64_step
 #define _rdrand_step _rdrand64_step
+#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 8)
 
 #elif defined (__i386__)
 #define random_t unsigned int
 #define _rdseed_step _rdseed32_step
 #define _rdrand_step _rdrand32_step
+#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 4)
 
 #endif
 #endif /* __i386__ || __x86_64__ */
@@ -203,8 +205,6 @@ enum cpu_rng_t {
 
 static int __cpu_rng = RNG_NONE;
 
-#define RETRIES 10
-
 static void detect (void) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
@@ -212,7 +212,7 @@ static void detect (void) {
   if (mc_detected_cpu_features.rdrand)
     /* AMD Ryzen 3000 bug where RDRAND always returns -1
        https://arstechnica.com/gadgets/2019/10/how-a-months-old-amd-microcode-bug-destroyed-my-weekend/ */
-    for (int i = 0; i < RETRIES; i++)
+    for (int i = 0; i < 10; i++)
       if (_rdrand_step(&r) == 1 && r != (random_t) (-1)) {
         __cpu_rng = RNG_RDRAND;
         break;
@@ -221,7 +221,7 @@ static void detect (void) {
   if (mc_detected_cpu_features.rdseed)
     /* RDSEED could return -1, thus we test it here
        https://www.reddit.com/r/Amd/comments/cmza34/agesa_1003_abb_fixes_rdrandrdseed/ */
-    for (int i = 0; i < RETRIES; i++)
+    for (int i = 0; i < 100; i++)
       if (_rdseed_step(&r) == 1 && r != (random_t) (-1)) {
         __cpu_rng |= RNG_RDSEED;
         break;
@@ -229,29 +229,35 @@ static void detect (void) {
 #endif
 }
 
-CAMLprim value mc_cpu_rdseed (value __unused(unit)) {
+CAMLprim value mc_cpu_rdseed (value buf, value off) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
-  int i = RETRIES;
+  int i = 100;
   do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
-  return Val_long(r);
+  fill_bytes(buf, off, &r);
+  return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
-  return Val_long (0);
+  (void)buf;
+  (void)off;
+  return Val_false;
 #endif
 }
 
-CAMLprim value mc_cpu_rdrand (value __unused(unit)) {
+CAMLprim value mc_cpu_rdrand (value buf, value off) {
 #ifdef __mc_ENTROPY__
   random_t r = 0;
   int ok = 0;
-  int i = RETRIES;
+  int i = 10;
   do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
-  return Val_long(r);
+  fill_bytes(buf, off, &r);
+  return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
-  return Val_long (0);
+  (void)buf;
+  (void)off;
+  return Val_false;
 #endif
 }
 

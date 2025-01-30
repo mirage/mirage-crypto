@@ -34,7 +34,7 @@ let periodically_collect_getrandom_entropy time_source span =
       let idx = ref 0 in
       let f () =
         incr idx;
-        String.sub random ~pos:(per_pool * (pred !idx)) ~len:per_pool
+        Ok (String.sub random ~pos:(per_pool * (pred !idx)) ~len:per_pool)
       in
       Entropy.feed_pools None source f)
 
