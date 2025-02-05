@@ -9,7 +9,7 @@ let main =
     package "ohex" ;
   ]
   in
-  main ~packages "Unikernel.Main" (random @-> job)
+  main ~packages "Unikernel" job
 
 let () =
-  register "crypto-test" [main $ default_random]
+  register "crypto-test" [main]

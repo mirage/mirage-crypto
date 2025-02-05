@@ -23,10 +23,8 @@ module Printing_rng = struct
   let pools = 1
 end
 
-module E = Mirage_crypto_rng_mirage.Make(Time)(Mclock)
-
 let with_entropy act =
-  E.initialize (module Printing_rng) >>= fun () ->
+  Mirage_crypto_rng_mirage.initialize (module Printing_rng) >>= fun () ->
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
          Mirage_crypto_rng.Entropy.pp_source ppf x;
