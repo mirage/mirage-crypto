@@ -28,8 +28,7 @@
  (name test_entropy_collection)
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
- (libraries mirage-crypto-rng-mirage mirage-unix mirage-time-unix
-   mirage-clock-unix duration ohex))
+ (libraries mirage-crypto-rng-mirage mirage-unix duration ohex))
 
 (test
  (name test_entropy)
