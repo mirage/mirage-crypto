@@ -81,7 +81,7 @@ opamrun update
 # Build logic
 #   2024-02-09: Remove mirage-crypto-pk on Windows since no portable GMP library (used by Zarith).
 #   2024-02-24: Remove mirage-crypto-ec on Windows since it results in test failures.
-packages_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-lwt,mirage-crypto-rng-mirage"
+packages_TOPOLOGICALSORT="mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-mirage"
 case "$dkml_host_abi" in
     windows_*)
         packages_TOPOLOGICALSORT="$packages_TOPOLOGICALSORT"

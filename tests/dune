@@ -32,17 +32,11 @@
    mirage-clock-unix duration ohex))
 
 (test
- (name test_entropy_collection_async)
- (modules test_entropy_collection_async)
- (package mirage-crypto-rng-async)
- (libraries mirage-crypto-rng-async ohex))
-
-(test
  (name test_entropy)
  (modules test_entropy)
  (package mirage-crypto-rng)
  (libraries mirage-crypto-rng ohex)
- (enabled_if (or (<> %{architecture} "arm64") (<> %{architecture} "riscv64"))))
+ (enabled_if (and (<> %{architecture} "arm64") (<> %{architecture} "riscv64"))))
  ; see https://github.com/mirage/mirage-crypto/issues/216
 
 (test
@@ -61,12 +55,6 @@
    x25519_test.json eddsa_test.json)
  (libraries alcotest mirage-crypto-ec wycheproof digestif asn1-combinators)
  (package mirage-crypto-ec))
-
-(tests
- (names     test_eio_rng test_eio_entropy_collection)
- (modules   test_eio_rng test_eio_entropy_collection)
- (libraries mirage-crypto-rng-eio duration eio_main ohex)
- (package   mirage-crypto-rng-eio))
 
 (tests
  (names     test_miou_rng test_miou_entropy_collection)
