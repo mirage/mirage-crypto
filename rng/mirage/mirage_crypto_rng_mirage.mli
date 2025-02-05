@@ -26,49 +26,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
-module type S = sig
-  type g = Mirage_crypto_rng.g
-  (** A generator (PRNG) with its state. *)
-
-  (** Entropy sources and collection *)
-  module Entropy :
-    sig
-      (** Entropy sources. *)
-      type source = Mirage_crypto_rng.Entropy.source
-
-      val sources : unit -> source list
-      (** [sources ()] returns the list of available sources. *)
-
-      val pp_source : Format.formatter -> source -> unit
-      (** [pp_source ppf source] pretty-prints the entropy [source] on [ppf]. *)
-
-      val register_source : string -> source
-      (** [register_source name] registers [name] as entropy source. *)
-    end
-
-  val generate_into : ?g:g -> bytes -> ?off:int -> int -> unit
-  (** [generate_into ~g buf ~off len] invokes
-      {{!Generator.generate_into}generate_into} on [g] or
-      {{!generator}default generator}. The random data is put into [buf] starting
-      at [off] (defaults to 0) with [len] bytes. *)
-
-  val generate : ?g:g -> int -> string
-  (** Invoke {!generate_into} on [g] or {{!generator}default generator} and a
-      freshly allocated string. *)
-
-  val accumulate : g option -> Entropy.source -> [`Acc of string -> unit]
-  (** [accumulate g source] is a function [data -> unit] to feed entropy to the
-      RNG. This is useful if your system has a special entropy source. *)
-end
-
-module Make (T : Mirage_time.S) (M : Mirage_clock.MCLOCK) : sig
-  include S
-
-  val initialize :
-    ?g:'a -> ?sleep:int64 -> 'a Mirage_crypto_rng.generator -> unit Lwt.t
-  (** [initialize ~g ~sleep generator] sets the default generator to the
-      [generator] and sets up periodic entropy feeding for that rng. This
-      function fails ([Lwt.fail]) if it is called a second time. The argument
-      [~sleep] is measured in ns, and used as sleep between cpu assisted random
-      number collection. It defaults to one second. *)
-end
+val initialize :
+  ?g:'a -> ?sleep:int64 -> 'a Mirage_crypto_rng.generator -> unit Lwt.t
+(** [initialize ~g ~sleep generator] sets the default generator to the
+    [generator] and sets up periodic entropy feeding for that rng. This
+    function fails ([Lwt.fail]) if it is called a second time. The argument
+    [~sleep] is measured in ns, and used as sleep between cpu assisted random
+    number collection. It defaults to one second. *)
