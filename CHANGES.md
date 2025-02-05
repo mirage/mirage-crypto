@@ -1,3 +1,10 @@
+## v2.0.0 (2025-02-03)
+
+* Remove now superfluous mirage-crypto-rng-{eio,lwt,async} packages
+  (#256 @hannesm)
+* Remove functorisation of mirage-crypto-rng-mirage, use mirage-sleep and
+  mirage-mtime directly (#257 @hannesm)
+
 ## v1.2.0 (2025-01-30)
 
 Provide thread safety (Unix.fork and multi-domain safe) RNG generators by using
