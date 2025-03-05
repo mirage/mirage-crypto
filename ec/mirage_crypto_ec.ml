@@ -88,9 +88,10 @@ module type Parameters = sig
   val first_byte_bits : int option
 end
 
-type point = { f_x : field_element; f_y : field_element; f_z : field_element }
-
-type out_point = { m_f_x : out_field_element; m_f_y : out_field_element; m_f_z : out_field_element }
+module Point_proj = struct
+  type point = { f_x : field_element; f_y : field_element; f_z : field_element }
+  type out_point = { m_f_x : out_field_element; m_f_y : out_field_element; m_f_z : out_field_element }
+end
 
 type scalar = Scalar of string
 
@@ -107,6 +108,11 @@ module type Foreign = sig
   val to_octets : bytes -> field_element -> unit
   val inv : out_field_element -> field_element -> unit
   val select_c : out_field_element -> bool -> field_element -> field_element -> unit
+end
+
+module type Foreign_proj = sig
+  include Foreign
+  open Point_proj
 
   val double_c : out_point -> point -> unit
   val add_c : out_point -> point -> point -> unit
@@ -114,6 +120,7 @@ module type Foreign = sig
 end
 
 module type Field_element = sig
+  val create : unit -> out_field_element
   val mul : field_element -> field_element -> field_element
   val sub : field_element -> field_element -> field_element
   val add : field_element -> field_element -> field_element
@@ -126,9 +133,6 @@ module type Field_element = sig
   val select : bool -> then_:field_element -> else_:field_element -> field_element
   val from_be_octets : string -> field_element
   val to_octets : field_element -> string
-  val double_point : point -> point
-  val add_point : point -> point -> point
-  val scalar_mult_base_point : scalar -> point
 end
 
 module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struct
@@ -196,51 +200,24 @@ module Make_field_element (P : Parameters) (F : Foreign) : Field_element = struc
     let tmp = create_octets () in
     F.to_octets tmp fe;
     b_uts tmp
-
-  let out_point () = {
-    m_f_x = create ();
-    m_f_y = create ();
-    m_f_z = create ();
-  }
-
-  let out_p_to_p p = {
-    f_x = b_uts p.m_f_x ;
-    f_y = b_uts p.m_f_y ;
-    f_z = b_uts p.m_f_z ;
-  }
-
-  let double_point p =
-    let tmp = out_point () in
-    F.double_c tmp p;
-    out_p_to_p tmp
-
-  let add_point a b =
-    let tmp = out_point () in
-    F.add_c tmp a b;
-    out_p_to_p tmp
-
-  let scalar_mult_base_point (Scalar d) =
-    let tmp = out_point () in
-    F.scalar_mult_base_c tmp d;
-    out_p_to_p tmp
 end
 
 module type Point = sig
-  val at_infinity : unit -> point
+  type point
   val is_infinity : point -> bool
-  val add : point -> point -> point
-  val double : point -> point
   val of_octets : string -> (point, error) result
   val to_octets : compress:bool -> point -> string
   val to_affine_raw : point -> (field_element * field_element) option
   val x_of_finite_point : point -> string
-  val params_g : point
-  val select : bool -> then_:point -> else_:point -> point
+  val scalar_mult : scalar -> point -> point
+  val scalar_mult_add : scalar -> scalar -> point -> point
   val scalar_mult_base : scalar -> point
+  val generator_tables : unit -> string array array array
 end
 
-module Make_point (P : Parameters) (F : Foreign) : Point = struct
+module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
   module Fe = Make_field_element(P)(F)
+  include Point_proj
 
   let at_infinity () =
     let f_x = Fe.one in
@@ -273,7 +250,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
   (** Convert coordinates to a finite point ensuring:
       - x < p
       - y < p
-      - y^2 = ax^3 + ax + b
+      - y^2 = x^3 + ax + b
   *)
   let validate_finite_point ~x ~y =
     match (check_coordinate x, check_coordinate y) with
@@ -325,9 +302,34 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     else
       buf
 
-  let double p = Fe.double_point p
+  let out_point () = {
+    m_f_x = Fe.create ();
+    m_f_y = Fe.create ();
+    m_f_z = Fe.create ();
+  }
 
-  let add p q = Fe.add_point p q
+  let out_p_to_p p =
+    let b_uts b = Bytes.unsafe_to_string b in
+    {
+      f_x = b_uts p.m_f_x ;
+      f_y = b_uts p.m_f_y ;
+      f_z = b_uts p.m_f_z ;
+    }
+
+  let double p =
+    let tmp = out_point () in
+    F.double_c tmp p;
+    out_p_to_p tmp
+
+  let add a b =
+    let tmp = out_point () in
+    F.add_c tmp a b;
+    out_p_to_p tmp
+
+  let scalar_mult_base (Scalar d) =
+    let tmp = out_point () in
+    F.scalar_mult_base_c tmp d;
+    out_p_to_p tmp
 
   let x_of_finite_point p =
     match to_affine p with None -> assert false | Some (x, _) -> rev_string x
@@ -418,7 +420,43 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
 
-  let scalar_mult_base = Fe.scalar_mult_base_point
+  (* Branchless Montgomery ladder method *)
+  let scalar_mult (Scalar s) p =
+    let r0 = ref (at_infinity ()) in
+    let r1 = ref p in
+    for i = P.byte_length * 8 - 1 downto 0 do
+      let bit = bit_at s i in
+      let sum = add !r0 !r1 in
+      let r0_double = double !r0 in
+      let r1_double = double !r1 in
+      r0 := select bit ~then_:sum ~else_:r0_double;
+      r1 := select bit ~then_:r1_double ~else_:sum
+    done;
+    !r0
+
+  let scalar_mult_add a b p =
+    add (scalar_mult_base a) (scalar_mult b p)
+
+  (* Pre-compute multiples of the generator point
+     returns the tables along with the number of significant bytes *)
+  let generator_tables () =
+    let len = P.fe_length * 2 in
+    let one_table _ = Array.init 15 (fun _ -> at_infinity ()) in
+    let table = Array.init len one_table in
+    let base = ref params_g in
+    for i = 0 to len - 1 do
+      table.(i).(0) <- !base;
+      for j = 1 to 14 do
+        table.(i).(j) <- add !base table.(i).(j - 1)
+      done;
+      base := double !base;
+      base := double !base;
+      base := double !base;
+      base := double !base
+    done;
+    let convert {f_x; f_y; f_z} = [|f_x; f_y; f_z|] in
+    Array.map (Array.map convert) table
+
 end
 
 module type Scalar = sig
@@ -426,9 +464,6 @@ module type Scalar = sig
   val is_in_range : string -> bool
   val of_octets : string -> (scalar, error) result
   val to_octets : scalar -> string
-  val scalar_mult : scalar -> point -> point
-  val scalar_mult_base : scalar -> point
-  val generator_tables : unit -> field_element array array array
 end
 
 module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
@@ -447,43 +482,6 @@ module Make_scalar (Param : Parameters) (P : Point) : Scalar = struct
     | false -> Error `Invalid_range
 
   let to_octets (Scalar buf) = rev_string buf
-
-  (* Branchless Montgomery ladder method *)
-  let scalar_mult (Scalar s) p =
-    let r0 = ref (P.at_infinity ()) in
-    let r1 = ref p in
-    for i = Param.byte_length * 8 - 1 downto 0 do
-      let bit = bit_at s i in
-      let sum = P.add !r0 !r1 in
-      let r0_double = P.double !r0 in
-      let r1_double = P.double !r1 in
-      r0 := P.select bit ~then_:sum ~else_:r0_double;
-      r1 := P.select bit ~then_:r1_double ~else_:sum
-    done;
-    !r0
-
-  (* Specialization of [scalar_mult d p] when [p] is the generator *)
-  let scalar_mult_base = P.scalar_mult_base
-
-  (* Pre-compute multiples of the generator point
-     returns the tables along with the number of significant bytes *)
-  let generator_tables () =
-    let len = Param.fe_length * 2 in
-    let one_table _ = Array.init 15 (fun _ -> P.at_infinity ()) in
-    let table = Array.init len one_table in
-    let base = ref P.params_g in
-    for i = 0 to len - 1 do
-      table.(i).(0) <- !base;
-      for j = 1 to 14 do
-        table.(i).(j) <- P.add !base table.(i).(j - 1)
-      done;
-      base := P.double !base;
-      base := P.double !base;
-      base := P.double !base;
-      base := P.double !base
-    done;
-    let convert {f_x; f_y; f_z} = [|f_x; f_y; f_z|] in
-    Array.map (Array.map convert) table
 end
 
 module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
@@ -498,7 +496,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
   type secret = scalar
 
   let share ?(compress = false) private_key =
-    let public_key = S.scalar_mult_base private_key in
+    let public_key = P.scalar_mult_base private_key in
     point_to_octets ~compress public_key
 
   let secret_of_octets ?compress s =
@@ -522,7 +520,7 @@ module Make_dh (Param : Parameters) (P : Point) (S : Scalar) : Dh = struct
   let key_exchange secret received =
     match point_of_octets received with
     | Error _ as err -> err
-    | Ok shared -> Ok (P.x_of_finite_point (S.scalar_mult secret shared))
+    | Ok shared -> Ok (P.x_of_finite_point (P.scalar_mult secret shared))
 end
 
 module type Foreign_n = sig
@@ -671,7 +669,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
   module K_gen_default = K_gen(H)
 
-  type pub = point
+  type pub = P.point
 
   let pub_of_octets = P.of_octets
 
@@ -687,16 +685,14 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
       in
       one ()
     in
-    let q = S.scalar_mult_base d in
+    let q = P.scalar_mult_base d in
     (d, q)
 
   let x_of_finite_point_mod_n p =
     match P.to_affine_raw p with
     | None -> None
     | Some (x, _) ->
-      let x = F.to_montgomery x in
       let x = F.mul x F.one in
-      let x = F.from_montgomery x in
       Some (F.to_be_octets x)
 
   let sign ~key ?k msg =
@@ -714,7 +710,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
         | Ok ksc -> ksc
         | Error _ -> invalid_arg "k not in range" (* if no k is provided, this cannot happen since K_gen_*.gen already preserves the Scalar invariants *)
       in
-      let point = S.scalar_mult_base ksc in
+      let point = P.scalar_mult_base ksc in
       match x_of_finite_point_mod_n point with
       | None -> again ()
       | Some r ->
@@ -734,7 +730,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
     in
     do_sign g
 
-  let pub_of_priv priv = S.scalar_mult_base priv
+  let pub_of_priv priv = P.scalar_mult_base priv
 
   let verify ~key (r, s) msg =
     try
@@ -756,10 +752,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
           S.of_octets (F.to_be_octets u2)
         with
         | Ok u1, Ok u2 ->
-          let point =
-            P.add
-              (S.scalar_mult_base u1)
-              (S.scalar_mult u2 key)
+          let point = P.scalar_mult_add u1 u2 key
           in
           begin match x_of_finite_point_mod_n point with
             | None -> false (* point is infinity *)
@@ -770,7 +763,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
     | Message_too_long -> false
 
   module Precompute = struct
-    let generator_tables = S.generator_tables
+    let generator_tables = P.generator_tables
   end
 end
 
@@ -790,6 +783,7 @@ module P256 : Dh_dsa  = struct
   end
 
   module Foreign = struct
+    include Point_proj
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p256_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p256_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p256_add" [@@noalloc]
@@ -842,6 +836,7 @@ module P384 : Dh_dsa = struct
   end
 
   module Foreign = struct
+    include Point_proj
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p384_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p384_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p384_add" [@@noalloc]
@@ -895,6 +890,7 @@ module P521 : Dh_dsa = struct
   end
 
   module Foreign = struct
+    include Point_proj
     external mul : out_field_element -> field_element -> field_element -> unit = "mc_p521_mul" [@@noalloc]
     external sub : out_field_element -> field_element -> field_element -> unit = "mc_p521_sub" [@@noalloc]
     external add : out_field_element -> field_element -> field_element -> unit = "mc_p521_add" [@@noalloc]
