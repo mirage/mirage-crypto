@@ -216,6 +216,105 @@ let ecdsa = [
   "ECDSA verify", `Quick, ecdsa_verify ;
 ]
 
+
+let secp256k1_ecdsa_gen () =
+  let d = of_hex "42202a98374f6dca439c0af88140e41f8eced3062682ec7f9fc8ac9ea83c7cb2" in
+  let p = match
+      P256k1.Dsa.pub_of_octets
+        (of_hex {|04
+                  131ca4e5811267fa90fc631d6298c2d7a4ecccc45cc60d378e0660b61f82fe8d
+                  cf5acf8ed3e0bbf735308cc415604bd34ab8f7fc8b4a22741117a7fbc72a7949|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  in
+  let pub = match P256k1.Dsa.priv_of_octets d with
+    | Ok p -> P256k1.Dsa.pub_of_priv p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let pub_eq a b =
+    String.equal (P256k1.Dsa.pub_to_octets a) (P256k1.Dsa.pub_to_octets b)
+  in
+  Alcotest.(check bool __LOC__ true (pub_eq pub p))
+
+let secp256k1_ecdsa_verify () =
+  let key =
+    match P256k1.Dsa.pub_of_octets
+            (of_hex {|04
+                      779dd197a5df977ed2cf6cb31d82d43328b790dc6b3b7d4437a427bd5847dfcd
+                      e94b724a555b6d017bb7607c3e3281daf5b1699d6ef4124975c9237b917d426f|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  and e = of_hex "4b688df40bcedbe641ddb16ff0a1842d9c67ea1c3bf63f3e0471baa664531d1a"
+  and r = of_hex "241097efbf8b63bf145c8961dbdf10c310efbb3b2676bbc0f8b08505c9e2f795"
+  and s = of_hex "021006b7838609339e8b415a7f9acb1b661828131aef1ecbc7955dfb01f3ca0e"
+  in
+  Alcotest.(check bool __LOC__ true (P256k1.Dsa.verify ~key (r, s) e))
+
+let secp256k1_ecdsa = [
+  "ECDSA gen", `Quick, secp256k1_ecdsa_gen ;
+  "ECDSA verify", `Quick, secp256k1_ecdsa_verify ;
+]
+
+let secp256k1_ecdsa_sign =
+  let case ?k ~h ~d ~r ~s () =
+    let msg = of_hex h in
+    let key = match P256k1.Dsa.priv_of_octets (of_hex d) with
+      | Ok p -> p
+      | Error _ -> Alcotest.fail "couldn't decode private key"
+    in
+    let k = Option.map (fun x -> of_hex x) k in
+    let (r', s') = P256k1.Dsa.sign ~key ?k msg in
+    Alcotest.(check string "r correct" (of_hex r) r');
+    Alcotest.(check string "s correct" (of_hex s) s')
+  in
+  let cases = [
+    case
+      ~d:"ebb2c082fd7727890a28ac82f6bdf97bad8de9f5d7c9028692de1a255cad3e0f"
+      ~h:"4b688df40bcedbe641ddb16ff0a1842d9c67ea1c3bf63f3e0471baa664531d1a"
+      ~k:"49a0d7b786ec9cde0d0721d72804befd06571c974b191efb42ecf322ba9ddd9a"
+      ~r:"241097efbf8b63bf145c8961dbdf10c310efbb3b2676bbc0f8b08505c9e2f795"
+      ~s:"021006b7838609339e8b415a7f9acb1b661828131aef1ecbc7955dfb01f3ca0e" ;
+    case
+      ~d:"0000000000000000000000000000000000000000000000000000000000000001"
+      ~h:"0000000000000000000000000000000000000000000000000000000000000001"
+      ~r:"6673FFAD2147741F04772B6F921F0BA6AF0C1E77FC439E65C36DEDF4092E8898"
+      ~s:"B3E568E9AD1F52577FEDF107FDA18F5EBB8E5C220BADF23532BF6FBCC67FB4B8" ;
+    case
+      ~d:"D30519BCAE8D180DBFCC94FE0B8383DC310185B0BE97B4365083EBCECCD75759"
+      ~h:"3F891FDA3704F0368DAB65FA81EBE616F4AA2A0854995DA4DC0B59D2CADBD64F"
+      ~k:"DC87789C4C1A09C97FF4DE72C0D0351F261F10A2B9009C80AEE70DDEC77201A0"
+      ~r:"A5C7B7756D34D8AAF6AA68F0B71644F0BEF90D8BFD126CE951B6060498345089"
+      ~s:"BC9644F1625AF13841E589FD00653AE8C763309184EA0DE481E8F06709E5D1CB" ;
+    case
+      ~d:"292efd39a4e53efb580ba4ba3e5bb47d6e7463cddab04335aa061d554c74bcc8"
+      ~h:"db72ce6fea09d442b4f31535df0a97f6c21d42be23e48b6bd088018cce75c3dd"
+      ~k:"654035b5acae79fff464d77b114f93b1b84caec325fdf7f3f050cc659245bfaa"
+      ~r:"9ae57e4e4eca88939152ee38a07860ae03cff51d84708eeceabc70d615b7d31b"
+      ~s:"808cddd65562c77c81a1c8d45e229f53edf19864069f8d62c3c3fa1f8c8c3c66" ;
+    case
+      ~d:"0deea9b194ea6d4f1b5de6b5468a80e0478ae0f03f4fce59bafe51e35763388e"
+      ~h:"a6442404392a831b481845c49d6009957ebd611bd366f4dd15f7578daef21678"
+      ~k:"e3253150b94868a179e34f819ec42cf14eb367d1685ee528e51f1dd031eabb29"
+      ~r:"5c5ab3fc0063da962440285f0df3a2cf031947920c990ff97b8a210a531d39a0"
+      ~s:"b45a4aff7d60bbaa1602a81d5c2f09d3d651344cc6c08723fd40ffaf79ba1c6a" ;
+    case
+      ~d:"634ccc8392372f66e9086c540f868a9ce93d5452aa1e0e1a5448ed15f4252c85"
+      ~h:"22a634e0114561e05c6e333e5bab22fbfe77e1691305fceae6697278a665447c"
+      ~k:"4a49d24c7b41392f8fd90ec5b49bdb949048ee0f55ccb35753ea8a38c4a942fb"
+      ~r:"c7700bcd35c0f82ca14c1c3d5a3b3b444a187593ebafcd5ec401f8a49b024553"
+      ~s:"3dbd18cf865697dfa6733dd0676063b769a1fd94f2d2a3b92e2680d4291c6128" ;
+    case
+      ~d:"576314d4c6ad800d5726b0cdd0e6e9429568ff96ffbd83aea38f6c9a3e6409d3"
+      ~h:"a168c68532a902215d7b3551bb1c39cf79df84d6bdc469b833bf72d4803d25d7"
+      ~k:"2e6511edb60aa7966007b383fa6ad9d0e6a54620182f0269509116d3e5e8f5af"
+      ~r:"41ee804ccacefd441972ca8d92c72c4b361c39eee5cb1f474de7f09d4b83f212"
+      ~s:"1614e19bab04de9ef3658bf6702d599bb518f598a122e1df92160bd5584dd42b" ;
+
+  ] in
+  List.mapi (fun i c -> "ECDSA sign " ^ string_of_int i, `Quick, c) cases
+
 let ecdsa_rfc6979_p256 =
   (* A.2.5 - P 256 *)
   let priv, pub =
@@ -874,5 +973,7 @@ let () =
       ("ECDSA RFC 6979 P521", ecdsa_rfc6979_p521);
       ("X25519", [ "RFC 7748", `Quick, x25519 ]);
       ("ED25519", ed25519);
-      ("ECDSA P521 regression", [ "regreesion1", `Quick, p521_regression ]);
+      ("ECDSA P521 regression", [ "regression1", `Quick, p521_regression ]);
+      ("secp256k1 ECDSA", secp256k1_ecdsa);
+      ("secp256k1 ECDSA sign", secp256k1_ecdsa_sign);
     ]

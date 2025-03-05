@@ -193,6 +193,13 @@ let ecdsa_p256 =
 
 let ecdsa_p256_sig () = Mirage_crypto_ec.P256.Dsa.sign ~key:ecdsa_p256 msg_str_32
 
+let ecdsa_p256k1 =
+  Result.get_ok
+    (Mirage_crypto_ec.P256k1.Dsa.priv_of_octets
+       "\x08\x9f\x4f\xfc\xcc\xf9\xba\x13\xfe\xdd\x09\x42\xef\x08\xcf\x2d\x90\x9f\x32\xe2\x93\x4a\xb5\xc9\x3b\x6c\x99\xbe\x5a\x9f\xf5\x27")
+
+let ecdsa_p256k1_sig () = Mirage_crypto_ec.P256k1.Dsa.sign ~key:ecdsa_p256k1 msg_str_32
+
 let ecdsa_p384 =
   Result.get_ok
     (Mirage_crypto_ec.P384.Dsa.priv_of_octets
@@ -215,6 +222,7 @@ let ed25519_sig () = Mirage_crypto_ec.Ed25519.sign ~key:ed25519 msg_str
 
 let ecdsas = [
   ("P256", `P256 (ecdsa_p256, ecdsa_p256_sig ()));
+  ("P256k1", `P256k1 (ecdsa_p256k1, ecdsa_p256k1_sig ()));
   ("P384", `P384 (ecdsa_p384, ecdsa_p384_sig ()));
   ("P521", `P521 (ecdsa_p521, ecdsa_p521_sig ()));
   ("Ed25519", `Ed25519 (ed25519, ed25519_sig ()));
@@ -224,6 +232,8 @@ let ecdh_shares =
   [
     ("P256", `P256 (Mirage_crypto_ec.P256.Dh.secret_of_octets "\x47\x0d\x57\x70\x6c\x77\x06\xb6\x8a\x3f\x42\x3a\xea\xf4\xff\x7f\xdd\x02\x49\x4a\x10\xd3\xe3\x81\xc3\xc1\x1f\x72\x76\x80\x2c\xdc" |> Result.get_ok |> fst,
                     "\x04\x11\xb3\xfc\x82\x72\x1c\x26\x9a\x19\x90\x9a\x3b\x2f\xc2\x6d\x98\x95\x82\x6d\x0c\xfc\xbc\x1f\x76\x26\xe4\x88\xf0\x1f\x4c\xa6\xb5\xc5\xed\x76\xad\xee\x7a\xf8\x1b\xb2\x0b\x17\xcf\x23\x1c\xbf\x0c\x67\xdb\x02\x95\xd6\x8d\x1d\x92\xc2\xd2\xa5\xa8\x06\x38\xd7\x8d"));
+    ("P256k1", `P256k1 (Mirage_crypto_ec.P256k1.Dh.secret_of_octets "\x47\x0d\x57\x70\x6c\x77\x06\xb6\x8a\x3f\x42\x3a\xea\xf4\xff\x7f\xdd\x02\x49\x4a\x10\xd3\xe3\x81\xc3\xc1\x1f\x72\x76\x80\x2c\xdc" |> Result.get_ok |> fst,
+                    "\x04\xd8\x09\x6a\xf8\xa1\x1e\x0b\x80\x03\x7e\x1e\xe6\x82\x46\xb5\xdc\xbb\x0a\xeb\x1c\xf1\x24\x4f\xd7\x67\xdb\x80\xf3\xfa\x27\xda\x2b\x39\x68\x12\xea\x16\x86\xe7\x47\x2e\x96\x92\xea\xf3\xe9\x58\xe5\x0e\x95\x00\xd3\xb4\xc7\x72\x43\xdb\x1f\x2a\xcd\x67\xba\x9c\xc4"));
     ("P384", `P384 (Mirage_crypto_ec.P384.Dh.secret_of_octets "\xee\x55\xe2\x9b\x61\x75\x2d\x5a\x3e\x52\x56\x56\xdb\x8b\xd8\xfe\x6f\x94\xfa\xb8\xaa\xcc\x9e\x92\xac\xff\x4c\x48\x12\xbf\x7a\x61\x87\xab\xa4\x6c\xc6\x0a\xb8\xf0\x8e\xfc\xf2\xd5\x74\x58\x4b\x74" |> Result.get_ok |> fst,
                     "\x04\x04\x89\xcf\x24\xbc\x80\xbf\x89\xfd\xfe\x9c\x05\xec\xc3\x9f\x69\x16\xad\x45\x09\xd9\x39\x85\x97\x95\x0d\x3d\x24\xe8\x28\xf6\xbf\x56\xba\x4a\xd6\xd2\x1e\xd7\x86\x3b\xed\x68\xe4\x13\x36\x4b\xd4\xc7\xb1\xe9\x04\x7d\x36\x12\x4c\x69\x53\xbe\x7c\x61\x20\x9c\xb3\xfc\x56\x45\x2f\x73\x05\x29\x37\x83\xc7\xc0\xed\x92\x9d\x6c\x98\xc7\xbc\x97\xf6\x0a\x72\xed\x22\x69\xa8\xeb\x19\xbb\x7e\xe1\x31"));
     ("P521", `P521 (Mirage_crypto_ec.P521.Dh.secret_of_octets "\x00\xaa\x47\x0b\xa1\xcc\x84\x3b\xa3\x14\x82\x1e\x72\xde\x4c\xd2\x99\xae\xc1\xf2\x6e\x9d\x64\xa0\xd8\x7d\xb1\x8a\x3d\xa9\xf6\x5c\x45\xec\xfc\xc5\x61\x7f\xf0\xd7\x3b\x2e\x0e\x1c\xdf\xf8\x04\x8e\x01\xbe\x5e\x20\x14\x94\x12\xe7\xdb\xfa\xb7\xfe\xae\x24\x9b\x1b\xfa\x4d" |> Result.get_ok |> fst,
@@ -303,6 +313,7 @@ let benchmarks = [
       count name
         (fun (_, x) -> match x with
            | `P256 _ -> P256.Dsa.generate () |> ignore
+           | `P256k1 _ -> P256k1.Dsa.generate () |> ignore
            | `P384 _ -> P384.Dsa.generate () |> ignore
            | `P521 _ -> P521.Dsa.generate () |> ignore
            | `Ed25519 _ -> Ed25519.generate () |> ignore
@@ -313,6 +324,7 @@ let benchmarks = [
       let open Mirage_crypto_ec in
       count name (fun (_, x) -> match x with
           | `P256 (key, _) -> P256.Dsa.sign ~key msg_str_32
+          | `P256k1 (key, _) -> P256k1.Dsa.sign ~key msg_str_32
           | `P384 (key, _) -> P384.Dsa.sign ~key msg_str_48
           | `P521 (key, _) -> P521.Dsa.sign ~key msg_str_65
           | `Ed25519 (key, _) -> Ed25519.sign ~key msg_str, ""
@@ -323,6 +335,7 @@ let benchmarks = [
       let open Mirage_crypto_ec in
       count name (fun (_, x) -> match x with
           | `P256 (key, signature) -> P256.Dsa.(verify ~key:(pub_of_priv key) signature msg_str_32)
+          | `P256k1 (key, signature) -> P256k1.Dsa.(verify ~key:(pub_of_priv key) signature msg_str_32)
           | `P384 (key, signature) -> P384.Dsa.(verify ~key:(pub_of_priv key) signature msg_str_48)
           | `P521 (key, signature) -> P521.Dsa.(verify ~key:(pub_of_priv key) signature msg_str_65)
           | `Ed25519 (key, signature) -> Ed25519.(verify ~key:(pub_of_priv key) signature ~msg:msg_str)
@@ -341,6 +354,7 @@ let benchmarks = [
       let open Mirage_crypto_ec in
       count name (fun (_, x) -> match x with
           | `P256 _ -> P256.Dh.gen_key () |> ignore
+          | `P256k1 _ -> P256k1.Dh.gen_key () |> ignore
           | `P384 _ -> P384.Dh.gen_key () |> ignore
           | `P521 _ -> P521.Dh.gen_key () |> ignore
           | `X25519 _ -> X25519.gen_key () |> ignore)
@@ -350,6 +364,7 @@ let benchmarks = [
       let open Mirage_crypto_ec in
       count name (fun (_, x) -> match x with
           | `P256 (sec, share) -> P256.Dh.key_exchange sec share |> Result.get_ok |> ignore
+          | `P256k1 (sec, share) -> P256k1.Dh.key_exchange sec share |> Result.get_ok |> ignore
           | `P384 (sec, share) -> P384.Dh.key_exchange sec share |> Result.get_ok |> ignore
           | `P521 (sec, share) -> P521.Dh.key_exchange sec share |> Result.get_ok |> ignore
           | `X25519 (sec, share) -> X25519.key_exchange sec share  |> Result.get_ok |> ignore)

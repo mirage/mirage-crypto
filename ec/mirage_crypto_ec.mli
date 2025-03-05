@@ -168,6 +168,9 @@ end
 (** The NIST P-256 curve, also known as SECP256R1. *)
 module P256 : Dh_dsa
 
+(** The SECP256K1 curve. *)
+module P256k1 : Dh_dsa
+
 (** The NIST P-384 curve, also known as SECP384R1. *)
 module P384 : Dh_dsa
 

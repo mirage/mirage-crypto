@@ -15,6 +15,7 @@ module Asn = struct
       | "secp256r1" -> Asn.OID.(base 1 2 <|| [ 840; 10045; 3; 1; 7 ])
       | "secp384r1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 34 ])
       | "secp521r1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 35 ])
+      | "secp256k1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 10 ])
       | _ -> assert false
     in
     match Asn.decode (Asn.codec Asn.ber term) s with
@@ -59,7 +60,7 @@ let pad ~total_len buf =
     Ok (String.make pad_len '\000' ^ buf)
 
 let len = function
-  | "secp256r1" -> 32
+  | "secp256r1" | "secp256k1" -> 32
   | "secp384r1" -> 48
   | "secp521r1" -> 66
   | _ -> assert false
@@ -92,6 +93,11 @@ let perform_key_exchange curve ~public_key ~raw_private_key =
          | Ok (p, _) -> P521.Dh.key_exchange p public_key
          | Error _ -> assert false
        end
+     | "secp256k1" ->
+       begin match P256k1.Dh.secret_of_octets raw_private_key with
+         | Ok (p, _) -> P256k1.Dh.key_exchange p public_key
+         | Error _ -> assert false
+       end
      | _ -> assert false)
 
 let interpret_test ~tcId curve { public_key; raw_private_key; expected } () =
@@ -117,7 +123,7 @@ type strategy = Test of test | Invalid_test of invalid_test | Skip
 let make_ecdh_test curve (test : ecdh_test) =
   let ignored_flags = ["UnnamedCurve"] in
   let curve_compression_test curve =
-    let curves = ["secp256r1"; "secp384r1"; "secp521r1"] in
+    let curves = ["secp256r1"; "secp384r1"; "secp521r1"; "secp256k1"] in
     test.tcId = 2 && List.exists (fun x -> String.equal x curve) curves
   in
   match test.result with
@@ -180,6 +186,11 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
     | "secp521r1" ->
       begin match P521.Dsa.pub_of_octets key with
         | Ok key -> P521.Dsa.verify ~key (r, s) msg
+        | Error _ -> assert false
+      end
+    | "secp256k1" ->
+      begin match P256k1.Dsa.pub_of_octets key with
+        | Ok key -> P256k1.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | _ -> assert false
@@ -311,4 +322,7 @@ let () =
      ecdsa_tests "ecdsa_secp521r1_sha512_test.json") ;
     ("X25519 test vectors", x25519_tests) ;
     ("ED25519 test vectors", ed25519_tests) ;
+    ("ECDH SECP256K1 test vectors", ecdh_tests "ecdh_secp256k1_test.json") ;
+    ("ECDSA SECP256K1 test vectors (SHA256)",
+     ecdsa_tests "ecdsa_secp256k1_sha256_test.json") ;
   ]
