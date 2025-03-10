@@ -16,6 +16,9 @@ module Asn = struct
       | "secp384r1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 34 ])
       | "secp521r1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 35 ])
       | "secp256k1" -> Asn.OID.(base 1 3 <|| [ 132; 0; 10 ])
+      | "brainpoolP256r1" -> Asn.OID.(base 1 3 <|| [ 36; 3; 3; 2; 8; 1; 1; 7 ])
+      | "brainpoolP384r1" -> Asn.OID.(base 1 3 <|| [ 36; 3; 3; 2; 8; 1; 1; 11 ])
+      | "brainpoolP512r1" -> Asn.OID.(base 1 3 <|| [ 36; 3; 3; 2; 8; 1; 1; 13 ])
       | _ -> assert false
     in
     match Asn.decode (Asn.codec Asn.ber term) s with
@@ -60,8 +63,9 @@ let pad ~total_len buf =
     Ok (String.make pad_len '\000' ^ buf)
 
 let len = function
-  | "secp256r1" | "secp256k1" -> 32
-  | "secp384r1" -> 48
+  | "secp256r1" | "secp256k1" | "brainpoolP256r1" -> 32
+  | "secp384r1" | "brainpoolP384r1" -> 48
+  | "brainpoolP512r1" -> 64
   | "secp521r1" -> 66
   | _ -> assert false
 
@@ -98,7 +102,22 @@ let perform_key_exchange curve ~public_key ~raw_private_key =
          | Ok (p, _) -> P256k1.Dh.key_exchange p public_key
          | Error _ -> assert false
        end
-     | _ -> assert false)
+       | "brainpoolP256r1" ->
+        begin match BrainpoolP256.Dh.secret_of_octets raw_private_key with
+          | Ok (p, _) -> BrainpoolP256.Dh.key_exchange p public_key
+          | Error _ -> assert false
+        end
+       | "brainpoolP384r1" ->
+        begin match BrainpoolP384.Dh.secret_of_octets raw_private_key with
+          | Ok (p, _) -> BrainpoolP384.Dh.key_exchange p public_key
+          | Error _ -> assert false
+        end
+       | "brainpoolP512r1" ->
+        begin match BrainpoolP512.Dh.secret_of_octets raw_private_key with
+          | Ok (p, _) -> BrainpoolP512.Dh.key_exchange p public_key
+          | Error _ -> assert false
+        end
+      | _ -> assert false)
 
 let interpret_test ~tcId curve { public_key; raw_private_key; expected } () =
   match perform_key_exchange curve ~public_key ~raw_private_key with
@@ -123,7 +142,7 @@ type strategy = Test of test | Invalid_test of invalid_test | Skip
 let make_ecdh_test curve (test : ecdh_test) =
   let ignored_flags = ["UnnamedCurve"] in
   let curve_compression_test curve =
-    let curves = ["secp256r1"; "secp384r1"; "secp521r1"; "secp256k1"] in
+    let curves = ["secp256r1"; "secp384r1"; "secp521r1"; "secp256k1"; "brainpoolP256r1"; "brainpoolP384r1"; "brainpoolP512r1"] in
     test.tcId = 2 && List.exists (fun x -> String.equal x curve) curves
   in
   match test.result with
@@ -191,6 +210,21 @@ let make_ecdsa_test curve key hash (tst : dsa_test) =
     | "secp256k1" ->
       begin match P256k1.Dsa.pub_of_octets key with
         | Ok key -> P256k1.Dsa.verify ~key (r, s) msg
+        | Error _ -> assert false
+      end
+    | "brainpoolP256r1" ->
+      begin match BrainpoolP256.Dsa.pub_of_octets key with
+        | Ok key -> BrainpoolP256.Dsa.verify ~key (r, s) msg
+        | Error _ -> assert false
+      end
+    | "brainpoolP384r1" ->
+      begin match BrainpoolP384.Dsa.pub_of_octets key with
+        | Ok key -> BrainpoolP384.Dsa.verify ~key (r, s) msg
+        | Error _ -> assert false
+      end
+    | "brainpoolP512r1" ->
+      begin match BrainpoolP512.Dsa.pub_of_octets key with
+        | Ok key -> BrainpoolP512.Dsa.verify ~key (r, s) msg
         | Error _ -> assert false
       end
     | _ -> assert false
@@ -306,7 +340,7 @@ let ed25519_tests =
     groups
 
 let () =
-  Alcotest.run "Wycheproof NIST curves" [
+  Alcotest.run "Wycheproof tests" [
     ("ECDH P256 test vectors", ecdh_tests "ecdh_secp256r1_test.json") ;
     ("ECDSA P256 test vectors (SHA256)",
      ecdsa_tests "ecdsa_secp256r1_sha256_test.json") ;
@@ -325,4 +359,13 @@ let () =
     ("ECDH SECP256K1 test vectors", ecdh_tests "ecdh_secp256k1_test.json") ;
     ("ECDSA SECP256K1 test vectors (SHA256)",
      ecdsa_tests "ecdsa_secp256k1_sha256_test.json") ;
+    ("ECDH BrainpoolP256r1 test vectors", ecdh_tests "ecdh_brainpoolP256r1_test.json") ;
+    ("ECDSA BrainpoolP256r1 test vectors (SHA256)",
+     ecdsa_tests "ecdsa_brainpoolP256r1_sha256_test.json") ;
+    ("ECDH BrainpoolP384r1 test vectors", ecdh_tests "ecdh_brainpoolP384r1_test.json") ;
+    ("ECDSA BrainpoolP384r1 test vectors (SHA384)",
+     ecdsa_tests "ecdsa_brainpoolP384r1_sha384_test.json") ;
+    ("ECDH BrainpoolP512r1 test vectors", ecdh_tests "ecdh_brainpoolP512r1_test.json") ;
+    ("ECDSA BrainpoolP512r1 test vectors (SHA512)",
+     ecdsa_tests "ecdsa_brainpoolP512r1_sha512_test.json") ;
   ]

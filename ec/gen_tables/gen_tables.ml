@@ -89,6 +89,9 @@ let curves =
       ("p256", (module P256 : Dh_dsa));
       ("p384", (module P384));
       ("p521", (module P521));
+      ("brainpoolp256", (module BrainpoolP256));
+      ("brainpoolp384", (module BrainpoolP384));
+      ("brainpoolp512", (module BrainpoolP512));
     ]
 
 let usage () =

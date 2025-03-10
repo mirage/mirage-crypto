@@ -216,6 +216,174 @@ let ecdsa = [
   "ECDSA verify", `Quick, ecdsa_verify ;
 ]
 
+let brainpoolp256_ecdsa_gen () =
+  let d = of_hex "6f836168c0ba509e3a1a9ab9e512ffd4bb70a062e8be6b791c30037edd49f337" in
+  let p = match
+      BrainpoolP256.Dsa.pub_of_octets
+        (of_hex {|04
+                  5046988febf1cbe9f0d1b60e9a34f706a0ee9ba7ad58643e13c17c968af97fe3
+                  99e111ea496bff192a417899a9f3e8422f6f46e7a7dab3bc675bebbf94eed9a4|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  in
+  let pub = match BrainpoolP256.Dsa.priv_of_octets d with
+    | Ok p -> BrainpoolP256.Dsa.pub_of_priv p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let pub_eq a b =
+    String.equal (BrainpoolP256.Dsa.pub_to_octets a) (BrainpoolP256.Dsa.pub_to_octets b)
+  in
+  Alcotest.(check bool __LOC__ true (pub_eq pub p))
+
+let brainpoolp256_ecdsa_sign () =
+  let d = of_hex "77ef213686eb279680d57c50750404af064c55f7b21d7406a44ae5204aba1077"
+  and k = of_hex "895f532869f2185d4c38bc66376a446bfb7aa3748510630c027491367df47fa8"
+  and e = of_hex "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049"
+  in
+  let r = of_hex "2bd423fa2ea59677ffb58462131083cef9821ed77a51079fad2fad1d88023a83"
+  and s = of_hex "413fd3cc9abcf016d3ea635e26c80a199a13ae00c2c9af1f60d970231e9000a5"
+  in
+  let key = match BrainpoolP256.Dsa.priv_of_octets d with
+    | Ok p -> p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let (r', s') = BrainpoolP256.Dsa.sign ~key ~k e in
+  Alcotest.(check bool __LOC__ true (String.equal r r' && String.equal s s'))
+
+let brainpoolp256_ecdsa_verify () =
+  let key =
+    match BrainpoolP256.Dsa.pub_of_octets
+            (of_hex {|04
+                      19e8be13f180c669aa31b31f931d80423f8a9d6c5adb80de93af2bd3010c14a5
+                      7a004f2c2be9c53ac6bc4254472c8a91749512b38e2c06f710d1bbfede742afa|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  and e = of_hex "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049"
+  and r = of_hex "3dab68bcf22882bdcc5ddec244f0b54119271570d80e467818c0de427a2c6962"
+  and s = of_hex "84223af79041e0d7e21c1289aa108f9a4c77d69ce6c4cc7da22532570db95670"
+  in
+  Alcotest.(check bool __LOC__ true (BrainpoolP256.Dsa.verify ~key (r, s) e))
+
+let brainpoolp256_ecdsa = [
+  "ECDSA gen", `Quick, brainpoolp256_ecdsa_gen ;
+  "ECDSA sign", `Quick, brainpoolp256_ecdsa_sign ;
+  "ECDSA verify", `Quick, brainpoolp256_ecdsa_verify ;
+]
+
+
+let brainpoolp384_ecdsa_gen () =
+  let d = of_hex "70b3653970f00be16919c4ac548693ad1f27a7d5db2e54b3660e61930abc7a24d8c0f5eb9896ce000c0b8491a1ced282" in
+  let p = match
+      BrainpoolP384.Dsa.pub_of_octets
+        (of_hex {|04
+                  796166fae3742405d0ba327cfc6b73232e046712f3f5623745c5d68292fef3cafacd79cbae8265fd0c13988d7774e1aa
+                  04ae9f697f6bdf5cd3629f8cf44405010488f6f3ebf7ea88babaa7469643bb9e4ee11f70a5f4f3b80730d89a4e8847e6|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  in
+  let pub = match BrainpoolP384.Dsa.priv_of_octets d with
+    | Ok p -> BrainpoolP384.Dsa.pub_of_priv p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let pub_eq a b =
+    String.equal (BrainpoolP384.Dsa.pub_to_octets a) (BrainpoolP384.Dsa.pub_to_octets b)
+  in
+  Alcotest.(check bool __LOC__ true (pub_eq pub p))
+
+let brainpoolp384_ecdsa_sign () =
+  let d = of_hex "2634a4c7ab5b2b3ef6c81ab4f0de9ec3fdce62ef1c0756ff3501adf4f0b118d5cc2ccf57175d093c57aee282e0a18c1d"
+  and k = of_hex "6a47ae7d54e9507d2eaf31d06d6e4319bdfdf068c8b1c746c838b2ae5912ff3b5a19a0c457e8a2736fc0ee245d49d2fd"
+  and e = of_hex "8f5e4d4e4972d73670383f94f727e58e683b6397b284c6493fab2754882f5e0847a359a67df5b6c91d3858a81e42e252"
+  in
+  let r = of_hex "72f0aa458f158a7a77954647d1f2926cf798885679506e49fb0ba6f8f786abeda0f8f41e2acf052d31cd19cf08464ced"
+  and s = of_hex "83fda4ab4b4513562cd9815aba60c6d0daaed84e57a54907ec3c1c74dc6126b57b7e37504ebe6cbfe05b9a8ac763f42e"
+  in
+  let key = match BrainpoolP384.Dsa.priv_of_octets d with
+    | Ok p -> p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let (r', s') = BrainpoolP384.Dsa.sign ~key ~k e in
+  Alcotest.(check bool __LOC__ true (String.equal r r' && String.equal s s'))
+
+let brainpoolp384_ecdsa_verify () =
+  let key =
+    match BrainpoolP384.Dsa.pub_of_octets
+            (of_hex {|04
+                      83a26ae2ae4c241d101bc03f74aa1f78e8559633394788ac1e193fa3b5ec8d1f05e737b2e454e2375b018cf06ef9e9a4
+                      57ab9b4414bf013e9f8b4e8c5801ee52eff820fb27ddf5d7ad1574944387d779cac830b402cfd5c207fe2053583af458|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  and e = of_hex "8f5e4d4e4972d73670383f94f727e58e683b6397b284c6493fab2754882f5e0847a359a67df5b6c91d3858a81e42e252"
+  and r = of_hex "839abac0eb2609b4c35260e7be9f0a86ef752e5035bf7acda64a00c3ff90fcee7ddf02fd0356b4cd151427d0ecf2b6dd"
+  and s = of_hex "3181eb62262eab42290333c85e64d6923a88048af95f8db8fe2d0dcccb22bd4e28a64120766b46bee610e60bed5ca5ee"
+  in
+  Alcotest.(check bool __LOC__ true (BrainpoolP384.Dsa.verify ~key (r, s) e))
+
+let brainpoolp384_ecdsa = [
+  "ECDSA gen", `Quick, brainpoolp384_ecdsa_gen ;
+  "ECDSA sign", `Quick, brainpoolp384_ecdsa_sign ;
+  "ECDSA verify", `Quick, brainpoolp384_ecdsa_verify ;
+]
+
+let brainpoolp512_ecdsa_gen () =
+  let d = of_hex "89e7f8007b0e30d3b2df95b55463658fce1db365ad115fa5f73766a75f6f08b91982086a1eabfd9da4937a6e90e470c18e0f4b79981a31ae482ac908d5115b36" in
+  let p = match
+      BrainpoolP512.Dsa.pub_of_octets
+        (of_hex {|04
+                  59ac5d9e0575b8ab6bfa14de0c9b5b07d76ca2325fd8469d32b248314e8ebcc663c07ee2065ceb38cb784e26e09bdfc08dfeaa215967a168def9577162a1c1c4
+                  000a6fb13d5a2ef437154f7c617b6396f00d5ba7fad5f23e33e6990167d72c775b61858f52801590e12551e8d35c4f998c10187c378e502866c8bb41f348bd59|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  in
+  let pub = match BrainpoolP512.Dsa.priv_of_octets d with
+    | Ok p -> BrainpoolP512.Dsa.pub_of_priv p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let pub_eq a b =
+    String.equal (BrainpoolP512.Dsa.pub_to_octets a) (BrainpoolP512.Dsa.pub_to_octets b)
+  in
+  Alcotest.(check bool __LOC__ true (pub_eq pub p))
+
+let brainpoolp512_ecdsa_sign () =
+  let d = of_hex "463a29fcce4907dd20d8e44402948f23c2906f956a98a17db5e6e51aa6f0c10a7f49567800b6b548101ee79d921c311f89c8329f4d7dbca4853a06612dd5125b"
+  and k = of_hex "5901efdb525257eb1afa30cd235bd9bc3b30806947e78dc1e6f7060042a0f283e8086078aa804af0036eac385cd8f45531d8a29f3da6a7fa5549f5275879f1da"
+  and e = of_hex "39ca7ce9ecc69f696bf7d20bb23dd1521b641f806cc7a6b724aaa6cdbffb3a023ff98ae73225156b2c6c9ceddbfc16f5453e8fa49fc10e5d96a3885546a46ef4"
+  in
+  let r = of_hex "0104960d88d6fd09be52b8dbcc83af4e2a9bd82d4f7408408835022415ea72688bd416b4fec04d56abc5a966801f6c6fccb7223f990a11ca7c509d8f2ac3098d"
+  and s = of_hex "40a80fbb9ac8e296c79f2e97a3f9b7a8bb181d3a8548ea72d817fa580a4ae23a5cca1c7501333f98d64fb08791aac1fbd2c791c2051d321e0925bbab8e49b268"
+  in
+  let key = match BrainpoolP512.Dsa.priv_of_octets d with
+    | Ok p -> p
+    | Error _ -> Alcotest.fail "couldn't decode private key"
+  in
+  let (r', s') = BrainpoolP512.Dsa.sign ~key ~k e in
+  Alcotest.(check bool __LOC__ true (String.equal r r' && String.equal s s'))
+
+let brainpoolp512_ecdsa_verify () =
+  let key =
+    match BrainpoolP512.Dsa.pub_of_octets
+            (of_hex {|04
+                      19cd31021886560ad25b61bb8dc60b3a3c4d80bee18cc1766692755457c4e0cf8bdc1461591006cc5be370987e2c99e3a0fd4c86979e25f15363e1566fa89343
+                      23cee843f886d3e57b0f4752e83342666e3413e60411400bc4eb23e0a4ae1fbda9069c8b843c9c8f3217c126c5d09070e4288d5809640131c396294ad771ded1|})
+    with
+    | Ok a -> a
+    | Error _ -> assert false
+  and e = of_hex "39ca7ce9ecc69f696bf7d20bb23dd1521b641f806cc7a6b724aaa6cdbffb3a023ff98ae73225156b2c6c9ceddbfc16f5453e8fa49fc10e5d96a3885546a46ef4"
+  and r = of_hex "60a96245d98dc4891068a775b2ddafc88fa25d287ae8b12498da5915ee78daed0d332139f10dd1a73726324a5683445605943b87dd0293ecc902fd28065954ff"
+  and s = of_hex "558d15a54bac0596554fb3240e9d68f0da8ec03a652a9d039509de89e5c5f5480ee591317be6aaa2b413e8427692a98c14602747b92f7b35ed0416be2cdfe7c5"
+  in
+  Alcotest.(check bool __LOC__ true (BrainpoolP512.Dsa.verify ~key (r, s) e))
+
+let brainpoolp512_ecdsa = [
+  "ECDSA gen", `Quick, brainpoolp512_ecdsa_gen ;
+  "ECDSA sign", `Quick, brainpoolp512_ecdsa_sign ;
+  "ECDSA verify", `Quick, brainpoolp512_ecdsa_verify ;
+]
 
 let secp256k1_ecdsa_gen () =
   let d = of_hex "42202a98374f6dca439c0af88140e41f8eced3062682ec7f9fc8ac9ea83c7cb2" in
@@ -976,4 +1144,7 @@ let () =
       ("ECDSA P521 regression", [ "regression1", `Quick, p521_regression ]);
       ("secp256k1 ECDSA", secp256k1_ecdsa);
       ("secp256k1 ECDSA sign", secp256k1_ecdsa_sign);
+      ("brainpoolP256r1 ECDSA", brainpoolp256_ecdsa);
+      ("brainpoolP384r1 ECDSA", brainpoolp384_ecdsa);
+      ("brainpoolP512r1 ECDSA", brainpoolp512_ecdsa);
     ]
