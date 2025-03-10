@@ -229,8 +229,22 @@ module type Point = sig
   val generator_tables : unit -> string array array array
 end
 
-module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
-  module Fe = Make_field_element(P)(F)
+module type Transform = sig
+  val in_x : field_element -> field_element
+  val in_y : field_element -> field_element
+  val out_x : field_element -> field_element
+  val out_y : field_element -> field_element
+end
+
+module NoTransform : Transform = struct
+  let noop x = x
+  let in_x = noop
+  let in_y = noop
+  let out_x = noop
+  let out_y = noop
+end
+
+module Make_point_proj_base (P : Parameters) (F : Foreign_proj) (Fe : Field_element) (T : Transform) : Point = struct
   include Point_proj
 
   let at_infinity () =
@@ -261,6 +275,12 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
     | exception Invalid_argument _ -> None
     | false -> Some (Fe.from_be_octets buf)
 
+  let validate_finite_point_fe x y =
+    if is_solution_to_curve_equation ~x ~y then
+      let f_z = Fe.one in
+      Ok { f_x=x; f_y=y; f_z }
+    else Error `Not_on_curve
+
   (** Convert coordinates to a finite point ensuring:
       - x < p
       - y < p
@@ -268,11 +288,9 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
   *)
   let validate_finite_point ~x ~y =
     match (check_coordinate x, check_coordinate y) with
-    | Some f_x, Some f_y ->
-      if is_solution_to_curve_equation ~x:f_x ~y:f_y then
-        let f_z = Fe.one in
-        Ok { f_x; f_y; f_z }
-      else Error `Not_on_curve
+    | Some x, Some y ->
+      let x, y = T.in_x x, T.in_y y in
+      validate_finite_point_fe x y
     | _ -> Error `Invalid_range
 
   let to_affine_raw p =
@@ -286,7 +304,7 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
       let x = Fe.mul p.f_x z1 in
       let z1 = Fe.mul z1 z2 in
       let y = Fe.mul p.f_y z1 in
-      Some (x, y)
+      Some (T.out_x x, T.out_y y)
 
   let to_affine p =
     Option.map (fun (x, y) -> Fe.to_octets x, Fe.to_octets y)
@@ -349,7 +367,9 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
     match to_affine p with None -> assert false | Some (x, _) -> rev_string x
 
   let params_g =
-    match validate_finite_point ~x:P.g_x ~y:P.g_y with
+    let x = Fe.from_be_octets P.g_x in
+    let y = Fe.from_be_octets P.g_y in
+    match validate_finite_point_fe x y with
     | Ok p -> p
     | Error _ -> assert false
 
@@ -388,7 +408,10 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
     let b = Fe.from_be_octets P.b in
     let p = Fe.from_be_octets P.p in
     fun pk ->
-      let x = Fe.from_be_octets (String.sub pk 1 P.byte_length) in
+      match check_coordinate (String.sub pk 1 P.byte_length) with
+      | None -> Error `Invalid_range
+      | Some x ->
+      let x = T.in_x x in
       let x3 = Fe.mul x x in
       let x3 = Fe.mul x3 x in (* x3 *)
       let ax = Fe.mul a x in  (* ax *)
@@ -396,41 +419,28 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
       let sum = Fe.add sum b in (* y^2 *)
       let y = pow sum pident in (* https://tools.ietf.org/id/draft-jivsov-ecc-compact-00.xml#sqrt point 4.3*)
       let y' = Fe.sub p y in
-      let y = Fe.from_montgomery y in
-      let y_struct = Fe.to_octets y in (* number must not be in montgomery domain*)
-      let y_struct = rev_string y_struct in
-      let y' = Fe.from_montgomery y' in
-      let y_struct2 = Fe.to_octets y' in (* number must not be in montgomery domain*)
-      let y_struct2 = rev_string y_struct2 in
+      let y_str = Fe.to_octets (Fe.from_montgomery (T.out_y y)) in (* number must not be in montgomery domain*)
       let ident = String.get_uint8 pk 0 in
       let signY =
-        2 + (String.get_uint8 y_struct (P.byte_length - 2)) land 1
+        2 + (String.get_uint8 y_str 1) land 1
       in
-      let res = if Int.equal signY ident then y_struct else y_struct2 in
-      let out = Bytes.create ((P.byte_length * 2) + 1) in
-      Bytes.set out 0 '\004';
-      Bytes.unsafe_blit_string pk 1 out 1 P.byte_length;
-      Bytes.unsafe_blit_string res 0 out (P.byte_length + 1) P.byte_length;
-      Bytes.unsafe_to_string out
+      let y = if Int.equal signY ident then y else y' in
+      validate_finite_point_fe x y
 
   let of_octets buf =
     let len = P.byte_length in
     if String.length buf = 0 then
       Error `Invalid_format
     else
-      let of_octets buf =
-        let x = String.sub buf 1 len in
-        let y = String.sub buf (1 + len) len in
-        validate_finite_point ~x ~y
-      in
       match String.get_uint8 buf 0 with
       | 0x00 when String.length buf = 1 ->
         Ok (at_infinity ())
       | 0x02 | 0x03 when String.length P.pident > 0 ->
-        let decompressed = decompress buf in
-        of_octets decompressed
+        decompress buf
       | 0x04 when String.length buf = 1 + len + len ->
-        of_octets buf
+        let x = String.sub buf 1 len in
+        let y = String.sub buf (1 + len) len in
+        validate_finite_point ~x ~y
       | 0x00 | 0x04 -> Error `Invalid_length
       | _ -> Error `Invalid_format
 
@@ -471,6 +481,11 @@ module Make_point (P : Parameters) (F : Foreign_proj) : Point = struct
     let convert {f_x; f_y; f_z} = [|f_x; f_y; f_z|] in
     Array.map (Array.map convert) table
 
+end
+
+module Make_point (P : Parameters) (F : Foreign_proj) = struct
+  module Fe = Make_field_element(P)(F)
+  include Make_point_proj_base(P)(F)(Fe)(NoTransform)
 end
 
 (*
