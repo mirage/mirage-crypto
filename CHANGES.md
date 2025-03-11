@@ -1,3 +1,8 @@
+## Pending
+
+* Use arc4random_buf instead of getrandom on Android before getrandom
+  became available in API 28.
+
 ## v2.0.0 (2025-02-03)
 
 * Remove now superfluous mirage-crypto-rng-{eio,lwt,async} packages
