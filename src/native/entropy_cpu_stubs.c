@@ -15,13 +15,13 @@
 #define random_t unsigned long long
 #define _rdseed_step _rdseed64_step
 #define _rdrand_step _rdrand64_step
-#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 8)
+#define fill_bytes(buf, bufsz, off, data) memcpy(_bp_uint8_off(buf, off), data, 8)
 
 #elif defined (__i386__)
 #define random_t unsigned int
 #define _rdseed_step _rdseed32_step
 #define _rdrand_step _rdrand32_step
-#define fill_bytes(buf, off, data) memcpy(_bp_uint8_off(buf, off), data, 4)
+#define fill_bytes(buf, bufsz, off, data) memcpy(_bp_uint8_off(buf, off), data, 4)
 
 #endif
 #endif /* __i386__ || __x86_64__ */
@@ -44,16 +44,19 @@
 
 #if defined (_MSC_VER)
 #include <immintrin.h>
+#include <memory.h>
 
 #if defined (_WIN64)
 #define random_t unsigned long long
 #define _rdseed_step _rdseed64_step
 #define _rdrand_step _rdrand64_step
+#define fill_bytes(buf, bufsz, off, data) memcpy_s(_bp_uint8_off(buf, off), bufsz, data, 8)
 
 #elif defined (_WIN32)
 #define random_t unsigned int
 #define _rdseed_step _rdseed32_step
 #define _rdrand_step _rdrand32_step
+#define fill_bytes(buf, bufsz, off, data) memcpy_s(_bp_uint8_off(buf, off), bufsz, data, 4)
 #endif
 
 #endif /* _MSC_VER */
@@ -235,7 +238,7 @@ CAMLprim value mc_cpu_rdseed (value buf, value off) {
   int ok = 0;
   int i = 100;
   do { ok = _rdseed_step (&r); _mm_pause (); } while ( !(ok | !--i) );
-  fill_bytes(buf, off, &r);
+  fill_bytes(buf, sizeof(r), off, &r);
   return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
@@ -251,7 +254,7 @@ CAMLprim value mc_cpu_rdrand (value buf, value off) {
   int ok = 0;
   int i = 10;
   do { ok = _rdrand_step (&r); } while ( !(ok | !--i) );
-  fill_bytes(buf, off, &r);
+  fill_bytes(buf, sizeof(r), off, &r);
   return Val_bool (ok);
 #else
   /* ARM: CPU-assisted randomness here. */
