@@ -174,6 +174,18 @@ module P384 : Dh_dsa
 (** The NIST P-521 curve, also known as SECP521R1. *)
 module P521 : Dh_dsa
 
+(** The SECP256K1 curve. *)
+module P256k1 : Dh_dsa
+
+(** The BrainpoolP256r1 curve. *)
+module BrainpoolP256 : Dh_dsa
+
+(** The BrainpoolP384r1 curve. *)
+module BrainpoolP384 : Dh_dsa
+
+(** The BrainpoolP512r1 curve. *)
+module BrainpoolP512 : Dh_dsa
+
 (** Curve 25519 Diffie-Hellman, also known as X25519. *)
 module X25519 : Dh
 

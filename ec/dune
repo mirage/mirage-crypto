@@ -5,7 +5,8 @@
  (foreign_stubs
   (language c)
   (names p256_stubs np256_stubs p384_stubs np384_stubs p521_stubs np521_stubs
-    curve25519_stubs)
+    curve25519_stubs secp256k1_stubs brainpoolp256_stubs nbrainpoolp256_stubs
+    brainpoolp384_stubs nbrainpoolp384_stubs brainpoolp512_stubs nbrainpoolp512_stubs)
   (include_dirs ../src/native)
   (flags
    (:standard -DNDEBUG)
