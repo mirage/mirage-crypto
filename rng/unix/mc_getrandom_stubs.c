@@ -9,7 +9,14 @@
 #include <caml/unixsupport.h>
 #include <caml/bigarray.h>
 
-#if defined(__linux) || defined(__GNU__)
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 28
+// on Android 27 and earlier, we use Google's <sys/random.h> recommended arc4random_buf
+# include <stdlib.h>
+
+void raw_getrandom (uint8_t *data, size_t len) {
+  arc4random_buf(data, len);
+}
+#elif defined(__linux) || defined(__GNU__)
 # include <errno.h>
 // on Linux and GNU/Hurd, we use getrandom and loop
 
