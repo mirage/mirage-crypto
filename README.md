@@ -39,12 +39,6 @@ dune runtest
 If RNG fails with `Fatal error: exception Unseeded_generator`, you need to
 seed it.
 
-Lwt:
 ```OCaml
-let () = Mirage_crypto_rng_lwt.initialize (module Mirage_crypto_rng.Fortuna)
-```
-
-Unix:
-```OCaml
-let () = Mirage_crypto_rng_unix.initialize (module Mirage_crypto_rng.Fortuna)
+let () = Mirage_crypto_rng_unix.use_default ()
 ```
