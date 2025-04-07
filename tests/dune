@@ -51,7 +51,11 @@
    ecdsa_secp256r1_sha512_test.json ecdh_secp384r1_test.json
    ecdsa_secp384r1_sha384_test.json ecdsa_secp384r1_sha512_test.json
    ecdh_secp521r1_test.json ecdsa_secp521r1_sha512_test.json
-   x25519_test.json eddsa_test.json)
+   x25519_test.json eddsa_test.json ecdsa_secp256k1_sha256_test.json
+   ecdh_secp256k1_test.json
+   ecdh_brainpoolP256r1_test.json ecdsa_brainpoolP256r1_sha256_test.json
+   ecdh_brainpoolP384r1_test.json ecdsa_brainpoolP384r1_sha384_test.json
+   ecdh_brainpoolP512r1_test.json ecdsa_brainpoolP512r1_sha512_test.json)
  (libraries alcotest mirage-crypto-ec wycheproof digestif asn1-combinators)
  (package mirage-crypto-ec))
 
