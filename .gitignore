@@ -15,13 +15,4 @@ mirage/myocamlbuild.ml
 mirage/.mirage.config
 _opam
 *.install
-
-# CI using dkml-workflows' DkML compilers.
-#   DkML compilers populate the .opam folder.
-/.opam/
-#   GitHub, unlike GitLab, does not need its CI files to exist
-#   before referencing them. That means the GitHub scripts do not need
-#   to be checked in.
-/.ci/dkml-compilers/gh-*
-#   Desktop testing on Windows uses MSYS2.
-/msys64/
+.opam/

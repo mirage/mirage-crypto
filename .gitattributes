@@ -2,9 +2,3 @@
 
 # Shell scripts are required to be LF
 *.sh text eol=lf
-
-# https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding?view=powershell-7.1
-*.ps1 text working-tree-encoding=UTF-16 eol=crlf
-*.psm1 text working-tree-encoding=UTF-16 eol=crlf
-# Other file types that must be CRLF
-*.sln text eol=crlf
