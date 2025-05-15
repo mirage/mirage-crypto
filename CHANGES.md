@@ -1,8 +1,8 @@
 ## v2.0.1 (2025-05-15)
 
 * Use arc4random_buf instead of getrandom on Android before getrandom
-  became available in API 28 (#259 @jonahbeckford)
-* Define fill_bytes for MSVC (#259 @jonahbeckford)
+  became available in API 28 (#261 @jonahbeckford)
+* Define fill_bytes for MSVC (#261 @jonahbeckford)
 * Update CI and remove DKML (#262 #265 @hannesm)
 * Update README (reported by @kit-ty-kat in #263)
 
