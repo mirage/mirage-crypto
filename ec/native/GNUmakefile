@@ -132,6 +132,34 @@ curve25519_32.h:
 .PHONY: curve25519
 curve25519: curve25519_64.h curve25519_32.h
 
+
+# SECP256K1 (aka Bitcoin curve)
+SECP256K1="2^256 - 2^32 - 977"
+
+.PHONY: secp256k1_64.h
+secp256k1_64.h:
+	$(WBW_MONT) --inline secp256k1 64 $(SECP256K1) > $@
+
+.PHONY: secp256k1_32.h
+secp256k1_32.h:
+	$(WBW_MONT) --inline secp256k1 32 $(SECP256K1) > $@
+
+# The group order N of SECP256K1
+SECP256K1N="2^256 - 432420386565659656852420866394968145599"
+
+.PHONY: nsecp256k1_64.h
+nsecp256k1_64.h:
+	$(WBW_MONT) --inline nsecp256k1 64 $(SECP256K1N) $(N_FUNCS) > $@
+
+.PHONY: nsecp256k1_32.h
+nsecp256k1_32.h:
+	$(WBW_MONT) --inline nsecp256k1 32 $(SECP256K1N) $(N_FUNCS) > $@
+
+.PHONY: secp256k1
+secp256k1: secp256k1_64.h secp256k1_32.h nsecp256k1_64.h nsecp256k1_32.h
+
+###
+
 .PHONY: tables
 tables: p256_tables p384_tables p521_tables
 
