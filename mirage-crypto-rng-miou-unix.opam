@@ -10,7 +10,7 @@ synopsis:     "Feed the entropy source in an miou.unix-friendly way"
 
 build: [ ["dune" "subst"] {dev}
          ["dune" "build" "-p" name "-j" jobs ]
-         ["dune" "runtest" "-p" name "-j" jobs] {with-test} ]
+         ["dune" "runtest" "-p" name "-j" jobs] {with-test & os != "win32"} ]
 
 depends: [
   "ocaml" {>= "5.0.0"}
