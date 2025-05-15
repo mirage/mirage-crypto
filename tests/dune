@@ -59,4 +59,5 @@
  (names     test_miou_rng test_miou_entropy_collection)
  (modules   test_miou_rng test_miou_entropy_collection)
  (libraries mirage-crypto-rng-miou-unix duration ohex)
- (package   mirage-crypto-rng-miou-unix))
+ (package   mirage-crypto-rng-miou-unix)
+ (enabled_if (<> %{os_type} "Win32")))
