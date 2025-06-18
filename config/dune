@@ -4,5 +4,7 @@
 
 (rule
  (targets cflags.sexp cflags_optimized.sexp cflags_warn.sexp)
+ (deps
+  (glob_files %{workspace_root}/.dune/configurator*))
  (action
   (run ./cfg.exe)))
