@@ -1,3 +1,8 @@
 (executables
  (names cfg)
  (libraries dune-configurator))
+
+(rule
+ (targets cflags.sexp cflags_optimized.sexp cflags_warn.sexp)
+ (action
+  (run ./cfg.exe)))
