@@ -132,6 +132,139 @@ curve25519_32.h:
 .PHONY: curve25519
 curve25519: curve25519_64.h curve25519_32.h
 
+
+# SECP256K1 (aka Bitcoin curve)
+SECP256K1="2^256 - 2^32 - 977"
+
+.PHONY: secp256k1_64.h
+secp256k1_64.h:
+	$(WBW_MONT) --inline secp256k1 64 $(SECP256K1) > $@
+
+.PHONY: secp256k1_32.h
+secp256k1_32.h:
+	$(WBW_MONT) --inline secp256k1 32 $(SECP256K1) > $@
+
+# The group order N of SECP256K1
+SECP256K1N="2^256 - 432420386565659656852420866394968145599"
+
+.PHONY: nsecp256k1_64.h
+nsecp256k1_64.h:
+	$(WBW_MONT) --inline nsecp256k1 64 $(SECP256K1N) $(N_FUNCS) > $@
+
+.PHONY: nsecp256k1_32.h
+nsecp256k1_32.h:
+	$(WBW_MONT) --inline nsecp256k1 32 $(SECP256K1N) $(N_FUNCS) > $@
+
+.PHONY: secp256k1
+secp256k1: secp256k1_64.h secp256k1_32.h nsecp256k1_64.h nsecp256k1_32.h
+
+# Brainpool256
+BRAINPOOLP256="0xA9FB57DBA1EEA9BC3E660A909D838D726E3BF623D52620282013481D1F6E5377"
+
+.PHONY: brainpoolp256_64.h
+brainpoolp256_64.h:
+	$(WBW_MONT) brainpoolp256 64 $(BRAINPOOLP256) > $@
+
+.PHONY: brainpoolp256_32.h
+brainpoolp256_32.h:
+	$(WBW_MONT) brainpoolp256 32 $(BRAINPOOLP256) > $@
+
+# The group order N of BRAINPOOLP256
+BRAINPOOLP256N="0xA9FB57DBA1EEA9BC3E660A909D838D718C397AA3B561A6F7901E0E82974856A7"
+
+.PHONY: nbrainpoolp256_64.h
+nbrainpoolp256_64.h:
+	$(WBW_MONT) nbrainpoolp256 64 $(BRAINPOOLP256N) $(N_FUNCS) > $@
+
+.PHONY: nbrainpoolp256_32.h
+nbrainpoolp256_32.h:
+	$(WBW_MONT) nbrainpoolp256 32 $(BRAINPOOLP256N) $(N_FUNCS) > $@
+
+.PHONY: brainpoolp256
+brainpoolp256: brainpoolp256_64.h brainpoolp256_32.h nbrainpoolp256_64.h nbrainpoolp256_32.h
+
+.PHONY: brainpoolp256_tables_64.h
+brainpoolp256_tables_64.h:
+	$(GEN_TABLE) brainpoolp256 64 > $@
+
+.PHONY: brainpoolp256_tables_32.h
+brainpoolp256_tables_32.h:
+	$(GEN_TABLE) brainpoolp256 32 > $@
+
+brainpoolp256_tables: brainpoolp256_tables_64.h brainpoolp256_tables_32.h
+
+# Brainpool384
+BRAINPOOLP384="0x8CB91E82A3386D280F5D6F7E50E641DF152F7109ED5456B412B1DA197FB71123ACD3A729901D1A71874700133107EC53"
+
+.PHONY: brainpoolp384_64.h
+brainpoolp384_64.h:
+	$(WBW_MONT) brainpoolp384 64 $(BRAINPOOLP384) > $@
+
+.PHONY: brainpoolp384_32.h
+brainpoolp384_32.h:
+	$(WBW_MONT) brainpoolp384 32 $(BRAINPOOLP384) > $@
+
+# The group order N of BRAINPOOLP384
+BRAINPOOLP384N="0x8CB91E82A3386D280F5D6F7E50E641DF152F7109ED5456B31F166E6CAC0425A7CF3AB6AF6B7FC3103B883202E9046565"
+
+.PHONY: nbrainpoolp384_64.h
+nbrainpoolp384_64.h:
+	$(WBW_MONT) nbrainpoolp384 64 $(BRAINPOOLP384N) $(N_FUNCS) > $@
+
+.PHONY: nbrainpoolp384_32.h
+nbrainpoolp384_32.h:
+	$(WBW_MONT) nbrainpoolp384 32 $(BRAINPOOLP384N) $(N_FUNCS) > $@
+
+.PHONY: brainpoolp384
+brainpoolp384: brainpoolp384_64.h brainpoolp384_32.h nbrainpoolp384_64.h nbrainpoolp384_32.h
+
+.PHONY: brainpoolp384_tables_64.h
+brainpoolp384_tables_64.h:
+	$(GEN_TABLE) brainpoolp384 64 > $@
+
+.PHONY: brainpoolp384_tables_32.h
+brainpoolp384_tables_32.h:
+	$(GEN_TABLE) brainpoolp384 32 > $@
+
+brainpoolp384_tables: brainpoolp384_tables_64.h brainpoolp384_tables_32.h
+
+# Brainpool512
+BRAINPOOLP512="0xAADD9DB8DBE9C48B3FD4E6AE33C9FC07CB308DB3B3C9D20ED6639CCA703308717D4D9B009BC66842AECDA12AE6A380E62881FF2F2D82C68528AA6056583A48F3"
+
+.PHONY: brainpoolp512_64.h
+brainpoolp512_64.h:
+	$(WBW_MONT) brainpoolp512 64 $(BRAINPOOLP512) > $@
+
+.PHONY: brainpoolp512_32.h
+brainpoolp512_32.h:
+	$(WBW_MONT) brainpoolp512 32 $(BRAINPOOLP512) > $@
+
+# The group order N of BRAINPOOLP512
+BRAINPOOLP512N="0xAADD9DB8DBE9C48B3FD4E6AE33C9FC07CB308DB3B3C9D20ED6639CCA70330870553E5C414CA92619418661197FAC10471DB1D381085DDADDB58796829CA90069"
+
+.PHONY: nbrainpoolp512_64.h
+nbrainpoolp512_64.h:
+	$(WBW_MONT) nbrainpoolp512 64 $(BRAINPOOLP512N) $(N_FUNCS) > $@
+
+.PHONY: nbrainpoolp512_32.h
+nbrainpoolp512_32.h:
+	$(WBW_MONT) nbrainpoolp512 32 $(BRAINPOOLP512N) $(N_FUNCS) > $@
+
+.PHONY: brainpoolp512
+brainpoolp512: brainpoolp512_64.h brainpoolp512_32.h nbrainpoolp512_64.h nbrainpoolp512_32.h
+
+.PHONY: brainpoolp512_tables_64.h
+brainpoolp512_tables_64.h:
+	$(GEN_TABLE) brainpoolp512 64 > $@
+
+.PHONY: brainpoolp512_tables_32.h
+brainpoolp512_tables_32.h:
+	$(GEN_TABLE) brainpoolp512 32 > $@
+
+brainpoolp512_tables: brainpoolp512_tables_64.h brainpoolp512_tables_32.h
+
+###
+
 .PHONY: tables
 tables: p256_tables p384_tables p521_tables
 
