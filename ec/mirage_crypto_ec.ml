@@ -317,7 +317,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
     if compress then
       let out = Bytes.create (P.byte_length + 1) in
       let ident =
-        2 + (String.get_uint8 buf ((P.byte_length * 2) - 1)) land 1
+        2 + (String.get_uint8 buf (P.byte_length * 2)) land 1
       in
       Bytes.unsafe_blit_string buf 1 out 1 P.byte_length;
       Bytes.set_uint8 out 0 ident;
@@ -388,7 +388,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       let y_struct2 = rev_string y_struct2 in
       let ident = String.get_uint8 pk 0 in
       let signY =
-        2 + (String.get_uint8 y_struct (P.byte_length - 2)) land 1
+        2 + (String.get_uint8 y_struct (P.byte_length - 1)) land 1
       in
       let res = if Int.equal signY ident then y_struct else y_struct2 in
       let out = Bytes.create ((P.byte_length * 2) + 1) in
