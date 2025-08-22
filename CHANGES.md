@@ -1,3 +1,7 @@
+## v2.0.2 (2025-08-22)
+
+* Fix ECDSA public key compression (#268 @ansiwen)
+
 ## v2.0.1 (2025-05-15)
 
 * Use arc4random_buf instead of getrandom on Android before getrandom
