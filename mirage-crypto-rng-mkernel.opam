@@ -20,7 +20,7 @@ depends: [
   "mirage-crypto-rng" {=version}
   "duration"
   "digestif" {>= "1.2.0"}
-  "miou-solo5"
+  "mkernel"
 ]
 description: """
 Mirage-crypto-rng-miou-solo5 feeds the entropy source for Mirage_crypto_rng-based

@@ -7,7 +7,7 @@ open Mirage_crypto_rng
 let periodic fn delta =
   let rec one () =
     let () = fn () in
-    let () = Miou_solo5.sleep delta in
+    let () = Mkernel.sleep delta in
     one () in
   Miou.async one
 
@@ -28,13 +28,13 @@ let miou_generator_already_launched =
   "Mirage_crypto_rng_miou_solo5.initialize has already been launched \
    and a task is already seeding the RNG."
 
-type rng = Miou_solo5.Hook.t * unit Miou.t
+type rng = Mkernel.Hook.t * unit Miou.t
 
 let rec compare_and_set ?(backoff= Miou_backoff.default) t a b =
   if Atomic.compare_and_set t a b = false
   then compare_and_set ~backoff:(Miou_backoff.once backoff) t a b
 
-let[@inline] now () = Int64.of_int (Miou_solo5.clock_monotonic ())
+let[@inline] now () = Int64.of_int (Mkernel.clock_monotonic ())
 let _1s = 1_000_000_000
 
 let initialize (type a) ?g ?(sleep= _1s) (rng : a generator) =
@@ -49,12 +49,12 @@ let initialize (type a) ?g ?(sleep= _1s) (rng : a generator) =
       with No_default_generator -> () in
     let rng = create ?g ~seed ~time:now rng in
     set_default_generator rng;
-    let hook = Miou_solo5.Hook.add (Entropy.timer_accumulator None) in
+    let hook = Mkernel.Hook.add (Entropy.timer_accumulator None) in
     (hook, rdrand sleep)
   end else invalid_arg miou_generator_already_launched
 
 let kill (hook, prm) =
-  Miou_solo5.Hook.remove hook;
+  Mkernel.Hook.remove hook;
   Miou.cancel prm;
   compare_and_set running true false;
   unset_default_generator ()
