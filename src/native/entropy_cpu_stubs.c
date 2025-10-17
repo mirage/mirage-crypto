@@ -126,7 +126,7 @@ static inline uint64_t read_virtual_count(void)
 }
 #endif /* aarch64 */
 
-#if defined (__powerpc64__)
+#if defined (__powerpc64__) || defined(__POWERPC__)
 /* from clang's builtin version and gperftools at
 https://chromium.googlesource.com/external/gperftools/+/master/src/base/cycleclock.h
 */
@@ -183,7 +183,7 @@ CAMLprim value mc_cycle_counter (value __unused(unit)) {
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
   return Val_long (read_virtual_count ());
-#elif defined(__powerpc64__)
+#elif defined(__powerpc64__) || defined(__POWERPC__)
   return Val_long (read_cycle_counter ());
 #elif defined(__riscv) && (64 == __riscv_xlen)
   return Val_long (cycle_count ());
