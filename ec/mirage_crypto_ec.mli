@@ -163,6 +163,49 @@ module type Dh_dsa = sig
 
   (** Digital signature algorithm. *)
   module Dsa : Dsa
+
+  (** Low-level group arithmetic. *)
+  module Group : sig
+
+    (** Points on the elliptic curve. *)
+    module Point : sig
+      type t
+      (** The type for points on the elliptic curve. *)
+
+      val of_octets : string -> (t, error) result
+      (** [of_octets buf] decodes a point from [buf] in uncompressed or
+          compressed SEC 1 format. Returns an error if the point is not on the
+          curve. *)
+
+      val to_octets : ?compress:bool -> t -> string
+      (** [to_octets ~compress point] encodes [point] to SEC 1 format. If
+          [compress] is [true] (default [false]), the compressed format is
+          used. *)
+
+      val generator : t
+      (** [generator] is the generator point (base point) of the curve. *)
+
+      val add : t -> t -> t
+      (** [add p q] is the sum of points [p] and [q]. *)
+    end
+
+    (** Scalars for the elliptic curve group. *)
+    module Scalar : sig
+      type t
+      (** The type for scalars. *)
+
+      val of_octets : string -> (t, error) result
+      (** [of_octets buf] decodes a scalar from [buf]. Returns an error if
+          the scalar is not in the valid range \[1, n-1\] where n is the group
+          order. *)
+
+      val to_octets : t -> string
+      (** [to_octets scalar] encodes [scalar] to a byte string. *)
+
+      val mult : t -> Point.t -> Point.t
+      (** [mult s p] is the scalar multiplication of [p] by [s]. *)
+    end
+  end
 end
 
 (** The NIST P-256 curve, also known as SECP256R1. *)

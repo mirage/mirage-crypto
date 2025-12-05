@@ -803,6 +803,210 @@ let ed25519 =
      |};
   ]
 
+let group_tests (module C : Mirage_crypto_ec.Dh_dsa) name =
+  let module G = C.Group in
+  let test_generator_not_identity () =
+    let g = G.Point.generator in
+    let g_bytes = G.Point.to_octets g in
+    Alcotest.(check bool) "generator has non-trivial encoding"
+      true (String.length g_bytes > 1)
+  in
+  let test_point_serialization_roundtrip () =
+    let _priv, pub = C.Dsa.generate () in
+    let pub_bytes = C.Dsa.pub_to_octets pub in
+    match G.Point.of_octets pub_bytes with
+    | Ok point ->
+      let point_bytes = G.Point.to_octets point in
+      Alcotest.(check string) "point roundtrip" pub_bytes point_bytes
+    | Error e -> Alcotest.failf "of_octets failed: %a" pp_error e
+  in
+  let test_point_compressed_serialization () =
+    let _priv, pub = C.Dsa.generate () in
+    let pub_bytes = C.Dsa.pub_to_octets pub in
+    match G.Point.of_octets pub_bytes with
+    | Ok point ->
+      let compressed = G.Point.to_octets ~compress:true point in
+      Alcotest.(check bool) "compressed is shorter"
+        true (String.length compressed < String.length pub_bytes);
+      (match G.Point.of_octets compressed with
+       | Ok point' ->
+         let uncompressed = G.Point.to_octets point' in
+         Alcotest.(check string) "compressed roundtrip" pub_bytes uncompressed
+       | Error e -> Alcotest.failf "compressed of_octets failed: %a" pp_error e)
+    | Error e -> Alcotest.failf "of_octets failed: %a" pp_error e
+  in
+  let test_scalar_serialization_roundtrip () =
+    let secret, _pub = C.Dh.gen_key () in
+    let secret_bytes = C.Dh.secret_to_octets secret in
+    match G.Scalar.of_octets secret_bytes with
+    | Ok scalar ->
+      let scalar_bytes = G.Scalar.to_octets scalar in
+      Alcotest.(check string) "scalar roundtrip" secret_bytes scalar_bytes
+    | Error e -> Alcotest.failf "Scalar.of_octets failed: %a" pp_error e
+  in
+  let test_scalar_mult_with_generator () =
+    let priv, pub = C.Dsa.generate () in
+    let priv_bytes = C.Dsa.priv_to_octets priv in
+    let pub_bytes = C.Dsa.pub_to_octets pub in
+    match G.Scalar.of_octets priv_bytes with
+    | Ok scalar ->
+      let computed_pub = G.Scalar.mult scalar G.Point.generator in
+      let computed_bytes = G.Point.to_octets computed_pub in
+      Alcotest.(check string) "Scalar.mult generator" pub_bytes computed_bytes
+    | Error e -> Alcotest.failf "Scalar.of_octets failed: %a" pp_error e
+  in
+  let test_point_add () =
+    let g = G.Point.generator in
+    let g_plus_g = G.Point.add g g in
+    let two =
+      let buf = Bytes.make C.Dsa.byte_length '\000' in
+      Bytes.set_uint8 buf (C.Dsa.byte_length - 1) 2;
+      Bytes.to_string buf
+    in
+    match G.Scalar.of_octets two with
+    | Ok scalar_2 ->
+      let two_g = G.Scalar.mult scalar_2 g in
+      Alcotest.(check string) "G + G = 2G"
+        (G.Point.to_octets g_plus_g) (G.Point.to_octets two_g)
+    | Error e -> Alcotest.failf "Scalar.of_octets 2 failed: %a" pp_error e
+  in
+  (* Invalid input tests *)
+  let test_point_of_octets_invalid () =
+    let check_err name input =
+      match G.Point.of_octets input with
+      | Error _ -> ()
+      | Ok _ -> Alcotest.failf "%s: expected error" name
+    in
+    check_err "empty" "";
+    check_err "single zero" "\x00\x00";
+    check_err "bad format byte" "\x05\x00";
+    check_err "truncated uncompressed"
+      (String.make (1 + C.Dsa.byte_length) '\x04');
+    (* A point with valid length but not on curve *)
+    let fake_uncompressed =
+      let len = 1 + 2 * C.Dsa.byte_length in
+      let buf = Bytes.make len '\x01' in
+      Bytes.set buf 0 '\x04';
+      Bytes.to_string buf
+    in
+    check_err "not on curve" fake_uncompressed
+  in
+  let test_scalar_of_octets_invalid () =
+    let check_err name input =
+      match G.Scalar.of_octets input with
+      | Error _ -> ()
+      | Ok _ -> Alcotest.failf "%s: expected error" name
+    in
+    check_err "empty" "";
+    check_err "too short" "\x01";
+    check_err "zero" (String.make C.Dsa.byte_length '\x00');
+    (* n (group order) itself is out of range *)
+    check_err "too long" (String.make (C.Dsa.byte_length + 1) '\xff');
+    check_err "all ff" (String.make C.Dsa.byte_length '\xff')
+  in
+  [
+    name ^ " Point.generator", `Quick, test_generator_not_identity;
+    name ^ " Point serialization roundtrip", `Quick, test_point_serialization_roundtrip;
+    name ^ " Point compressed serialization", `Quick, test_point_compressed_serialization;
+    name ^ " Scalar serialization roundtrip", `Quick, test_scalar_serialization_roundtrip;
+    name ^ " Scalar.mult with generator", `Quick, test_scalar_mult_with_generator;
+    name ^ " Point.add", `Quick, test_point_add;
+    name ^ " Point.of_octets invalid", `Quick, test_point_of_octets_invalid;
+    name ^ " Scalar.of_octets invalid", `Quick, test_scalar_of_octets_invalid;
+  ]
+
+(* RFC 5903 Section 8 test vectors for scalar multiplication *)
+let rfc5903_tests =
+  let test_scalar_mult
+      (module C : Mirage_crypto_ec.Dh_dsa) ~scalar ~expected_x ~expected_y () =
+    let module G = C.Group in
+    let s = of_hex scalar in
+    let expected = of_hex ("04" ^ expected_x ^ expected_y) in
+    match G.Scalar.of_octets s with
+    | Error e -> Alcotest.failf "Scalar.of_octets: %a" pp_error e
+    | Ok s ->
+      let p = G.Scalar.mult s G.Point.generator in
+      let got = G.Point.to_octets p in
+      Alcotest.(check string) "i*G" expected got
+  in
+  let test_dh
+      (module C : Mirage_crypto_ec.Dh_dsa)
+      ~si ~x_ig ~y_ig ~sr ~x_rg ~y_rg ~expected_x ~expected_y () =
+    let module G = C.Group in
+    let p_ig = of_hex ("04" ^ x_ig ^ y_ig) in
+    let p_rg = of_hex ("04" ^ x_rg ^ y_rg) in
+    let expected = of_hex ("04" ^ expected_x ^ expected_y) in
+    match G.Scalar.of_octets (of_hex si),
+          G.Scalar.of_octets (of_hex sr),
+          G.Point.of_octets p_ig,
+          G.Point.of_octets p_rg with
+    | Ok si, Ok sr, Ok p_ig, Ok p_rg ->
+      (* i * (r*G) should equal the shared secret *)
+      let ir_g = G.Scalar.mult si p_rg in
+      Alcotest.(check string) "i*(r*G)" expected (G.Point.to_octets ir_g);
+      (* r * (i*G) should equal the shared secret *)
+      let ri_g = G.Scalar.mult sr p_ig in
+      Alcotest.(check string) "r*(i*G)" expected (G.Point.to_octets ri_g)
+    | Error e, _, _, _ | _, Error e, _, _ | _, _, Error e, _  | _, _, _, Error e ->
+      Alcotest.failf "of_octets: %a" pp_error e
+  in
+  [
+    (* P-256: RFC 5903 Section 8.1 *)
+    "P-256 i*G (RFC 5903)", `Quick, test_scalar_mult (module P256)
+      ~scalar:"C88F01F510D9AC3F70A292DAA2316DE544E9AAB8AFE84049C62A9C57862D1433"
+      ~expected_x:"DAD0B65394221CF9B051E1FECA5787D098DFE637FC90B9EF945D0C3772581180"
+      ~expected_y:"5271A0461CDB8252D61F1C456FA3E59AB1F45B33ACCF5F58389E0577B8990BB3";
+    "P-256 r*G (RFC 5903)", `Quick, test_scalar_mult (module P256)
+      ~scalar:"C6EF9C5D78AE012A011164ACB397CE2088685D8F06BF9BE0B283AB46476BEE53"
+      ~expected_x:"D12DFB5289C8D4F81208B70270398C342296970A0BCCB74C736FC7554494BF63"
+      ~expected_y:"56FBF3CA366CC23E8157854C13C58D6AAC23F046ADA30F8353E74F33039872AB";
+    "P-256 DH (RFC 5903)", `Quick, test_dh (module P256)
+      ~si:"C88F01F510D9AC3F70A292DAA2316DE544E9AAB8AFE84049C62A9C57862D1433"
+      ~x_ig:"DAD0B65394221CF9B051E1FECA5787D098DFE637FC90B9EF945D0C3772581180"
+      ~y_ig:"5271A0461CDB8252D61F1C456FA3E59AB1F45B33ACCF5F58389E0577B8990BB3"
+      ~sr:"C6EF9C5D78AE012A011164ACB397CE2088685D8F06BF9BE0B283AB46476BEE53"
+      ~x_rg:"D12DFB5289C8D4F81208B70270398C342296970A0BCCB74C736FC7554494BF63"
+      ~y_rg:"56FBF3CA366CC23E8157854C13C58D6AAC23F046ADA30F8353E74F33039872AB"
+      ~expected_x:"D6840F6B42F6EDAFD13116E0E12565202FEF8E9ECE7DCE03812464D04B9442DE"
+      ~expected_y:"522BDE0AF0D8585B8DEF9C183B5AE38F50235206A8674ECB5D98EDB20EB153A2";
+    (* P-384: RFC 5903 Section 8.2 *)
+    "P-384 i*G (RFC 5903)", `Quick, test_scalar_mult (module P384)
+      ~scalar:"099F3C7034D4A2C699884D73A375A67F7624EF7C6B3C0F160647B67414DCE655E35B538041E649EE3FAEF896783AB194"
+      ~expected_x:"667842D7D180AC2CDE6F74F37551F55755C7645C20EF73E31634FE72B4C55EE6DE3AC808ACB4BDB4C88732AEE95F41AA"
+      ~expected_y:"9482ED1FC0EEB9CAFC4984625CCFC23F65032149E0E144ADA024181535A0F38EEB9FCFF3C2C947DAE69B4C634573A81C";
+    "P-384 r*G (RFC 5903)", `Quick, test_scalar_mult (module P384)
+      ~scalar:"41CB0779B4BDB85D47846725FBEC3C9430FAB46CC8DC5060855CC9BDA0AA2942E0308312916B8ED2960E4BD55A7448FC"
+      ~expected_x:"E558DBEF53EECDE3D3FCCFC1AEA08A89A987475D12FD950D83CFA41732BC509D0D1AC43A0336DEF96FDA41D0774A3571"
+      ~expected_y:"DCFBEC7AACF3196472169E838430367F66EEBE3C6E70C416DD5F0C68759DD1FFF83FA40142209DFF5EAAD96DB9E6386C";
+    "P-384 DH (RFC 5903)", `Quick, test_dh (module P384)
+      ~si:"099F3C7034D4A2C699884D73A375A67F7624EF7C6B3C0F160647B67414DCE655E35B538041E649EE3FAEF896783AB194"
+      ~x_ig:"667842D7D180AC2CDE6F74F37551F55755C7645C20EF73E31634FE72B4C55EE6DE3AC808ACB4BDB4C88732AEE95F41AA"
+      ~y_ig:"9482ED1FC0EEB9CAFC4984625CCFC23F65032149E0E144ADA024181535A0F38EEB9FCFF3C2C947DAE69B4C634573A81C"
+      ~sr:"41CB0779B4BDB85D47846725FBEC3C9430FAB46CC8DC5060855CC9BDA0AA2942E0308312916B8ED2960E4BD55A7448FC"
+      ~x_rg:"E558DBEF53EECDE3D3FCCFC1AEA08A89A987475D12FD950D83CFA41732BC509D0D1AC43A0336DEF96FDA41D0774A3571"
+      ~y_rg:"DCFBEC7AACF3196472169E838430367F66EEBE3C6E70C416DD5F0C68759DD1FFF83FA40142209DFF5EAAD96DB9E6386C"
+      ~expected_x:"11187331C279962D93D604243FD592CB9D0A926F422E47187521287E7156C5C4D603135569B9E9D09CF5D4A270F59746"
+      ~expected_y:"A2A9F38EF5CAFBE2347CF7EC24BDD5E624BC93BFA82771F40D1B65D06256A852C983135D4669F8792F2C1D55718AFBB4";
+    (* P-521: RFC 5903 Section 8.3 *)
+    "P-521 i*G (RFC 5903)", `Quick, test_scalar_mult (module P521)
+      ~scalar:"0037ADE9319A89F4DABDB3EF411AACCCA5123C61ACAB57B5393DCE47608172A095AA85A30FE1C2952C6771D937BA9777F5957B2639BAB072462F68C27A57382D4A52"
+      ~expected_x:"0015417E84DBF28C0AD3C278713349DC7DF153C897A1891BD98BAB4357C9ECBEE1E3BF42E00B8E380AEAE57C2D107564941885942AF5A7F4601723C4195D176CED3E"
+      ~expected_y:"017CAE20B6641D2EEB695786D8C946146239D099E18E1D5A514C739D7CB4A10AD8A788015AC405D7799DC75E7B7D5B6CF2261A6A7F1507438BF01BEB6CA3926F9582";
+    "P-521 r*G (RFC 5903)", `Quick, test_scalar_mult (module P521)
+      ~scalar:"0145BA99A847AF43793FDD0E872E7CDFA16BE30FDC780F97BCCC3F078380201E9C677D600B343757A3BDBF2A3163E4C2F869CCA7458AA4A4EFFC311F5CB151685EB9"
+      ~expected_x:"00D0B3975AC4B799F5BEA16D5E13E9AF971D5E9B984C9F39728B5E5739735A219B97C356436ADC6E95BB0352F6BE64A6C2912D4EF2D0433CED2B6171640012D9460F"
+      ~expected_y:"015C68226383956E3BD066E797B623C27CE0EAC2F551A10C2C724D9852077B87220B6536C5C408A1D2AEBB8E86D678AE49CB57091F4732296579AB44FCD17F0FC56A";
+    "P-521 DH (RFC 5903)", `Quick, test_dh (module P521)
+      ~si:"0037ADE9319A89F4DABDB3EF411AACCCA5123C61ACAB57B5393DCE47608172A095AA85A30FE1C2952C6771D937BA9777F5957B2639BAB072462F68C27A57382D4A52"
+      ~x_ig:"0015417E84DBF28C0AD3C278713349DC7DF153C897A1891BD98BAB4357C9ECBEE1E3BF42E00B8E380AEAE57C2D107564941885942AF5A7F4601723C4195D176CED3E"
+      ~y_ig:"017CAE20B6641D2EEB695786D8C946146239D099E18E1D5A514C739D7CB4A10AD8A788015AC405D7799DC75E7B7D5B6CF2261A6A7F1507438BF01BEB6CA3926F9582"
+      ~sr:"0145BA99A847AF43793FDD0E872E7CDFA16BE30FDC780F97BCCC3F078380201E9C677D600B343757A3BDBF2A3163E4C2F869CCA7458AA4A4EFFC311F5CB151685EB9"
+      ~x_rg:"00D0B3975AC4B799F5BEA16D5E13E9AF971D5E9B984C9F39728B5E5739735A219B97C356436ADC6E95BB0352F6BE64A6C2912D4EF2D0433CED2B6171640012D9460F"
+      ~y_rg:"015C68226383956E3BD066E797B623C27CE0EAC2F551A10C2C724D9852077B87220B6536C5C408A1D2AEBB8E86D678AE49CB57091F4732296579AB44FCD17F0FC56A"
+      ~expected_x:"01144C7D79AE6956BC8EDB8E7C787C4521CB086FA64407F97894E5E6B2D79B04D1427E73CA4BAA240A34786859810C06B3C715A3A8CC3151F2BEE417996D19F3DDEA"
+      ~expected_y:"01B901E6B17DB2947AC017D853EF1C1674E5CFE59CDA18D078E05D1B5242ADAA9FFC3C63EA05EDB1E13CE5B3A8E50C3EB622E8DA1B38E0BDD1F88569D6C99BAFFA43";
+  ]
+
 let p521_regression () =
   let key = of_hex
 "04 01 e4 f8 8a 40 3d fe  2f 65 a0 20 50 01 9b 87
@@ -853,4 +1057,8 @@ let () =
       ("X25519", [ "RFC 7748", `Quick, x25519 ]);
       ("ED25519", ed25519);
       ("ECDSA P521 regression", [ "regreesion1", `Quick, p521_regression ]);
+      ("P256 Group", group_tests (module P256) "P256");
+      ("P384 Group", group_tests (module P384) "P384");
+      ("P521 Group", group_tests (module P521) "P521");
+      ("RFC 5903", rfc5903_tests);
     ]

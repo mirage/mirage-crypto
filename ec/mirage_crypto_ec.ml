@@ -68,6 +68,21 @@ end
 module type Dh_dsa = sig
   module Dh : Dh
   module Dsa : Dsa
+  module Group : sig
+    module Point : sig
+      type t
+      val of_octets : string -> (t, error) result
+      val to_octets : ?compress:bool -> t -> string
+      val generator : t
+      val add : t -> t -> t
+    end
+    module Scalar : sig
+      type t
+      val of_octets : string -> (t, error) result
+      val to_octets : t -> string
+      val mult : t -> Point.t -> Point.t
+    end
+  end
 end
 
 type field_element = string
@@ -774,6 +789,22 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
   end
 end
 
+module Make_group (P : Point) (S : Scalar) = struct
+  module Point = struct
+    type t = point
+    let of_octets = P.of_octets
+    let to_octets ?(compress = false) p = P.to_octets ~compress p
+    let generator = P.params_g
+    let add = P.add
+  end
+  module Scalar = struct
+    type t = scalar
+    let of_octets = S.of_octets
+    let to_octets = S.to_octets
+    let mult = S.scalar_mult
+  end
+end
+
 module P256 : Dh_dsa  = struct
   module Params = struct
     let a = "\xFF\xFF\xFF\xFF\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC"
@@ -823,6 +854,7 @@ module P256 : Dh_dsa  = struct
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
   module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA256)
+  module Group = Make_group(P)(S)
 end
 
 module P384 : Dh_dsa = struct
@@ -875,6 +907,7 @@ module P384 : Dh_dsa = struct
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
   module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA384)
+  module Group = Make_group(P)(S)
 end
 
 module P521 : Dh_dsa = struct
@@ -928,6 +961,7 @@ module P521 : Dh_dsa = struct
   module Dh = Make_dh(Params)(P)(S)
   module Fn = Make_Fn(Params)(Foreign_n)
   module Dsa = Make_dsa(Params)(Fn)(P)(S)(Digestif.SHA512)
+  module Group = Make_group(P)(S)
 end
 
 module X25519 = struct
