@@ -1,4 +1,4 @@
 (library
  (name mirage_crypto_pqc)
  (public_name mirage-crypto-pqc)
- (libraries mirage-crypto-rng))
+ (libraries mirage-crypto-rng digestif eqaf))

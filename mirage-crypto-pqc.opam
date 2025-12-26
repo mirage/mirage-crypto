@@ -20,5 +20,7 @@ depends: [
   "ocaml" {>= "4.13.0"}
   "dune" {>= "2.7"}
   "mirage-crypto-rng" {>= "1.0.0"}
+  "digestif" {>= "1.0.0"}
+  "eqaf" {>= "0.9"}
   "alcotest" {with-test}
 ]
