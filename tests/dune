@@ -61,3 +61,9 @@
  (libraries mirage-crypto-rng-miou-unix duration ohex)
  (package   mirage-crypto-rng-miou-unix)
  (enabled_if (<> %{os_type} "Win32")))
+
+(test
+ (name test_pqc)
+ (modules test_pqc)
+ (libraries alcotest mirage-crypto-pqc mirage-crypto-rng.unix)
+ (package mirage-crypto-pqc))
