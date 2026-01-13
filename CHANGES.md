@@ -1,6 +1,6 @@
 ## v2.1.0 (2025-12-26)
 
-* Added ML-KEM-768 (NIST FIPS 203) in pq
+* Added ML-KEM-768 (NIST FIPS 203) in pqc
 
 ## v2.0.2 (2025-08-22)
 
