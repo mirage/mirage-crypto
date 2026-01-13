@@ -1,3 +1,7 @@
+## v2.1.0 (2025-12-26)
+
+* Added ML-KEM-768 (NIST FIPS 203) in pq
+
 ## v2.0.2 (2025-08-22)
 
 * Fix ECDSA public key compression (#268 @ansiwen)
