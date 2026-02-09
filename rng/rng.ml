@@ -17,7 +17,7 @@ let setup_rng =
    `let main = Mirage.main \"Unikernel.Main\" (random @-> job)`, \
    and `let () = register \"my_unikernel\" [main $ default_random]`. \
    \n  If you are using miou, execute \
-   `Mirage_crypto_rng_miou_unix.initialize (module Mirage_crypto_rng.Fortuna)` \
+   `Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna))` \
    at startup."
 
 let () = Printexc.register_printer (function
