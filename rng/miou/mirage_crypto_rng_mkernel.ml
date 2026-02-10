@@ -21,11 +21,11 @@ let running = Atomic.make false
 
 let default_generator_already_set =
   "Mirage_crypto_rng.default_generator has already \
-   been set (but not via Mirage_crypto_rng_miou_solo5). Please check \
+   been set (but not via Mirage_crypto_rng_mkernel). Please check \
    that this is intentional"
 
 let miou_generator_already_launched =
-  "Mirage_crypto_rng_miou_solo5.initialize has already been launched \
+  "Mirage_crypto_rng_mkernel.initialize has already been launched \
    and a task is already seeding the RNG."
 
 type rng = Mkernel.Hook.t * unit Miou.t
