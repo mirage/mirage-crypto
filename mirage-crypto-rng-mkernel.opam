@@ -24,6 +24,6 @@ depends: [
 ]
 description: """
 Mirage-crypto-rng-mkernel feeds the entropy source for Mirage_crypto_rng-based
-random number generator implementations, in an mkernel friendly way.
+random number generator implementations, in a mkernel friendly way.
 """
 x-maintenance-intent: [ "(latest)" ]
