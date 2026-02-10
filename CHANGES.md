@@ -1,3 +1,8 @@
+## v2.0.3 (2026-02-10)
+
+* Add mirage-crypto-rng-mkernel (#266 @dinosaure)
+* Add PPC macros (#269 @barracuda156)
+
 ## v2.0.2 (2025-08-22)
 
 * Fix ECDSA public key compression (#268 @ansiwen)
