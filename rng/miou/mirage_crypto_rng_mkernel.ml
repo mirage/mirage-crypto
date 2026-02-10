@@ -13,9 +13,9 @@ let periodic fn delta =
 
 let rdrand delta =
   match Entropy.cpu_rng with
-  | Error `Not_supported -> Miou.async (Fun.const ())
+  | Error `Not_supported -> None
   | Ok cpu_rng ->
-      periodic (cpu_rng None) delta
+      Some (periodic (cpu_rng None) delta)
 
 let running = Atomic.make false
 
@@ -28,7 +28,7 @@ let miou_generator_already_launched =
   "Mirage_crypto_rng_mkernel.initialize has already been launched \
    and a task is already seeding the RNG."
 
-type rng = Mkernel.Hook.t * unit Miou.t
+type rng = Mkernel.Hook.t * unit Miou.t option
 
 let rec compare_and_set ?(backoff= Miou_backoff.default) t a b =
   if Atomic.compare_and_set t a b = false
@@ -55,6 +55,6 @@ let initialize (type a) ?g ?(sleep= _1s) (rng : a generator) =
 
 let kill (hook, prm) =
   Mkernel.Hook.remove hook;
-  Miou.cancel prm;
+  Option.iter Miou.cancel prm;
   compare_and_set running true false;
   unset_default_generator ()
