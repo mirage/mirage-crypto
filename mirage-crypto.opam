@@ -14,7 +14,7 @@ build: [ ["dune" "subst"] {dev}
 
 depends: [
   "ocaml" {>= "4.13.0"}
-  "dune" {>= "2.7"}
+  "dune" {>= "3.2"}
   "dune-configurator" {>= "2.0.0"}
   "ounit2" {with-test}
   "ohex" {with-test & >= "0.2.0"}
