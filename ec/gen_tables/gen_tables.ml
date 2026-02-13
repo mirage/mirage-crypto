@@ -21,8 +21,6 @@ let pp_array elem_fmt fmt arr =
   done;
   fout "@]@,}"
 
-let div_round_up a b = (a / b) + if a mod b = 0 then 0 else 1
-
 let pp_string_words ~wordsize fmt str =
   assert (String.length str * 8 mod wordsize = 0);
   let limbs = String.length str * 8 / wordsize in
