@@ -26,7 +26,7 @@ homepage: "https://github.com/mirage/mirage-crypto"
 doc: "https://mirage.github.io/mirage-crypto/doc"
 bug-reports: "https://github.com/mirage/mirage-crypto/issues"
 depends: [
-  "dune" {>= "2.7"}
+  "dune" {>= "3.2"}
   "ocaml" {>= "4.13.0"}
   "dune-configurator"
   "eqaf" {>= "0.7"}

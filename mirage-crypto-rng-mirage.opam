@@ -14,7 +14,7 @@ build: [ ["dune" "subst"] {dev}
 
 depends: [
   "ocaml" {>= "4.13.0"}
-  "dune" {>= "2.7"}
+  "dune" {>= "3.2"}
   "mirage-crypto-rng" {=version}
   "duration"
   "logs"

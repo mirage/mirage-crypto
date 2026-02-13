@@ -15,7 +15,7 @@ build: [ ["dune" "subst"] {dev}
 depends: [
   "conf-gmp-powm-sec" {build}
   "ocaml" {>= "4.13.0"}
-  "dune" {>= "2.7"}
+  "dune" {>= "3.2"}
   "ounit2" {with-test}
   "randomconv" {with-test & >= "0.2.0"}
   "ohex" {with-test & >= "0.2.0"}
