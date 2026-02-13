@@ -98,7 +98,7 @@ let usage () =
        pp_print_string)
     (List.map fst curves)
 
-let go =
+let () =
   let name, curve, wordsize =
     try
       let name, curve =
