@@ -35,7 +35,7 @@
  (modules test_entropy)
  (package mirage-crypto-rng)
  (libraries mirage-crypto-rng ohex)
- (enabled_if (and (<> %{architecture} "arm64") (<> %{architecture} "riscv64"))))
+ (enabled_if (and (<> %{architecture} "arm64") (<> %{architecture} "riscv"))))
  ; see https://github.com/mirage/mirage-crypto/issues/216
 
 (test
