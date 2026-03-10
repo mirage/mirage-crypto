@@ -162,7 +162,21 @@ module type Dh_dsa = sig
   module Dh : Dh
 
   (** Digital signature algorithm. *)
-  module Dsa : Dsa
+  module Dsa : sig
+    include Dsa
+
+    (** Low-level arithmetic operations. *)
+    module Primitive : sig
+      val generator : pub
+      (** [generator] is the generator point (base point) of the curve. *)
+
+      val add : pub -> pub -> pub
+      (** [add p q] is the sum of points [p] and [q]. *)
+
+      val scalar_mult : priv -> pub -> pub
+      (** [scalar_mult s p] is the scalar multiplication of [p] by [s]. *)
+    end
+  end
 end
 
 (** The NIST P-256 curve, also known as SECP256R1. *)

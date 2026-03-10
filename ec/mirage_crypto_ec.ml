@@ -67,7 +67,14 @@ end
 
 module type Dh_dsa = sig
   module Dh : Dh
-  module Dsa : Dsa
+  module Dsa : sig
+    include Dsa
+    module Primitive : sig
+      val generator : pub
+      val add : pub -> pub -> pub
+      val scalar_mult : priv -> pub -> pub
+    end
+  end
 end
 
 type field_element = string
@@ -771,6 +778,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
   module Precompute = struct
     let generator_tables = S.generator_tables
+  end
+
+  module Primitive = struct
+    let generator = P.params_g
+    let add = P.add
+    let scalar_mult = S.scalar_mult
   end
 end
 
