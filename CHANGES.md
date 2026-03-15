@@ -1,3 +1,12 @@
+## v2.1.0 (2026-03-15)
+
+* Add new module Mirage_crypto_ec.Dsa.Primitive exposing the generator, point
+  add, scalar multiplication for NIST curves. This is useful for implementing
+  some protocols (such as spake2) (#278 #277 @samoht @hannesm)
+* Cleanup gen_tables (#273 #275 @reynir)
+* Use 'architecture' 'riscv' to not execute the entropy test on riscv64 (#272
+  #273 #274 @reynir @hannesm)
+
 ## v2.0.3 (2026-02-10)
 
 * Add mirage-crypto-rng-mkernel (#266 @dinosaure)
