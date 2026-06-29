@@ -42,6 +42,7 @@ let _1s = 1_000_000_000
 let initialize (type a) ?g ?(sleep= _1s) (rng : a generator) =
   if Atomic.compare_and_set running false true
   then begin
+    entropy_test ();
     let seed =
       let init = Entropy.[ bootstrap; bootstrap; whirlwind_bootstrap; bootstrap; ] in
       List.mapi (fun i fn -> fn i) init |> String.concat "" in

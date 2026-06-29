@@ -55,6 +55,7 @@ let initialize (type a) ?g ?(sleep = Duration.of_sec 1) (rng : a generator) =
   if !running then
     Lwt.fail_with "entropy collection already running"
   else begin
+    entropy_test ();
     (try
        let _ = default_generator () in
        Log.warn (fun m -> m "Mirage_crypto_rng.default_generator has already \
