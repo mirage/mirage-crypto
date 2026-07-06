@@ -52,7 +52,7 @@
    on these platforms.
 */
 
-#if defined (__arm__) || defined (__aarch64__) || defined (__riscv) && (64 == __riscv_xlen))
+#if defined (__arm__) || defined (__aarch64__) || (defined (__riscv) && (64 == __riscv_xlen))
 #include <stdint.h>
 static uint32_t mc_cycle_counter_calls = 0;
 #define mc_sequence() __atomic_fetch_add(&mc_cycle_counter_calls, 1, __ATOMIC_RELAXED)
