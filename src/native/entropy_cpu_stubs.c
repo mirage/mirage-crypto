@@ -40,7 +40,23 @@
    The executable test/test_entropy.ml tests parts of the requirements by
    calling mc_cycle_counter 10 times and comparing the output to the previous
    output.
+
+   On some platforms (arm64 cntvct_el0, riscv rdtime, the arm32 fallbacks),
+   the available timer ticks slower than the rate at which OCaml can call
+   this function, so two successive reads may observe the same timer value
+   (see https://github.com/mirage/mirage-crypto/issues/216). There, a
+   per-call sequence number is mixed in: the timer still provides the
+   entropy, while the sequence number guarantees that successive outputs
+   differ. This **does not** amplify the unpredictability of the value, but it
+   does ensure that you do not encounter any issues when initialising Fortuna
+   on these platforms.
 */
+
+#if defined (__arm__) || defined (__aarch64__)
+#include <stdint.h>
+static uint32_t mc_cycle_counter_calls = 0;
+#define mc_sequence() __atomic_fetch_add(&mc_cycle_counter_calls, 1, __ATOMIC_RELAXED)
+#endif
 
 #if defined (_MSC_VER)
 #include <immintrin.h>
@@ -138,20 +154,6 @@ static inline uint64_t read_cycle_counter(void)
 }
 #endif
 
-#if defined (__riscv) && (64 == __riscv_xlen)
-//since rdcycle is a privileged instruction since linux 6.6, we use rdtime when in user-space
-static inline uint64_t cycle_count(void)
-{
-  uint64_t rval;
-#if defined(__ocaml_freestanding__) || defined(__ocaml_solo5__)
-  __asm__ __volatile__ ("rdcycle %0" : "=r" (rval));
-#else
-  __asm__ __volatile__ ("rdtime %0" : "=r" (rval));
-#endif /* __ocaml_freestanding__ || __ocaml_solo5__ */
-  return rval;
-}
-#endif
-
 #if defined (__s390x__)
 static inline uint64_t getticks(void)
 {
@@ -178,15 +180,44 @@ static inline unsigned long get_count(void) {
 }
 #endif
 
+#if (defined(__riscv) && (64 == __riscv_xlen))
+// See Chapter 4. Entropy Source of
+// RISC-V Cryptography Extensions Volume 1 (2022)
+#if defined(__riscv_zkr)
+static inline uint8_t riscv_get_uint16(uint16_t *value) {
+  uint32_t reg;
+  while (1) {
+    __asm__ volatile("csrrw %0, 0x015, x0" : "=r"(reg));
+    uint32_t status = reg & 0xc0000000;
+    if (status == 0x80000000) /* ES16 */ {
+      *value = (uint16_t)(reg & 0x0000ffff);
+      return true;
+    }
+    if (status == 0xc0000000) /* DEAD */
+      return false;
+    }
+  }
+}
+#else
+#error ("You must have the ZKR extension on RISC-V to be able to initiate correctly our RNG.")
+#endif
+#endif
+
 CAMLprim value mc_cycle_counter (value __unused(unit)) {
 #if defined (__i386__) || defined (__x86_64__) || defined (_MSC_VER)
   return Val_long (__rdtsc ());
 #elif defined (__arm__) || defined (__aarch64__)
-  return Val_long (read_virtual_count ());
+  return Val_long (read_virtual_count () + mc_sequence ());
 #elif defined(__powerpc64__) || defined(__POWERPC__)
   return Val_long (read_cycle_counter ());
 #elif defined(__riscv) && (64 == __riscv_xlen)
-  return Val_long (cycle_count ());
+  uint16_t l = 0;
+  uint16_t h = 0;
+
+  (void) riscv_get_uint16(&l);
+  (void) riscv_get_uint16(&h);
+
+  return Val_long(h << 16 | l);
 #elif defined (__s390x__)
   return Val_long (getticks ());
 #elif defined(__mips__)

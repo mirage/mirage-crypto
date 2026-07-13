@@ -35,13 +35,7 @@
  (modules test_entropy)
  (package mirage-crypto-rng)
  (libraries mirage-crypto-rng ohex)
- (enabled_if
-  (and
-   (<> %{architecture} "arm64")
-   (and
-    (<> %{architecture} "riscv")
-    (or (<> %{system} "macosx") (<> %{architecture} "amd64"))))))
- ; see https://github.com/mirage/mirage-crypto/issues/216
+ (enabled_if (or (<> %{system} "macosx") (<> %{architecture} "amd64"))))
 
 (test
  (name test_ec)
