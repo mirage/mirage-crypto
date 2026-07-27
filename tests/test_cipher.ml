@@ -990,6 +990,46 @@ let empty_cases _ =
   assert_oct_equal ~msg:"ARC4 encrypt" cipher (ARC4.(encrypt ~key plain).message) ;
   assert_oct_equal ~msg:"ARC4 decrypt" plain (ARC4.(decrypt ~key cipher).message)
 
+let aead_forged_tag =
+  let nonce = String.make 12 '\x00'
+  and secret = "let password = 42" in
+  let len = String.length secret in
+  let sentinel = String.make len '\x2a' in
+  let forge blob =
+    let b = Bytes.of_string blob in
+    Bytes.set b len (Char.chr (Char.code (Bytes.get b len) lxor 1)) ;
+    Bytes.unsafe_to_string b
+  in
+  let gcm _ =
+    let key = AES.GCM.of_secret (String.make 32 '\x00') in
+    let forged = forge (AES.GCM.authenticate_encrypt ~key ~nonce secret) in
+    let dst = Bytes.of_string sentinel in
+    let ok = AES.GCM.authenticate_decrypt_into ~key ~nonce forged ~src_off:0
+        ~tag_off:len dst ~dst_off:0 len in
+    assert_bool "GCM forged tag rejected" (not ok) ;
+    assert_equal ~printer:(fun s -> s) ~msg:"GCM dst untouched on forgery"
+      sentinel (Bytes.to_string dst)
+  and chacha _ =
+    let key = Chacha20.of_secret (String.make 32 '\x00') in
+    let forged = forge (Chacha20.authenticate_encrypt ~key ~nonce secret) in
+    let dst = Bytes.of_string sentinel in
+    let ok = Chacha20.authenticate_decrypt_into ~key ~nonce forged ~src_off:0
+        ~tag_off:len dst ~dst_off:0 len in
+    assert_bool "Chacha20 forged tag rejected" (not ok) ;
+    assert_equal ~printer:(fun s -> s) ~msg:"Chacha20 dst untouched on forgery"
+      sentinel (Bytes.to_string dst)
+  and ccm _ =
+    let key = AES.CCM16.of_secret (vx "000102030405060708090a0b0c0d0e0f") in
+    let forged = forge (AES.CCM16.authenticate_encrypt ~key ~nonce secret) in
+    let dst = Bytes.of_string sentinel in
+    let ok = AES.CCM16.authenticate_decrypt_into ~key ~nonce forged ~src_off:0
+        ~tag_off:len dst ~dst_off:0 len in
+    assert_bool "AES CCM forged tag rejected" (not ok) ;
+    assert_equal ~printer:(fun s -> s) ~msg:"AES CCM dst zeroed on forgery"
+      (String.make len '\000') (Bytes.to_string dst)
+  in
+  [ test_case gcm ; test_case chacha ; test_case ccm ]
+
 let suite = [
   "3DES-ECB" >::: des_ecb_cases ;
   "3DES-CBC" >::: des_cbc_cases ;
@@ -1004,4 +1044,5 @@ let suite = [
   "Chacha20" >::: chacha20_cases ;
   "poly1305" >:: poly1305_rfc8439_2_5_2 ;
   "empty" >:: empty_cases ;
+  "AEAD-forged-tag" >::: aead_forged_tag ;
 ]

@@ -426,10 +426,11 @@ module Modes = struct
 
     let unsafe_authenticate_decrypt_into ~key:{ key; hkey } ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
       let ctr = counter ~hkey nonce in
-      CTR.(unsafe_encrypt_into ~key ~ctr:(add_ctr ctr 1L) src ~src_off dst ~dst_off len);
       let ctag = Bytes.create tag_size in
       unsafe_tag_into ~key ~hkey ~ctr ?adata src ~off:src_off ~len ctag ~tag_off:0;
-      Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag)
+      let r = Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag) in
+      if r then CTR.(unsafe_encrypt_into ~key ~ctr:(add_ctr ctr 1L) src ~src_off dst ~dst_off len);
+      r
 
     let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
       check_offset ~tag:"GCM" ~buf:"src" ~off:src_off ~len (String.length src);

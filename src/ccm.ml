@@ -149,4 +149,6 @@ let unsafe_decryption_verification_into ~cipher ~key ~nonce ~adata src ~src_off 
   let tag = String.sub src tag_off block_size in
   let t = crypto_core_into ~cipher ~mode:Decrypt ~key ~nonce ~adata src ~src_off dst ~dst_off len in
   crypto_t t nonce cipher key ;
-  Eqaf.equal tag (Bytes.unsafe_to_string t)
+  let r  = Eqaf.equal tag (Bytes.unsafe_to_string t) in
+  if not r then Bytes.unsafe_fill dst dst_off len '\000';
+  r

@@ -133,8 +133,9 @@ let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   let ctag = Bytes.create tag_size in
   mac_into ~key:poly1305_key ~adata src ~src_off len ctag ~dst_off:0;
-  crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
-  Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag)
+  let r = Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag) in
+  if r then crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
+  r
 
 let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
   if src_off < 0 || dst_off < 0 || tag_off < 0 then
