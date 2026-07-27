@@ -191,21 +191,21 @@ let ecdsa_p256 =
     (Mirage_crypto_ec.P256.Dsa.priv_of_octets
        "\x08\x9f\x4f\xfc\xcc\xf9\xba\x13\xfe\xdd\x09\x42\xef\x08\xcf\x2d\x90\x9f\x32\xe2\x93\x4a\xb5\xc9\x3b\x6c\x99\xbe\x5a\x9f\xf5\x27")
 
-let ecdsa_p256_sig () = Mirage_crypto_ec.P256.Dsa.sign ~key:ecdsa_p256 msg_str_32
+let ecdsa_p256_sig () = Mirage_crypto_ec.P256.Dsa.sign ~mask:`No ~key:ecdsa_p256 msg_str_32
 
 let ecdsa_p384 =
   Result.get_ok
     (Mirage_crypto_ec.P384.Dsa.priv_of_octets
        "\xf5\xc0\xc9\xfb\x95\x17\x86\x41\xaf\x76\xf3\x83\x1f\x41\xe2\xd3\x7c\xfa\xaf\xff\xc7\xe6\x01\x72\xcf\xb0\x89\xfe\x60\x4b\x56\xa6\x1c\x7c\x31\xa6\x90\x4b\x3b\x5d\x08\x20\x7a\x4b\x81\xe2\x5e\xa5")
 
-let ecdsa_p384_sig () = Mirage_crypto_ec.P384.Dsa.sign ~key:ecdsa_p384 msg_str_48
+let ecdsa_p384_sig () = Mirage_crypto_ec.P384.Dsa.sign ~mask:`No ~key:ecdsa_p384 msg_str_48
 
 let ecdsa_p521 =
   Result.get_ok
     (Mirage_crypto_ec.P521.Dsa.priv_of_octets
        "\x00\xb1\x8f\x60\xc0\x35\x2a\xd8\xe3\xef\x98\x2f\x1d\xdf\xcf\x6e\xec\x7f\xa6\xca\xf0\xe6\xf3\x68\x35\x4a\x8b\x02\xb2\xd8\xac\x1e\x05\x9e\x30\x98\x91\xe2\xbf\xa8\x57\x91\xa5\xe7\x1b\x40\xbd\xec\xbf\x90\x2b\xf2\x43\xdc\x3b\x00\x80\x49\x5c\xf4\xd9\x1c\x78\x72\x8b\xd5")
 
-let ecdsa_p521_sig () = Mirage_crypto_ec.P521.Dsa.sign ~key:ecdsa_p521 msg_str_65
+let ecdsa_p521_sig () = Mirage_crypto_ec.P521.Dsa.sign ~mask:`No ~key:ecdsa_p521 msg_str_65
 
 let ed25519 =
   Result.get_ok (Mirage_crypto_ec.Ed25519.priv_of_octets

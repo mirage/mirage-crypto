@@ -112,12 +112,14 @@ module type Dsa = sig
 
   (** {2 Cryptographic operations} *)
 
-  val sign : key:priv -> ?k:string -> string -> string * string
-  (** [sign ~key ~k digest] signs the message [digest] using the private
+  val sign : ?mask:[ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ] ->
+    key:priv -> ?k:string -> string -> string * string
+  (** [sign ~mask ~key ~k digest] signs the message [digest] using the private
       [key]. The [digest] is not processed further - it should be the hash of
-      the message to sign. If [k] is not provided, it is computed using the
-      deterministic construction from RFC 6979. The result is a pair of [r]
-      and [s].
+      the message to sign. If [mask] is provided, the computation is blinded to
+      protect the private key operation. If [k] is not provided, it is computed
+      using the deterministic construction from RFC 6979. The result is a pair
+      of [r] and [s].
 
       Warning: there {{:https://www.hertzbleed.com/2h2b.pdf}are}
       {{:https://www.hertzbleed.com/hertzbleed.pdf}attacks} that recover the

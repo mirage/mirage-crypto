@@ -55,7 +55,8 @@ module type Dsa = sig
   val pub_to_octets : ?compress:bool -> pub -> string
   val pub_of_priv : priv -> pub
   val generate : ?g:Mirage_crypto_rng.g -> unit -> priv * pub
-  val sign : key:priv -> ?k:string -> string -> string * string
+  val sign : ?mask:[ `No | `Yes | `Yes_with of Mirage_crypto_rng.g ] ->
+    key:priv -> ?k:string -> string -> string * string
   val verify : key:pub -> string * string -> string -> bool
   module K_gen (H : Digestif.S) : sig
     val generate : key:priv -> string -> string
@@ -697,6 +698,33 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
     let q = S.scalar_mult_base d in
     (d, q)
 
+  let not_zero =
+    let zero = String.make Param.byte_length '\000' in
+    fun n -> not (String.equal zero n)
+
+  let mod_n v =
+    let v' = F.from_be_octets v in
+    let v' = F.mul v' F.one in
+    let v' = F.from_montgomery v' in
+    F.to_be_octets v'
+
+  let smaller_n v =
+    String.equal v (mod_n v)
+
+  let blind mask =
+    let rec rng g =
+      let r = Mirage_crypto_rng.generate ?g Param.byte_length in
+      if not_zero r && smaller_n r then begin
+        let ba = F.from_be_octets r in
+        Some (ba, F.inv ba)
+      end else
+        rng g
+    in
+    match mask with
+    | `No -> None
+    | `Yes -> rng None
+    | `Yes_with g -> rng (Some g)
+
   let x_of_finite_point_mod_n p =
     match P.to_affine_raw p with
     | None -> None
@@ -706,7 +734,12 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
       let x = F.from_montgomery x in
       Some (F.to_be_octets x)
 
-  let sign ~key ?k msg =
+  let sign ?(mask = `Yes) ~key ?k msg =
+    (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
+       we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
+       s = k^-1 * blind^-1 (blind * m + blind * r * priv_key) mod n
+    *)
+    let b = blind mask in
     let msg = padded msg in
     let e = F.from_be_octets msg in
     let g = K_gen_default.g ~key msg in
@@ -729,9 +762,18 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
         let kmon = F.from_be_octets k' in
         let kinv = F.inv kmon in
         let dmon = F.from_be_octets (S.to_octets key) in
+        let dmon =
+          match b with None -> dmon | Some (b, _) -> F.mul b dmon
+        in
         let rd = F.mul r_mon dmon in
+        let e =
+          match b with None -> e | Some (b, _) -> F.mul b e
+        in
         let cmon = F.add e rd in
         let smon = F.mul kinv cmon in
+        let smon =
+          match b with None -> smon | Some (_, b') -> F.mul b' smon
+        in
         let s = F.from_montgomery smon in
         let s = F.to_be_octets s in
         if S.not_zero s && S.not_zero r then
