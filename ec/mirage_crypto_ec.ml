@@ -701,10 +701,9 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
   let blind mask =
     let rec rng g =
       let r = Mirage_crypto_rng.generate ?g Param.byte_length in
-      if S.is_in_range r then begin
-        let ba = F.from_be_octets r in
-        Some (ba, F.inv ba)
-      end else
+      if S.is_in_range r then
+        Some (F.from_be_octets r)
+      else
         rng g
     in
     match mask with
@@ -723,8 +722,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
   let sign ?(mask = `Yes) ~key ?k msg =
     (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
-       we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
-       s = k^-1 * blind^-1 * (blind * m + blind * r * priv_key) mod n
+       we blind: s = (k * blind)^-1 * (blind * m + blind * r * priv_key) mod n
     *)
     let b = blind mask in
     let msg = padded msg in
@@ -747,20 +745,20 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
       | Some r ->
         let r_mon = F.from_be_octets r in
         let kmon = F.from_be_octets k' in
+        let kmon =
+          match b with None -> kmon | Some b -> F.mul b kmon
+        in
         let kinv = F.inv kmon in
         let dmon = F.from_be_octets (S.to_octets key) in
         let dmon =
-          match b with None -> dmon | Some (b, _) -> F.mul b dmon
+          match b with None -> dmon | Some b -> F.mul b dmon
         in
         let rd = F.mul r_mon dmon in
         let e =
-          match b with None -> e | Some (b, _) -> F.mul b e
+          match b with None -> e | Some b -> F.mul b e
         in
         let cmon = F.add e rd in
         let smon = F.mul kinv cmon in
-        let smon =
-          match b with None -> smon | Some (_, b') -> F.mul b' smon
-        in
         let s = F.from_montgomery smon in
         let s = F.to_be_octets s in
         if S.not_zero s && S.not_zero r then
