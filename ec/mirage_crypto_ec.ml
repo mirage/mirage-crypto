@@ -698,23 +698,10 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
     let q = S.scalar_mult_base d in
     (d, q)
 
-  let not_zero =
-    let zero = String.make Param.byte_length '\000' in
-    fun n -> not (String.equal zero n)
-
-  let mod_n v =
-    let v' = F.from_be_octets v in
-    let v' = F.mul v' F.one in
-    let v' = F.from_montgomery v' in
-    F.to_be_octets v'
-
-  let smaller_n v =
-    String.equal v (mod_n v)
-
   let blind mask =
     let rec rng g =
       let r = Mirage_crypto_rng.generate ?g Param.byte_length in
-      if not_zero r && smaller_n r then begin
+      if S.is_in_range r then begin
         let ba = F.from_be_octets r in
         Some (ba, F.inv ba)
       end else
