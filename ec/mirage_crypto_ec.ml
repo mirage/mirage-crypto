@@ -724,7 +724,7 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
   let sign ?(mask = `Yes) ~key ?k msg =
     (* blinding: literature: s = k^-1 * (m + r * priv_key) mod n
        we blind, similar to OpenSSL (https://github.com/openssl/openssl/commit/a3e9d5aa980f238805970f420adf5e903d35bf09):
-       s = k^-1 * blind^-1 (blind * m + blind * r * priv_key) mod n
+       s = k^-1 * blind^-1 * (blind * m + blind * r * priv_key) mod n
     *)
     let b = blind mask in
     let msg = padded msg in
