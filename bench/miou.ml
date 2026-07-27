@@ -49,15 +49,15 @@ let bm name f = (name, fun () -> f name)
 
 let benchmarks = [
   bm "pfortuna" (fun name ->
-    let open Mirage_crypto_rng_miou_unix.Pfortuna in
+    let open Mirage_crypto_rng_mkernel.Pfortuna in
     Miou_unix.run ~domains:2 @@ fun () ->
-    let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
+    let rng = Mirage_crypto_rng_mkernel.(initialize (module Pfortuna)) in
     let g = create () in
     reseed ~g "abcd" ;
     throughput name (fun buf ->
         let buf = Bytes.unsafe_of_string buf in
         generate_into ~g buf ~off:0 (Bytes.length buf));
-    Mirage_crypto_rng_miou_unix.kill rng) ;
+    Mirage_crypto_rng_mkernel.kill rng) ;
 ]
 
 let help () =

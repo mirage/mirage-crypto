@@ -32,7 +32,7 @@
 
     Suitable entropy feeding of generators are provided by other libraries
     {{!Mirage_crypto_rng_mirage}mirage-crypto-rng-mirage} (for MirageOS),
-    and {{!Mirage_crypto_rng_miou_unix}mirage-crypto-miou-unix} (for Miou_unix).
+    and {{!Mirage_crypto_rng_kernel}mirage-crypto-mkernel} (for mkernel).
 
     The intention is that "initialize" in the respective sub-library is called
     once, which sets the default generator and registers entropy

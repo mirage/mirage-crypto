@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: ["4.14.2"]
+        ocaml-version: ["4.14.4"]
         operating-system: [macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.operating-system }}
@@ -21,9 +21,6 @@ jobs:
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: ocaml/setup-ocaml@v3
         with:
-          opam-local-packages: |
-            *.opam
-            !mirage-crypto-rng-miou-unix.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
@@ -41,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml-version: ["5.2.1"]
+        ocaml-version: ["5.5.0"]
         operating-system: [macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.operating-system }}
@@ -56,14 +53,13 @@ jobs:
           opam-local-packages: |
             mirage-crypto.opam
             mirage-crypto-rng.opam
-            mirage-crypto-rng-miou-unix.opam
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng mirage-crypto-rng-miou-unix
+        run: opam install --deps-only -t mirage-crypto mirage-crypto-rng
 
       - name: Build
-        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-miou-unix
+        run: opam exec -- dune build -p mirage-crypto,mirage-crypto-rng
 
       - name: Test
-        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng,mirage-crypto-rng-miou-unix
+        run: opam exec -- dune runtest -p mirage-crypto,mirage-crypto-rng

@@ -22,7 +22,7 @@ The following packages are provided in this repository, each installable via `op
 - `mirage-crypto-pk` - asymmetric cryptography (RSA, DSA, DH) - uses [zarith](https://github.com/ocaml/zarith) with [gmp](https://gmplib.org),
 - `mirage-crypto-rng` - random number generators (Fortuna, HMAC-DRBG),
 - `mirage-crypto-rng-mirage` - seed and feed entropy for the RNG with MirageOS unikernels,
-- `mirage-crypto-rng-miou-unix` - seed and feed entropy for the RNG with [miou](https://github.com/robur-coop/miou) scheduler on Unix.
+- `mirage-crypto-rng-mkernel` - seed and feed entropy for the RNG with [mkernel](https://git.robur.coop/robur/mkernel) (using the miou scheduler).
 
 On Unix, `getrandom()` (and `getentropy()`) or `/dev/urandom` are used for
 random number generation. On MirageOS, entropy harvesting and feeding uses
