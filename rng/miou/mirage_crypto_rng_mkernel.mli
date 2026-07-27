@@ -1,5 +1,9 @@
 (** {b RNG} seeding on {b Mkernel}. *)
 
+module Pfortuna : Mirage_crypto_rng.Generator
+(** {b Pfortuna}, a {b domain-safe} CSPRNG
+    {{: https://www.schneier.com/fortuna.html} proposed} by Schneier. *)
+
 type rng
 (** Type of tasks seeding the RNG. *)
 

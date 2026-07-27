@@ -4,6 +4,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 open Mirage_crypto_rng
 
+module Pfortuna = Pfortuna
+
 let periodic fn delta =
   let rec one () =
     let () = fn () in

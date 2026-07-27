@@ -5,8 +5,8 @@
    mirage-crypto-pk mirage-crypto-ec))
 
 ; marking as "(optional)" leads to OCaml-CI failures
-; marking with "(package mirage-crypto-rng-miou-unix)" only has an effect with a "public_name"
+; marking with "(package mirage-crypto-rng-mkernel)" only has an effect with a "public_name"
 ;(executables
 ; (names miou)
 ; (modules miou)
-; (libraries mirage-crypto-rng-miou-unix))
+; (libraries mirage-crypto-rng-mkernel miou.unix))

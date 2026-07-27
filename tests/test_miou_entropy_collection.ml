@@ -20,7 +20,7 @@ end
 
 let () =
   Miou_unix.run @@ fun () ->
-  let rng = Mirage_crypto_rng_miou_unix.initialize (module Printing_rng) in
+  let rng = Mirage_crypto_rng_mkernel.initialize (module Printing_rng) in
   Format.printf "entropy sources: %a@,%!"
     (fun ppf -> List.iter (fun x ->
          Mirage_crypto_rng.Entropy.pp_source ppf x;
@@ -28,4 +28,4 @@ let () =
     (Mirage_crypto_rng.Entropy.sources ());
   let sleep = Duration.(of_sec 2 |> to_f) in
   Miou_unix.sleep sleep;
-  Mirage_crypto_rng_miou_unix.kill rng
+  Mirage_crypto_rng_mkernel.kill rng

@@ -1,5 +1,5 @@
 let () = Miou_unix.run @@ fun () ->
-  let rng = Mirage_crypto_rng_miou_unix.(initialize (module Pfortuna)) in
+  let rng = Mirage_crypto_rng_mkernel.(initialize (module Pfortuna)) in
   let random_num = Mirage_crypto_rng.generate 32 in
   assert (String.length random_num = 32);
   Printf.printf "32 bit random number: %s\n%!" (Ohex.encode random_num);
@@ -13,4 +13,4 @@ let () = Miou_unix.run @@ fun () ->
     let _ = Mirage_crypto_rng.generate 16 in
     Miou_unix.sleep 0.5;
   done;
-  Mirage_crypto_rng_miou_unix.kill rng
+  Mirage_crypto_rng_mkernel.kill rng
