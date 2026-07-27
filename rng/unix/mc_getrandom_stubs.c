@@ -50,7 +50,7 @@ void raw_getrandom (uint8_t *data, size_t len) {
 
 void raw_getrandom (uint8_t *data, size_t len) {
   size_t rlen = 0;
-  for (size_t i = 0; i <= len; i += 256) {
+  for (size_t i = 0; i < len; i += 256) {
     rlen = MIN(256, len - i);
     if (getentropy(data + i, rlen) == -1) uerror("getentropy", Nothing);
   }
