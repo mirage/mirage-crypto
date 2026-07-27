@@ -681,7 +681,10 @@ module Make_dsa (Param : Parameters) (F : Fn) (P : Point) (S : Scalar) (H : Dige
 
   type pub = point
 
-  let pub_of_octets = P.of_octets
+  let pub_of_octets buf =
+    match P.of_octets buf with
+    | Ok p when P.is_infinity p -> Error `At_infinity
+    | x -> x
 
   let pub_to_octets ?(compress = false) pk = P.to_octets ~compress pk
 
