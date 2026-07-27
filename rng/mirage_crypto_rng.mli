@@ -283,6 +283,10 @@ val pools      : g option -> int
 val strict : g option -> bool
 (**/**)
 
+val entropy_test : unit -> unit
+(** [entropy_test ()] tests entropy harvesting. This raises [Failure] if either
+    whirlwind, cpu-rng, or timer produces the same result twice in a row. Best
+    to be used at startup to ensure your hardware is sane. *)
 
 (** {1:rng_examples Examples}
 
