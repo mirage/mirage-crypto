@@ -28,13 +28,7 @@
  (name test_entropy_collection)
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)
- (libraries mirage-crypto-rng-mirage mirage-unix duration ohex))
-
-(test
- (name test_entropy)
- (modules test_entropy)
- (package mirage-crypto-rng)
- (libraries mirage-crypto-rng ohex)
+ (libraries mirage-crypto-rng-mirage mirage-unix duration ohex)
  (enabled_if
   (and
    (<> %{architecture} "arm64")
