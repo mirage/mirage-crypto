@@ -1,3 +1,21 @@
+## v2.2.0 (2026-07-27)
+
+* mirage-crypto-ec: do not accept the point at infinity as ECDSA public key
+  (OSEC-2026-13, reported by @samoht (including patch), @hannesm)
+* mirage-crypto: decrypt only after AEAD tag has been validated (OSEC-2026-12,
+  reported by @samoht (including patch), fixed by @hannesm)
+* mirage-crypto-rng: expose entropy_test: unit -> unit (which raises if entropy
+  collection fails), called by Mirage_crypto_rng_mirage and
+  Mirage_crypto_rng_mkernel at initialization time (#282 @hannesm, review by
+  @dinosaure) -- moving this crucial test to startup (instead of test run)
+* mirage-crypto-ec: add blinding for ECDSA.sign (#285 @hannesm, review by
+  @edwintorok)
+* remove mirage-crypto-rng-miou-unix - use Mirage_crypto_rng_unix.use_default ()
+  (#286 @hannesm, review by @dinosaure)
+* mirage-crypto: Chacha20: reject negative offsets in
+  authenticate_{encrypt,decrypt}_into (#281 @samoht)
+* Skip entropy test on macOS x86_64 (#279 @iamanaws)
+
 ## v2.1.0 (2026-03-15)
 
 * Add new module Mirage_crypto_ec.Dsa.Primitive exposing the generator, point
