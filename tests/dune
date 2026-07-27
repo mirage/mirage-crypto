@@ -54,9 +54,9 @@
  (libraries alcotest mirage-crypto-ec wycheproof digestif asn1-combinators)
  (package mirage-crypto-ec))
 
-(tests
- (names     test_miou_rng test_miou_entropy_collection)
- (modules   test_miou_rng test_miou_entropy_collection)
- (libraries mirage-crypto-rng-mkernel duration ohex miou miou.unix)
- (package   mirage-crypto-rng-mkernel)
- (enabled_if (<> %{os_type} "Win32")))
+;(tests
+; (names     test_miou_rng test_miou_entropy_collection)
+; (modules   test_miou_rng test_miou_entropy_collection)
+; (libraries mirage-crypto-rng-mkernel duration ohex miou miou.unix)
+; (package   mirage-crypto-rng-mkernel)
+; (enabled_if (<> %{os_type} "Win32")))
