@@ -106,8 +106,8 @@ let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst 
   mac_into ~key:poly1305_key ~adata (Bytes.unsafe_to_string dst) ~src_off:dst_off len dst ~dst_off:tag_off
 
 let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
-  if src_off < 0 || dst_off < 0 || tag_off < 0 then
-    invalid_arg "Chacha20: negative offset";
+  if src_off < 0 || dst_off < 0 || tag_off < 0 || len < 0 then
+    invalid_arg "Chacha20: negative offset or length";
   if String.length src - src_off < len then
     invalid_arg "Chacha20: src length %u - src_off %u < len %u"
       (String.length src) src_off len;
@@ -137,8 +137,8 @@ let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag
   Eqaf.equal (String.sub src tag_off tag_size) (Bytes.unsafe_to_string ctag)
 
 let authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len =
-  if src_off < 0 || dst_off < 0 || tag_off < 0 then
-    invalid_arg "Chacha20: negative offset";
+  if src_off < 0 || dst_off < 0 || tag_off < 0 || len < 0 then
+    invalid_arg "Chacha20: negative offset or length";
   if String.length src - src_off < len then
     invalid_arg "Chacha20: src length %u - src_off %u < len %u"
       (String.length src) src_off len;

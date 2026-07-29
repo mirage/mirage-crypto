@@ -156,6 +156,9 @@ let check_offset ~tag ~buf ~off ~len actual_len =
   if off < 0 then
     invalid_arg "%s: %s off %u < 0"
       tag buf off;
+  if len < 0 then
+    invalid_arg "%s: %s len %u < 0"
+      tag buf len;
   if actual_len - off < len then
     invalid_arg "%s: %s length %u - off %u < len %u"
       tag buf actual_len off len
