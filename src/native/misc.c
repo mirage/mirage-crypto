@@ -43,11 +43,12 @@ static inline void _mc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks
 /* The GCM counter. Counts on the last 32 bits, ignoring carry. */
 static inline void _mc_count_16_be_4 (uint64_t *init, uint64_t *dst, size_t blocks) {
 
-  uint64_t qw1 = init[0];
+  uint64_t qw1;
+  memcpy(&qw1, init, 8);
   uint32_t dw3 = ((uint32_t*) init)[2],
            dw4 = be32_to_cpu (((uint32_t*) init)[3]);
   for (; blocks --; dst += 2) {
-    dst[0] = qw1;
+    memcpy(dst, &qw1, 8);
     ((uint32_t*) dst)[2] = dw3;
     ((uint32_t*) dst)[3] = cpu_to_be32 (dw4 ++);
   }
