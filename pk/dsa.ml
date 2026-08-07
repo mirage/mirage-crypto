@@ -104,7 +104,7 @@ let sign_z ?(mask = `Yes) ?k:k0 ~key:({ p; q; gg; x; _ } as key) z =
     | Some k when Z.zero < k && k < q -> k
     | Some _ -> invalid_arg "k not in range ]0, q["
     | None -> K_gen_sha256.z_gen ~key z
-    in
+  in
   let k' = Z.invert k q
   and b, b' = match expand_mask mask with
     | `No -> Z.one, Z.one
