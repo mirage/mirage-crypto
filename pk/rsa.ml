@@ -179,7 +179,7 @@ let decrypt_blinded_unsafe ~crt_hardening ?g ~key:({ e; n; _} as key : priv) c =
 
 let (encrypt_z, decrypt_z) =
   let check_params n msg =
-    if msg < two then invalid_arg "Rsa: message: %a" Z.pp_print msg;
+    if msg < two then raise Insufficient_key;
     if n <= msg then raise Insufficient_key in
   (fun ~(key : pub) msg -> check_params key.n msg ; encrypt_unsafe ~key msg),
   (fun ~crt_hardening ~mask ~(key : priv) msg ->
