@@ -1,0 +1,29 @@
+(install
+  (files LICENSE.md)
+  (section doc)
+  (package mirage-crypto))
+
+(install
+  (files LICENSE.md)
+  (section doc)
+  (package mirage-crypto-pk))
+
+(install
+  (files (LICENSE.md.mirage-crypto-ec as LICENSE.md))
+  (section doc)
+  (package mirage-crypto-ec))
+
+(install
+  (files (LICENSE.md.mirage-crypto-rng as LICENSE.md))
+  (section doc)
+  (package mirage-crypto-rng))
+
+(install
+  (files (LICENSE.md.mirage-crypto-rng as LICENSE.md))
+  (section doc)
+  (package mirage-crypto-rng-mirage))
+
+(install
+  (files LICENSE.md)
+  (section doc)
+  (package mirage-crypto-rng-mkernel))
