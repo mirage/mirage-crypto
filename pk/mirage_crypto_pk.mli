@@ -110,9 +110,7 @@ module Rsa : sig
   val encrypt : key:pub -> string -> string
   (** [encrypt key message] is the encrypted [message].
 
-      @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key})
-
-      @raise Invalid_argument if [message] is [0x00] or [0x01]. *)
+      @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
   val decrypt : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
     string -> string
@@ -166,7 +164,9 @@ module Rsa : sig
     (** [decrypt ~crt_hardening ~mask ~key ciphertext] is [Some message] if
         the [ciphertext] was produced by the corresponding {{!encrypt}encrypt}
         operation, or [None] otherwise. [crt_hardening] defaults to
-        [false]. *)
+        [false].
+
+        @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
     val sig_encode : ?crt_hardening:bool -> ?mask:mask -> key:priv ->
       string -> string
@@ -183,7 +183,9 @@ module Rsa : sig
     val sig_decode : key:pub -> string -> string option
     (** [sig_decode key signature] is [Some message] when the [signature]
         was produced with the given [key] as per {{!sig_encode}sig_encode}, or
-        [None] *)
+        [None].
+
+        @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
 
     val min_key : [< Digestif.hash' > `MD5 `SHA1 `SHA224 `SHA256 `SHA384 `SHA512 ] -> int
     (** [min_key hash] is the minimum key size required by {{!sign}[sign]}. *)
@@ -213,6 +215,8 @@ module Rsa : sig
         [hashp] determines the allowed hash algorithms. Whenever [hashp] is
         [false], [verify] is also [false].
 
+        @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key})
+
         @raise Invalid_argument if message is a [`Digest] of the wrong size.  *)
   end
 
@@ -239,7 +243,9 @@ module Rsa : sig
     (** [decrypt ~crt_hardening ~mask ~label ~key ciphertext] is
         [Some message] if the [ciphertext] was produced by the corresponding
         {{!encrypt}encrypt} operation, or [None] otherwise. [crt_hardening]
-        defaults to [false]. *)
+        defaults to [false].
+
+        @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key}) *)
   end
 
   (** {1 PSS signing} *)
@@ -273,6 +279,8 @@ module Rsa : sig
         valid {b PSS} signature of the [message] under the given [key].
 
         [message] is either the actual message, or its digest.
+
+        @raise Insufficient_key (see {{!Insufficient_key}Insufficient_key})
 
         @raise Invalid_argument if message is a [`Digest] of the wrong size. *)
   end
