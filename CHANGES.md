@@ -1,3 +1,25 @@
+## v2.3.0 (2026-08-07)
+
+- mirage-crypto-pk: RSA: avoid Invalid_argument when message is < 2, instead
+  raise Insufficient_key which is already documented and caught by clients
+  (OSEC-2026-14, report by @samoht,
+  fix a0f59a0c90eb067505b55a03d3bb104eacd6dd33 by @hannesm)
+- mirage-crypto-ec: NIST: add bounds check for compressed public keys (both for
+  Dsa.pub_of_octets and Dh.key_exchange) (OSEC-2026-15, reported by @samoht,
+  fix 1f0bf67044e67cf6e46911fcd77a0ff706b6c3e7 by @hannesm)
+- mirage-crypto: count_16_be_4: avoid unaligned access that causes bus error on
+  armhf (#292 @glondu)
+- mirage-crypto-rng: remove `[@@noalloc]` annotations on `getrandom` - it
+  eventually calls `uerror` (#287 @samoht)
+- mirage-crypto-rng: avoid zero-length `getentropy` call on BSD and macOS
+  (#288 @samoht)
+- mirage-crypto-pk: Dsa.sign: avoid division by 0 when k is 0 (#289 @samoht)
+- mirage-crypto: add checks that length is positive in AEAD cipher modes
+  (#290 @samoht)
+- mirage-crypto-pk: blind Dsa using (k * b) ^ -1 instead of k ^ -1 * b ^ -1
+  to avoid expensive inversion (#294 @hannesm)
+- install proper licenses for packages (#293 @hannesm)
+
 ## v2.2.0 (2026-07-27)
 
 * mirage-crypto-ec: do not accept the point at infinity as ECDSA public key
