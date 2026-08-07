@@ -1,5 +1,5 @@
 
-external getrandom_buf : bytes -> int -> int -> unit = "mc_getrandom" [@@noalloc]
+external getrandom_buf : bytes -> int -> int -> unit = "mc_getrandom"
 
 type g = unit
 
