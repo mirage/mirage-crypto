@@ -418,7 +418,7 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       match String.get_uint8 buf 0 with
       | 0x00 when String.length buf = 1 ->
         Ok (at_infinity ())
-      | 0x02 | 0x03 when String.length P.pident > 0 ->
+      | 0x02 | 0x03 when String.length buf = len + 1 ->
         let decompressed = decompress buf in
         of_octets decompressed
       | 0x04 when String.length buf = 1 + len + len ->
