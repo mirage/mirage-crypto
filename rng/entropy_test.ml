@@ -34,8 +34,6 @@ let timer_check () =
   done
 
 let test () =
-  Format.printf "TESTING entropy harvesting... %!";
   timer_check ();
   cpu_bootstrap_check ();
-  whirlwind_bootstrap_check ();
-  Format.printf "successfully\n%!"
+  whirlwind_bootstrap_check ()
