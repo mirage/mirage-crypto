@@ -169,7 +169,7 @@ mirage-crypto-rng-{lwt,eio,async} and calling
   multiplications and 2 squarings, details
   https://mailarchive.ietf.org/arch/msg/cfrg/qlKpMBqxXZYmDpXXIx6LO3Oznv4/
   (#196 @hannesm)
-* mirage-crypto-ec: use sliding window method with pre-computed calues of
+* mirage-crypto-ec: use sliding window method with pre-computed values of
   multiples of the generator point for NIST curves, speedup around 4x for P-256
   sign (#191 @Firobe, review @palainp @hannesm)
 * mirage-crypto-ec: documentation: warn about power timing analysis on `k` in
