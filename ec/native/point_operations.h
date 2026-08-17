@@ -227,9 +227,9 @@ static void table_select(fe out_x, fe out_y, fe out_z, size_t index, uint8_t n) 
     fe_one(x); fe_one(y);
     for(uint8_t i = 1 ; i < 16 ; ++i) {
         WORD cond = i ^ n;
-        fe_cmovznz(x, cond, generator_table[index][n - 1][0], x);
-        fe_cmovznz(y, cond, generator_table[index][n - 1][1], y);
-        fe_cmovznz(z, cond, generator_table[index][n - 1][2], z);
+        fe_cmovznz(x, cond, generator_table[index][i - 1][0], x);
+        fe_cmovznz(y, cond, generator_table[index][i - 1][1], y);
+        fe_cmovznz(z, cond, generator_table[index][i - 1][2], z);
     }
     fe_copy(out_x, x);
     fe_copy(out_y, y);
