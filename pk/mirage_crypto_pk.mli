@@ -525,4 +525,8 @@ module Z_extra : sig
   val gen_r : ?g:Mirage_crypto_rng.g -> Z.t -> Z.t -> Z.t
   (** [gen_r ~g low high] picks a value from the interval [\[low, high - 1\]]
       uniformly at random. *)
+
+  val pseudoprime : Z.t -> bool
+  (** [pseudoprime z] does the Miller-Rabin test (number of rounds taken from
+      Handbook of Applied Cryptography, Table 4.4 *)
 end
