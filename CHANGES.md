@@ -1,3 +1,11 @@
+## v2.4.0 (2026-08-17)
+
+- mirage-crypto-rng: don't display anything when running the entropy test
+  (#296 @dinosaure)
+- mirage-crypto-pk: fix hardcoded Dh groups (#297, reported by @torinnd)
+- mirage-crypto-ec: fix timing leak in lookup tables (OSEC-2026-17, reported
+  by @torinnd, acknowledged by @Firobe, fixed by @hannesm)
+
 ## v2.3.0 (2026-08-07)
 
 - mirage-crypto-pk: RSA: avoid Invalid_argument when message is < 2, instead
