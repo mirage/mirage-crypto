@@ -172,6 +172,23 @@ let rsa_oaep_encrypt_selftest ~bits n =
      | None     -> assert_failure "unpad failure"
      | Some dec -> assert_oct_equal msg dec ~msg:"recovery failure")
 
+let rsa_oaep_missing_separator _ =
+  let module OAEP_SHA1 = Rsa.OAEP (Digestif.SHA1) in
+  let key = gen_rsa ~bits:512
+  and label = "oaep-separator-regression-19"
+  (* Zero-seed OAEP encoding whose DB omits the 0x01 separator. *)
+  and encoded =
+    vx
+      "00175f6e4d5f89042fa4b90433ac7dff9e60eb6b50d29cf23daa66ca65f6cd7\
+       977924f87190712b5f6a4fa647defa221e1f720c856fd893973d239d2273c97f1"
+  in
+  let label_hash = Digestif.SHA1.(digest_string label |> to_raw_string) in
+  assert_equal 0x01 (String.get_uint8 label_hash 0);
+  let ciphertext = Rsa.(encrypt ~key:(pub_of_priv key) encoded) in
+  match OAEP_SHA1.decrypt ~mask:`No ~label ~key ciphertext with
+  | None -> ()
+  | Some _ -> assert_failure "accepted OAEP DB without separator"
+
 let rsa_pss_sign_selftest ~bits n =
   let module Pss_sha1 = Rsa.PSS (Digestif.SHA1) in
   "selftest" >:: times ~n @@ fun _ ->
@@ -319,6 +336,7 @@ let suite = [
   ] ;
 
   "RSA-regression" >::: [
+    test_case rsa_oaep_missing_separator ;
     test_case rsa_priv_of_primes_regression ;
     test_case rsa_priv_of_primes_regression_62 ;
     test_case rsa_priv_of_primes_regression_openssl ;
