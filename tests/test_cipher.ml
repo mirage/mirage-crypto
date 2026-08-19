@@ -459,6 +459,16 @@ let ccm_regressions =
     match authenticate_decrypt ~key ~nonce ~adata cipher with
     | Some x -> assert_oct_equal ~msg:"CCM decrypt of empty message" p x
     | None -> assert_failure "decryption broken"
+  and aligned_adata _ =
+    (* The two-byte length and 14-byte adata fill one block. *)
+    let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = vx "000102030405060708090a0b0c"
+    and plaintext = ""
+    and adata = vx "000102030405060708090a0b0c0d"
+    and expected = vx "4c8deb839f1db3856356fe0c0956db30"
+    in
+    let cipher = authenticate_encrypt ~adata ~key ~nonce plaintext in
+    assert_oct_equal ~msg:"CCM encrypt with aligned adata" expected cipher
   and long_adata _ =
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
     and nonce = vx "0001020304050607"
@@ -629,6 +639,7 @@ b8fc 10f3 13c7 aa16  8165 a29c 67f1 46f4
     test_case short_nonce_enc3 ;
     test_case long_nonce_enc ;
     test_case enc_dec_empty_message ;
+    test_case aligned_adata ;
     test_case long_adata ;
   ] @ List.map test_case regr_tls
 

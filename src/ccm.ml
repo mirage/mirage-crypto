@@ -41,7 +41,7 @@ let gen_adata a =
   in
   let to_pad =
     let leftover = (llen + String.length a) mod block_size in
-    block_size - leftover
+    if leftover = 0 then 0 else block_size - leftover
   in
   llen + String.length a + to_pad,
   fun buf off ->
