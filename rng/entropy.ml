@@ -67,10 +67,13 @@ let register_source name =
     let sources = Atomic.get _sources in
     let n = S.cardinal sources in
     let source = (n, name) in
-    if Atomic.compare_and_set _sources sources (S.add source sources) then
-      source
-    else
-      set ()
+    match S.find_opt source sources with
+    | Some source -> source
+    | None ->
+      if Atomic.compare_and_set _sources sources (S.add source sources) then
+        source
+      else
+        set ()
   in
   set ()
 

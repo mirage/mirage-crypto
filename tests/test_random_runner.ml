@@ -87,8 +87,22 @@ let xor_selftest n =
     assert_oct_equal ~msg:"invert" x x1 ;
     assert_oct_equal ~msg:"commut" x1 x2
 
+let entropy_source_registration =
+  "registration" >:: fun _ ->
+  let a = Mirage_crypto_rng.Entropy.register_source "test-source-a" in
+  let a' = Mirage_crypto_rng.Entropy.register_source "test-source-a" in
+  let b = Mirage_crypto_rng.Entropy.register_source "test-source-b" in
+  assert_equal
+    ~printer:string_of_int
+    (Mirage_crypto_rng.Entropy.id a)
+    (Mirage_crypto_rng.Entropy.id a');
+  assert_bool
+    "distinct sources have distinct IDs"
+    (Mirage_crypto_rng.Entropy.id a <> Mirage_crypto_rng.Entropy.id b)
+
 let suite =
   "All" >::: [
+    "entropy source" >::: [ entropy_source_registration ] ;
     "XOR" >::: [ xor_selftest 300 ] ;
     "3DES-ECB" >::: [ ecb_selftest (module DES.ECB) 100 ] ;
 
