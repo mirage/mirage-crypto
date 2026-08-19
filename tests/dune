@@ -18,6 +18,13 @@
  (modules test_random_runner))
 
 (test
+ (name test_urandom_fork)
+ (modules test_urandom_fork)
+ (libraries mirage-crypto-rng mirage-crypto-rng.unix ounit2 unix)
+ (package mirage-crypto-rng)
+ (enabled_if (<> %{os_type} "Win32")))
+
+(test
  (name test_pk_runner)
  (libraries test_common mirage-crypto-pk mirage-crypto-rng.unix randomconv
    ounit2)

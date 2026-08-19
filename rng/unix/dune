@@ -17,7 +17,7 @@
  (name mirage_crypto_rng_unix)
  (public_name mirage-crypto-rng.unix)
  (modules mirage_crypto_rng_unix urandom getentropy)
- (libraries mirage-crypto-rng unix logs threads.posix)
+ (libraries mirage-crypto-rng unix logs)
  (foreign_stubs
   (language c)
   (include_dirs ../../src/native)
