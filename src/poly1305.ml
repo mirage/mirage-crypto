@@ -70,6 +70,8 @@ module It : S = struct
     List.iter (fun (d, off, len) ->
         if off < 0 then
           Uncommon.invalid_arg "Poly1305: d off %u < 0" off;
+        if len < 0 then
+          Uncommon.invalid_arg "Poly1305: d len %u < 0" len;
         if String.length d - off < len then
           Uncommon.invalid_arg "Poly1305: d length %u - off %u < len %u"
             (String.length d) off len;
