@@ -105,10 +105,16 @@ module Block = struct
 end
 
 module Counters = struct
+  let wrapped () = invalid_arg "CTR: counter wrapped"
+
+  let check_count add ctr blocks =
+    if blocks > 0 then ignore (add ctr (Int64.of_int (blocks - 1)))
+
   module type S = sig
     type ctr
     val size : int
     val add  : ctr -> int64 -> ctr
+    val check : ctr -> int -> unit
     val of_octets : string -> ctr
     val unsafe_count_into : ctr -> bytes -> off:int -> blocks:int -> unit
   end
@@ -117,7 +123,11 @@ module Counters = struct
     type ctr = int64
     let size = 8
     let of_octets cs = String.get_int64_be cs 0
-    let add = Int64.add
+    let add t n =
+      let t' = Int64.add t n in
+      if Int64.unsigned_compare t' t < 0 then wrapped ();
+      t'
+    let check = check_count add
     let unsafe_count_into t buf ~off ~blocks =
       let ctr = Bytes.create 8 in
       Bytes.set_int64_be ctr 0 t;
@@ -131,9 +141,11 @@ module Counters = struct
       let buf = Bytes.unsafe_of_string cs in
       Bytes.(get_int64_be buf 0, get_int64_be buf 8)
     let add (w1, w0) n =
-      let w0'  = Int64.add w0 n in
-      let flip = if Int64.logxor w0 w0' < 0L then w0' > w0 else w0' < w0 in
-      ((if flip then Int64.succ w1 else w1), w0')
+      let w0' = Int64.add w0 n in
+      let carry = Int64.unsigned_compare w0' w0 < 0 in
+      if carry && w1 = -1L then wrapped ();
+      ((if carry then Int64.succ w1 else w1), w0')
+    let check = check_count add
     let unsafe_count_into (w1, w0) buf ~off ~blocks =
       let ctr = Bytes.create 16 in
       Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
@@ -145,6 +157,8 @@ module Counters = struct
     let add (w1, w0) n =
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
+    let check _ blocks =
+      if Int64.of_int blocks > 0xfffffffeL then wrapped ()
     let unsafe_count_into (w1, w0) buf ~off ~blocks =
       let ctr = Bytes.create 16 in
       Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
@@ -291,9 +305,10 @@ module Modes = struct
 
     let unsafe_stream_into ~key ~ctr buf ~off len =
       let blocks = imax 0 len / block_size in
+      let slack = imax 0 len mod block_size in
+      Ctr.check ctr (blocks + if slack = 0 then 0 else 1);
       Ctr.unsafe_count_into ctr buf ~off ~blocks ;
       Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) off buf off ;
-      let slack = imax 0 len mod block_size in
       if slack <> 0 then begin
         let buf' = Bytes.create block_size in
         let ctr = Ctr.add ctr (Int64.of_int blocks) in

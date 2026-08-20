@@ -57,14 +57,13 @@ let ctr_selftest (m : (module Block.CTR)) n =
     assert_oct_equal ~msg:"CTR chain" enc @@
       M.encrypt ~key ~ctr d1 ^ M.encrypt ~key ~ctr:(M.next_ctr ~ctr d1) d2
 
-let ctr_offsets (type c) ~zero (m : (module Block.CTR with type ctr = c)) n =
+let ctr_offsets (m : (module Block.CTR)) n =
   let module M = (val m) in
   "offsets" >:: fun _ ->
     let key = M.of_secret @@ Mirage_crypto_rng.generate M.key_sizes.(0) in
-    for i = 0 to n - 1 do
-      let ctr = match i with
-        | 0 -> M.add_ctr zero (-1L)
-        | _ -> Mirage_crypto_rng.generate M.block_size |> M.ctr_of_octets
+    for _i = 0 to n - 1 do
+      let ctr =
+        "\x00" ^ Mirage_crypto_rng.generate (M.block_size - 1) |> M.ctr_of_octets
       and gap = Randomconv.int ~bound:64 Mirage_crypto_rng.generate in
       let s1 = M.stream ~key ~ctr ((gap + 1) * M.block_size)
       and s2 = M.stream ~key ~ctr:(M.add_ctr ctr (Int64.of_int gap)) M.block_size in
@@ -95,12 +94,12 @@ let suite =
     "3DES-CBC" >::: [ cbc_selftest (module DES.CBC) 100 ] ;
 
     "3DES-CTR" >::: [ ctr_selftest (module DES.CTR) 100;
-                      ctr_offsets  (module DES.CTR) 100 ~zero:0L; ] ;
+                      ctr_offsets  (module DES.CTR) 100; ] ;
 
     "AES-ECB" >::: [ ecb_selftest (module AES.ECB) 100 ] ;
     "AES-CBC" >::: [ cbc_selftest (module AES.CBC) 100 ] ;
     "AES-CTR" >::: [ ctr_selftest (module AES.CTR) 100;
-                     ctr_offsets  (module AES.CTR) 100 ~zero:(0L, 0L) ] ;
+                     ctr_offsets  (module AES.CTR) 100 ] ;
 
   ]
 

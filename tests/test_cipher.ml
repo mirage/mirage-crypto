@@ -922,6 +922,43 @@ let poly1305_rfc8439_2_5_2 _ =
   assert_oct_equal ~msg:"poly 1305 RFC8439 Section 2.5.2"
     (Poly1305.mac ~key data) output
 
+let counter_wraps =
+  let ctr _ =
+    let error = Invalid_argument "Mirage_crypto: CTR: counter wrapped" in
+    let aes_ctr = AES.CTR.ctr_of_octets (String.make AES.CTR.block_size '\xff')
+    and aes_key = AES.CTR.of_secret (String.make 16 '\x00')
+    and aes_zero = AES.CTR.ctr_of_octets (String.make AES.CTR.block_size '\x00')
+    and des_ctr = DES.CTR.ctr_of_octets (String.make DES.CTR.block_size '\xff')
+    and des_key = DES.CTR.of_secret (String.make 24 '\x00') in
+    assert_equal
+      (AES.CTR.ctr_of_octets (String.make 8 '\x00' ^ String.make 8 '\xff'))
+      (AES.CTR.add_ctr aes_zero (-1L));
+    assert_raises ~msg:"AES CTR add wraps" error
+      (fun () -> ignore (AES.CTR.add_ctr aes_ctr 1L));
+    ignore (AES.CTR.stream ~key:aes_key ~ctr:aes_ctr AES.CTR.block_size);
+    assert_raises ~msg:"AES CTR stream wraps" error
+      (fun () -> ignore (AES.CTR.stream ~key:aes_key ~ctr:aes_ctr 17));
+    ignore (DES.CTR.stream ~key:des_key ~ctr:des_ctr DES.CTR.block_size);
+    assert_raises ~msg:"DES CTR add wraps" error
+      (fun () -> ignore (DES.CTR.add_ctr des_ctr 1L))
+  and chacha _ =
+    let error = Invalid_argument "Mirage_crypto: Chacha20: counter wrapped" in
+    let key = Chacha20.of_secret (String.make 32 '\x00')
+    and block = String.make 64 '\x00'
+    and data = String.make 65 '\x00' in
+    ignore (Chacha20.crypt ~key ~nonce:(String.make 12 '\x00')
+      ~ctr:0xffffffffL block);
+    assert_raises ~msg:"ChaCha20 32-bit counter wraps" error
+      (fun () -> ignore (Chacha20.crypt ~key ~nonce:(String.make 12 '\x00')
+          ~ctr:0xffffffffL data));
+    ignore (Chacha20.crypt ~key ~nonce:(String.make 8 '\x00')
+      ~ctr:Int64.minus_one block);
+    assert_raises ~msg:"ChaCha20 64-bit counter wraps" error
+      (fun () -> ignore (Chacha20.crypt ~key ~nonce:(String.make 8 '\x00')
+          ~ctr:Int64.minus_one data))
+  in
+  [ test_case ctr ; test_case chacha ]
+
 let empty_cases _ =
   let plain = ""
   and cipher = ""
@@ -1054,6 +1091,7 @@ let suite = [
   "AES-GCM-REGRESSION" >::: gcm_regressions ;
   "Chacha20" >::: chacha20_cases ;
   "poly1305" >:: poly1305_rfc8439_2_5_2 ;
+  "counter wrap" >::: counter_wraps ;
   "empty" >:: empty_cases ;
   "AEAD-forged-tag" >::: aead_forged_tag ;
 ]
