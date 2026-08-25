@@ -37,7 +37,7 @@ mc_detect_cpu_features (__unit ()) {
   if (ecx & bit_RDRND)
     mc_detected_cpu_features.rdrand = 1;
 
-  if (max > 7) {
+  if (max >= 7) {
     __cpuid(cpuInfo, 0x00000007);
     ebx = cpuInfo[1];
     if (ebx & bit_RDSEED)
@@ -67,7 +67,7 @@ mc_detect_cpu_features (__unit ()) {
   if (ecx & bit_RDRND)
     mc_detected_cpu_features.rdrand = 1;
 
-  if (max > 7) {
+  if (max >= 7) {
     __cpuid_count(7, 0, eax, ebx, ecx, edx);
     if (ebx & bit_RDSEED)
       mc_detected_cpu_features.rdseed = 1;
