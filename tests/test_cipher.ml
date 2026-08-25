@@ -448,6 +448,32 @@ let ccm_regressions =
     assert_raises ~msg:"CCM with short nonce raises"
       (Invalid_argument "Mirage_crypto: CCM: nonce length not between 7 and 13: 14")
       (fun () -> authenticate_encrypt ~key ~nonce plaintext)
+  and long_message _ =
+    let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
+    and nonce = String.make 13 '\x00'
+    and plaintext = String.make (1 lsl 16) '\x00'
+    in
+    let exn =
+      Invalid_argument "Mirage_crypto: CCM: message length 65536 does not fit in 2 bytes"
+    in
+    assert_raises ~msg:"CCM encrypt of too long message raises" exn
+      (fun () -> authenticate_encrypt ~key ~nonce plaintext);
+    let dst = Bytes.create (String.length plaintext + tag_size) in
+    assert_raises ~msg:"CCM encrypt_into of too long message raises" exn
+      (fun () -> authenticate_encrypt_into ~key ~nonce plaintext ~src_off:0
+          dst ~dst_off:0 ~tag_off:(String.length plaintext) (String.length plaintext));
+    let ciphertext = plaintext ^ String.make tag_size '\x00' in
+    assert_raises ~msg:"CCM decrypt of too long message raises" exn
+      (fun () -> authenticate_decrypt ~key ~nonce ciphertext);
+    assert_raises ~msg:"CCM decrypt_into of too long message raises" exn
+      (fun () -> authenticate_decrypt_into ~key ~nonce ciphertext ~src_off:0
+          ~tag_off:(String.length plaintext) dst ~dst_off:0 (String.length plaintext));
+    assert_raises ~msg:"CCM unsafe_encrypt_into of too long message raises" exn
+      (fun () -> unsafe_authenticate_encrypt_into ~key ~nonce plaintext ~src_off:0
+          dst ~dst_off:0 ~tag_off:(String.length plaintext) (String.length plaintext));
+    assert_raises ~msg:"CCM unsafe_decrypt_into of too long message raises" exn
+      (fun () -> unsafe_authenticate_decrypt_into ~key ~nonce ciphertext ~src_off:0
+          ~tag_off:(String.length plaintext) dst ~dst_off:0 (String.length plaintext))
   and enc_dec_empty_message _ =
     (* as reported in https://github.com/mirleft/ocaml-nocrypto/issues/168 *)
     let key = of_secret (vx "000102030405060708090a0b0c0d0e0f")
@@ -638,6 +664,7 @@ b8fc 10f3 13c7 aa16  8165 a29c 67f1 46f4
     test_case short_nonce_enc2 ;
     test_case short_nonce_enc3 ;
     test_case long_nonce_enc ;
+    test_case long_message ;
     test_case enc_dec_empty_message ;
     test_case aligned_adata ;
     test_case long_adata ;

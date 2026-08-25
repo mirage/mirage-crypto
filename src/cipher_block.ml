@@ -476,20 +476,13 @@ module Modes = struct
       Ccm.unsafe_generation_encryption_into ~cipher ~key ~nonce ~adata
         src ~src_off dst ~dst_off ~tag_off len
 
-    let valid_nonce nonce =
-      let nsize = String.length nonce in
-      if nsize < 7 || nsize > 13 then
-        invalid_arg "CCM: nonce length not between 7 and 13: %u" nsize
-
     let authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
       check_offset ~tag:"CCM" ~buf:"src" ~off:src_off ~len (String.length src);
       check_offset ~tag:"CCM" ~buf:"dst" ~off:dst_off ~len (Bytes.length dst);
       check_offset ~tag:"CCM" ~buf:"dst tag" ~off:tag_off ~len:tag_size (Bytes.length dst);
-      valid_nonce nonce;
       unsafe_authenticate_encrypt_into ~key ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len
 
     let authenticate_encrypt ~key ~nonce ?adata cs =
-      valid_nonce nonce;
       let l = String.length cs in
       let dst = Bytes.create (l + tag_size) in
       unsafe_authenticate_encrypt_into ~key ~nonce ?adata cs ~src_off:0 dst ~dst_off:0 ~tag_off:l l;
@@ -506,7 +499,6 @@ module Modes = struct
       check_offset ~tag:"CCM" ~buf:"src" ~off:src_off ~len (String.length src);
       check_offset ~tag:"CCM" ~buf:"src tag" ~off:tag_off ~len:tag_size (String.length src);
       check_offset ~tag:"CCM" ~buf:"dst" ~off:dst_off ~len (Bytes.length dst);
-      valid_nonce nonce;
       unsafe_authenticate_decrypt_into ~key ~nonce ?adata src ~src_off ~tag_off dst ~dst_off len
 
     let authenticate_decrypt ~key ~nonce ?adata data =

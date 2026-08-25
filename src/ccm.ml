@@ -2,6 +2,17 @@ open Uncommon
 
 let block_size = 16
 
+let valid_nonce nonce =
+  let nsize = String.length nonce in
+  if nsize < 7 || nsize > 13 then
+    invalid_arg "CCM: nonce length not between 7 and 13: %u" nsize
+
+let valid_message_length nonce len =
+  let l = 15 - String.length nonce in
+  let bits = 8 * l in
+  if bits < Sys.int_size && len >= 1 lsl bits then
+    invalid_arg "CCM: message length %u does not fit in %u bytes" len l
+
 let flags bit6 len1 len2 =
   bit6 lsl 6 + len1 lsl 3 + len2
 
@@ -75,6 +86,8 @@ let prepare_header nonce adata plen tlen =
 type mode = Encrypt | Decrypt
 
 let crypto_core_into ~cipher ~mode ~key ~nonce ~adata src ~src_off dst ~dst_off len =
+  valid_nonce nonce;
+  valid_message_length nonce len;
   let cbcheader = prepare_header nonce adata len block_size in
 
   let small_q = 15 - String.length nonce in
