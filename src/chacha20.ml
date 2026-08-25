@@ -11,7 +11,7 @@ let of_secret a = a
 let chacha20_block state idx key_stream =
   Native.Chacha.round 10 state key_stream idx
 
-let init ctr ~key ~nonce =
+let init ctr ~key ~nonce ~blocks =
   let ctr_off = 48 in
   let set_ctr32 b v = Bytes.set_int32_le b ctr_off v
   and set_ctr64 b v = Bytes.set_int64_le b ctr_off v
@@ -19,16 +19,24 @@ let init ctr ~key ~nonce =
   let inc32 b = set_ctr32 b (Int32.add (Bytes.get_int32_le b ctr_off) 1l)
   and inc64 b = set_ctr64 b (Int64.add (Bytes.get_int64_le b ctr_off) 1L)
   in
+  let check_counter max =
+    if blocks > 0
+       && Int64.unsigned_compare (Int64.of_int (blocks - 1)) (Int64.sub max ctr) > 0
+    then invalid_arg "Chacha20: counter wrapped"
+  in
   let s, key, init_ctr, nonce_off, inc =
     match String.length key, String.length nonce, Int64.shift_right ctr 32 = 0L with
     | 32, 12, true ->
+      check_counter 0xffffffffL;
       let ctr = Int64.to_int32 ctr in
       "expand 32-byte k", key, (fun b -> set_ctr32 b ctr), 52, inc32
     | 32, 12, false ->
       invalid_arg "Counter too big for IETF mode (32 bit counter)"
     | 32, 8, _ ->
+      check_counter Int64.minus_one;
       "expand 32-byte k", key, (fun b -> set_ctr64 b ctr), 56, inc64
     | 16, 8, _ ->
+      check_counter Int64.minus_one;
       let k = key ^ key in
       "expand 16-byte k", k, (fun b -> set_ctr64 b ctr), 56, inc64
     | _ -> invalid_arg "Valid parameters are nonce 12 bytes and key 32 bytes \
@@ -43,8 +51,8 @@ let init ctr ~key ~nonce =
   state, inc
 
 let crypt_into ~key ~nonce ~ctr src ~src_off dst ~dst_off len =
-  let state, inc = init ctr ~key ~nonce in
   let block_count = len // block in
+  let state, inc = init ctr ~key ~nonce ~blocks:block_count in
   let last_len =
     let last = len mod block in
     if last = 0 then block else last

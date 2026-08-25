@@ -409,7 +409,9 @@ end
     type ctr
 
     val add_ctr : ctr -> int64 -> ctr
-    (** [add_ctr ctr n] adds [n] to [ctr]. *)
+    (** [add_ctr ctr n] adds the unsigned 64-bit value [n] to [ctr].
+
+        @raise Invalid_argument if the counter wraps. *)
 
     val next_ctr : ?off:int -> string -> ctr:ctr -> ctr
     (** [next_ctr ~off msg ~ctr] is the state of the counter after encrypting or
@@ -424,7 +426,7 @@ end
 {[encrypt ~ctr msg1 || encrypt ~ctr:(next_ctr ~ctr msg1) msg2
   == encrypt ~ctr (msg1 || msg2)]}
 
-    *)
+        @raise Invalid_argument if the counter wraps. *)
 
     val ctr_of_octets : string -> ctr
     (** [ctr_of_octets buf] converts the value of [buf] into a counter. *)
@@ -443,7 +445,9 @@ end
   == stream ~key ~ctr (k * block_size + x)]}
 
         In other words, it is possible to restart a keystream at [block_size]
-        boundaries by manipulating the counter. *)
+        boundaries by manipulating the counter.
+
+        @raise Invalid_argument if the counter wraps. *)
 
     val encrypt : key:key -> ctr:ctr -> string -> string
     (** [encrypt ~key ~ctr msg] is
@@ -456,7 +460,7 @@ end
     (** [stream_into ~key ~ctr dst ~off len] is the raw key stream put into
         [dst] starting at [off].
 
-        @raise Invalid_argument if [Bytes.length dst - off < len]. *)
+        @raise Invalid_argument if [Bytes.length dst - off < len] or the counter wraps. *)
 
     val encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -465,7 +469,8 @@ end
         [src_off].
 
         @raise Invalid_argument if [dst_off < 0 || Bytes.length dst - dst_off < len].
-        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len]. *)
+        @raise Invalid_argument if [src_off < 0 || String.length src - src_off < len].
+        @raise Invalid_argument if the counter wraps. *)
 
     val decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -550,10 +555,10 @@ module Chacha20 : sig
       the counter is 8 byte, same as the nonce) and the IETF RFC 8439
       specification (where nonce is 12 bytes, and counter 4 bytes).
 
-      @raise Invalid_argument if invalid parameters are provided. Valid
-      parameters are: [key] must be 32 bytes and [nonce] 12 bytes for the
-      IETF mode (and counter fit into 32 bits), or [key] must be either 16
-      bytes or 32 bytes and [nonce] 8 bytes.
+      @raise Invalid_argument if invalid parameters are provided or the counter
+      wraps. Valid parameters are: [key] must be 32 bytes and [nonce] 12 bytes
+      for the IETF mode (and counter fit into 32 bits), or [key] must be either
+      16 bytes or 32 bytes and [nonce] 8 bytes.
   *)
 end
 
