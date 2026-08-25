@@ -1004,7 +1004,7 @@ module X25519 = struct
 
   let is_zero =
     let zero = String.make key_len '\000' in
-    fun buf -> String.equal zero buf
+    fun buf -> Eqaf.equal zero buf
 
   let key_exchange secret public =
     if String.length public = key_len then
