@@ -310,10 +310,10 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
       (to_affine_raw p)
 
   let to_octets ~compress p =
-    let buf =
-      match to_affine p with
-      | None -> String.make 1 '\000'
-      | Some (x, y) ->
+    match to_affine p with
+    | None -> String.make 1 '\000'
+    | Some (x, y) ->
+      let buf =
         let len_x = String.length x and len_y = String.length y in
         let res = Bytes.create (1 + len_x + len_y) in
         Bytes.set res 0 '\004' ;
@@ -321,17 +321,17 @@ module Make_point (P : Parameters) (F : Foreign) : Point = struct
         Bytes.unsafe_blit_string rev_x 0 res 1 len_x ;
         Bytes.unsafe_blit_string rev_y 0 res (1 + len_x) len_y ;
         Bytes.unsafe_to_string res
-    in
-    if compress then
-      let out = Bytes.create (P.byte_length + 1) in
-      let ident =
-        2 + (String.get_uint8 buf (P.byte_length * 2)) land 1
       in
-      Bytes.unsafe_blit_string buf 1 out 1 P.byte_length;
-      Bytes.set_uint8 out 0 ident;
-      Bytes.unsafe_to_string out
-    else
-      buf
+      if compress then
+        let out = Bytes.create (P.byte_length + 1) in
+        let ident =
+          2 + (String.get_uint8 buf (P.byte_length * 2)) land 1
+        in
+        Bytes.unsafe_blit_string buf 1 out 1 P.byte_length;
+        Bytes.set_uint8 out 0 ident;
+        Bytes.unsafe_to_string out
+      else
+        buf
 
   let double p = Fe.double_point p
 
