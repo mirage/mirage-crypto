@@ -1,23 +1,22 @@
+type g = Unix.file_descr
 
-type g = In_channel.t * Mutex.t
-
-(* The OCaml runtime always reads at least IO_BUFFER_SIZE from an input channel, which is currently 64 KiB *)
-let block = 65536
+let block = 1
 
 let create ?time:_ () =
-  let ic = In_channel.open_bin "/dev/urandom"
-  and mutex = Mutex.create ()
+  let fd =
+    Unix.openfile "/dev/urandom" [ Unix.O_RDONLY; Unix.O_CLOEXEC ] 0
   in
-  at_exit (fun () -> In_channel.close ic);
-  (ic, mutex)
+  at_exit (fun () -> Unix.close fd);
+  fd
 
-let generate_into ~g:(ic, m) buf ~off len =
-  let finally () = Mutex.unlock m in
-  Mutex.lock m;
-  Fun.protect ~finally (fun () ->
-      match In_channel.really_input ic buf off len with
-      | None -> failwith "couldn't read enough bytes from /dev/urandom"
-      | Some () -> ())
+let rec generate_into ~g buf ~off len =
+  if len > 0 then
+    try
+      let n = Unix.read g buf off len in
+      if n = 0 then failwith "couldn't read enough bytes from /dev/urandom"
+      else generate_into ~g buf ~off:(off + n) (len - n)
+    with
+    | Unix.Unix_error (Unix.EINTR, _, _) -> generate_into ~g buf ~off len
 
 let reseed ~g:_ _data = ()
 
