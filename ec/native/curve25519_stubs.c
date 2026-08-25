@@ -1840,6 +1840,8 @@ CAMLprim value mc_25519_double_scalar_mult(value out, value k, value key, value 
   fe_loose t;
   int success = 0;
   success = x25519_ge_frombytes_vartime(&B, _st_uint8(key));
+  if (!success)
+    CAMLreturn(Val_bool(0));
   fe_neg(&t, &B.X);
   fe_carry(&B.X, &t);
   fe_neg(&t, &B.T);
