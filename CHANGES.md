@@ -9,8 +9,17 @@
   (#300 @hannesm)
 - mirage-crypto: CCM reject oversized messages (#304 @torinnd)
 - mirage-crypto: CCM, ChaCha20, and GCM enforce block-count limits
-  (#304 #305 @torinnd)
+  (#304 #305 #306 @torinnd @hannesm)
 - mirage-crypto-rng: avoid duplicate output after fork (#302 @torinnd)
+- mirage-crypto-rng: detect RDSEED correctly (@avsm)
+- mirage-crypto-ec: return early in ed25519 double_scalar_mult on decode failure
+  (@avsm)
+- mirage-crypto-ec: X25519 compare the shared secret against zero in constant
+  time (@avsm)
+- mirage-crypto-ec: encode the compressed point at infinity as 0 (previously
+  it crashed) (@avsm)
+- mirage-crypto: ChaCha20 reject keys of not 16 or 32 byte size (@hannesm,
+  inspired by @avsm)
 
 ## v2.4.0 (2026-08-17)
 
