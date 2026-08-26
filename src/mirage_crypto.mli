@@ -539,8 +539,9 @@ val accelerated : [`XOR | `AES | `GHASH] list
 
 (** The ChaCha20 cipher proposed by D.J. Bernstein.
 
-    In IETF AEAD mode, messages may span at most [2^32 - 1] blocks because
-    counter 0 is used to derive the Poly1305 key. *)
+    In AEAD mode, messages may span at most [2^32 - 1] blocks with a 12-byte
+    nonce and [2^64 - 1] blocks with an 8-byte nonce because counter 0 is used
+    to derive the Poly1305 key. *)
 module Chacha20 : sig
   include AEAD
 
@@ -554,9 +555,10 @@ module Chacha20 : sig
       specification (where nonce is 12 bytes, and counter 4 bytes).
 
       @raise Invalid_argument if invalid parameters are provided or [data] spans
-      more than [2^32] blocks in IETF mode. Valid parameters are: [key] must be
-      32 bytes and [nonce] 12 bytes for the IETF mode (and counter fit into 32
-      bits), or [key] must be either 16 bytes or 32 bytes and [nonce] 8 bytes.
+      more than [2^32] blocks in IETF mode or [2^64 - 1] blocks in the original
+      mode. Valid parameters are: [key] must be 32 bytes and [nonce] 12 bytes
+      for the IETF mode (and counter fit into 32 bits), or [key] must be either
+      16 bytes or 32 bytes and [nonce] 8 bytes.
   *)
 end
 

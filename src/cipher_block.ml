@@ -105,10 +105,15 @@ module Block = struct
 end
 
 module Counters = struct
+  let check_block_count max blocks =
+    if Int64.unsigned_compare (Int64.of_int blocks) max > 0 then
+      invalid_arg "CTR: too many blocks"
+
   module type S = sig
     type ctr
     val size : int
     val add  : ctr -> int64 -> ctr
+    val check_blocks : int -> unit
     val of_octets : string -> ctr
     val unsafe_count_into : ctr -> bytes -> off:int -> blocks:int -> unit
   end
@@ -118,6 +123,7 @@ module Counters = struct
     let size = 8
     let of_octets cs = String.get_int64_be cs 0
     let add = Int64.add
+    let check_blocks = check_block_count Int64.minus_one
     let unsafe_count_into t buf ~off ~blocks =
       let ctr = Bytes.create 8 in
       Bytes.set_int64_be ctr 0 t;
@@ -134,6 +140,7 @@ module Counters = struct
       let w0' = Int64.add w0 n in
       let carry = Int64.unsigned_compare w0' w0 < 0 in
       ((if carry then Int64.succ w1 else w1), w0')
+    let check_blocks _ = ()
     let unsafe_count_into (w1, w0) buf ~off ~blocks =
       let ctr = Bytes.create 16 in
       Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
@@ -145,6 +152,7 @@ module Counters = struct
     let add (w1, w0) n =
       let hi = 0xffffffff00000000L and lo = 0x00000000ffffffffL in
       (w1, Int64.(logor (logand hi w0) (add n w0 |> logand lo)))
+    let check_blocks = check_block_count 0xfffffffeL
     let unsafe_count_into (w1, w0) buf ~off ~blocks =
       let ctr = Bytes.create 16 in
       Bytes.set_int64_be ctr 0 w1; Bytes.set_int64_be ctr 8 w0;
@@ -291,9 +299,10 @@ module Modes = struct
 
     let unsafe_stream_into ~key ~ctr buf ~off len =
       let blocks = imax 0 len / block_size in
+      let slack = imax 0 len mod block_size in
+      Ctr.check_blocks (blocks + if slack = 0 then 0 else 1);
       Ctr.unsafe_count_into ctr buf ~off ~blocks ;
       Core.encrypt ~key ~blocks (Bytes.unsafe_to_string buf) off buf off ;
-      let slack = imax 0 len mod block_size in
       if slack <> 0 then begin
         let buf' = Bytes.create block_size in
         let ctr = Ctr.add ctr (Int64.of_int blocks) in
@@ -405,9 +414,7 @@ module Modes = struct
               (pack64s (bits64 adata) (Int64.of_int (len * 8)), 0, 16)))
         ~src_off:0 dst ~dst_off:tag_off tag_size
 
-    let check_blocks len =
-      if Int64.of_int (len // block_size) > 0xfffffffeL then
-        invalid_arg "GCM: too many blocks"
+    let check_blocks len = Counters.C128be32.check_blocks (len // block_size)
     [@@inline always]
 
     let unsafe_authenticate_encrypt_into ~key:{ key; hkey } ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
