@@ -1,3 +1,17 @@
+## v2.4.1 (2026-08-26)
+
+- mirage-crypto: CCM avoid padding of already aligned associated data
+  (#299 @torinnd)
+- mirage-crypto-rng: avoid reusing registered entropy sources (#303 @torinnd)
+- mirage-crypto-pk: RSA reject encodings without a separator (#301 @torinnd)
+- mirage-crypto: poly1305 reject negative length in mac_into (#298 @torinnd)
+- mirage-crypto-rng-mkernel: seed Stdlib.Random once the RNG is seeded
+  (#300 @hannesm)
+- mirage-crypto: CCM reject oversized messages (#304 @torinnd)
+- mirage-crypto: (CCM, ChaCha20, GCM) reject wrapping of stream cipher counters
+  (#305 @torinnd)
+- mirage-crypto-rng: avoid duplicate output after fork (#302 @torinnd)
+
 ## v2.4.0 (2026-08-17)
 
 - mirage-crypto-rng: don't display anything when running the entropy test
