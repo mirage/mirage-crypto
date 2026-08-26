@@ -8,8 +8,8 @@
 - mirage-crypto-rng-mkernel: seed Stdlib.Random once the RNG is seeded
   (#300 @hannesm)
 - mirage-crypto: CCM reject oversized messages (#304 @torinnd)
-- mirage-crypto: (CCM, ChaCha20, GCM) reject wrapping of stream cipher counters
-  (#305 @torinnd)
+- mirage-crypto: CCM, ChaCha20, and GCM enforce block-count limits
+  (#304 #305 @torinnd)
 - mirage-crypto-rng: avoid duplicate output after fork (#302 @torinnd)
 
 ## v2.4.0 (2026-08-17)
