@@ -408,6 +408,7 @@ module Modes = struct
     let check_blocks len =
       if Int64.of_int (len // block_size) > 0xfffffffeL then
         invalid_arg "GCM: too many blocks"
+    [@@inline always]
 
     let unsafe_authenticate_encrypt_into ~key:{ key; hkey } ~nonce ?adata src ~src_off dst ~dst_off ~tag_off len =
       check_blocks len;

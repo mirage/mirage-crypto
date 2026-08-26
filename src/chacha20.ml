@@ -25,15 +25,17 @@ let init ctr ~key ~nonce ~blocks =
   let s, key, init_ctr, nonce_off, inc =
     match String.length key, String.length nonce, Int64.shift_right ctr 32 = 0L with
     | 32, 12, true ->
-      check_blocks 0x100000000L;
+      check_blocks 0xfffffffeL;
       let ctr = Int64.to_int32 ctr in
       "expand 32-byte k", key, (fun b -> set_ctr32 b ctr), 52, inc32
     | 32, 12, false ->
       invalid_arg "Counter too big for IETF mode (32 bit counter)"
     | 32, 8, _ ->
+      check_blocks Int64.minus_one;
       "expand 32-byte k", key, (fun b -> set_ctr64 b ctr), 56, inc64
     | 16, 8, _ ->
       let k = key ^ key in
+      check_blocks Int64.minus_one;
       "expand 16-byte k", k, (fun b -> set_ctr64 b ctr), 56, inc64
     | _ -> invalid_arg "Valid parameters are nonce 12 bytes and key 32 bytes \
                         (counter 32 bit), or nonce 8 byte and key 16 or 32 \
@@ -104,12 +106,7 @@ let mac_into ~key ~adata src ~src_off len dst ~dst_off =
                            len_buf, 0, String.length len_buf ]
     dst ~dst_off
 
-let check_aead_blocks nonce len =
-  if String.length nonce = 12 && Int64.of_int (len // block) > 0xffffffffL then
-    invalid_arg "Chacha20: too many blocks"
-
 let unsafe_authenticate_encrypt_into ~key ~nonce ?(adata = "") src ~src_off dst ~dst_off ~tag_off len =
-  check_aead_blocks nonce len;
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   crypt_into ~key ~nonce ~ctr:1L src ~src_off dst ~dst_off len;
   mac_into ~key:poly1305_key ~adata (Bytes.unsafe_to_string dst) ~src_off:dst_off len dst ~dst_off:tag_off
@@ -139,7 +136,6 @@ let authenticate_encrypt_tag ~key ~nonce ?adata data =
   String.sub r 0 (String.length data), String.sub r (String.length data) tag_size
 
 let unsafe_authenticate_decrypt_into ~key ~nonce ?(adata = "") src ~src_off ~tag_off dst ~dst_off len =
-  check_aead_blocks nonce len;
   let poly1305_key = generate_poly1305_key ~key ~nonce in
   let ctag = Bytes.create tag_size in
   mac_into ~key:poly1305_key ~adata src ~src_off len ctag ~dst_off:0;
