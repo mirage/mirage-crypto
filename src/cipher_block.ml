@@ -108,6 +108,7 @@ module Counters = struct
   let check_block_count max blocks =
     if Int64.unsigned_compare (Int64.of_int blocks) max > 0 then
       invalid_arg "CTR: too many blocks"
+  [@@inline always]
 
   module type S = sig
     type ctr
@@ -170,7 +171,7 @@ let check_offset ~tag ~buf ~off ~len actual_len =
   if actual_len - off < len then
     invalid_arg "%s: %s length %u - off %u < len %u"
       tag buf actual_len off len
-[@@inline]
+[@@inline always]
 
 module Modes = struct
   module ECB_of (Core : Block.Core) : Block.ECB = struct
@@ -231,7 +232,7 @@ module Modes = struct
       if len mod block <> 0 then
         invalid_arg "CBC: argument length %u not of block size"
           len
-    [@@inline]
+    [@@inline always]
 
     let next_iv ?(off = 0) cs ~iv =
       check_block_size ~iv (String.length cs - off) ;
