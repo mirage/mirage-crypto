@@ -11,21 +11,16 @@
     entropy_cpu_stubs)
   (flags
    (:standard)
-   (:include cflags_optimized.sexp)))
+   (:include ../config/cflags_optimized.sexp)))
  (foreign_stubs
   (language c)
   (names chacha_generic)
   (flags
    (:standard)
-   (:include cflags.sexp))))
+   (:include ../config/cflags.sexp))))
 
 (env
  (dev
-  (c_flags (:include cflags_warn.sexp))))
+  (c_flags (:include ../config/cflags_warn.sexp))))
 
 (include_subdirs unqualified)
-
-(rule
- (targets cflags.sexp cflags_optimized.sexp cflags_warn.sexp)
- (action
-  (run ../config/cfg.exe)))
