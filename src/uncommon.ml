@@ -1,9 +1,6 @@
 (** [Uncommon] is a [Common], now with less name clashes. *)
 
-let kasprintf k fmt =
-  Format.(kfprintf (fun _ -> k (flush_str_formatter ())) str_formatter fmt)
-
-let invalid_arg fmt = kasprintf invalid_arg ("Mirage_crypto: " ^^ fmt)
+let invalid_arg fmt = Format.kasprintf invalid_arg ("Mirage_crypto: " ^^ fmt)
 
 let (//) x y =
   if y < 1 then raise Division_by_zero else
