@@ -1,10 +1,164 @@
-open Wycheproof
-
 open Mirage_crypto_ec
+
+type hex = string
+
+let hex =
+  let padded s = if String.length s mod 2 = 0 then s else "0" ^ s in
+  Jsont.map ~kind:"hex" ~dec:(fun s -> Ohex.decode (padded s)) ~enc:Ohex.encode Jsont.string
+
+type test_result = Valid | Acceptable | Invalid
+
+let test_result_to_string = function
+  | Valid -> "Valid"
+  | Acceptable -> "Acceptable"
+  | Invalid -> "Invalid"
+
+let test_result_of_string = function
+  | "valid" -> Valid
+  | "acceptable" -> Acceptable
+  | "invalid" -> Invalid
+  | x -> failwith ("unknown test result: " ^ x)
+
+let test_result =
+  Jsont.map ~kind:"test result" ~dec:test_result_of_string ~enc:test_result_to_string Jsont.string
+
+type ecdh_test = {
+  tcId : int;
+  comment : string;
+  curve : string option;
+  public : hex;
+  private_ : hex;
+  shared : hex;
+  result : test_result;
+  flags : string list;
+}
+
+let make_ecdh_test tcId comment curve public private_ shared result flags =
+  { tcId ; comment ; curve ; public ; private_ ; shared ; result ; flags }
+
+let ecdh_test =
+  Jsont.Object.map ~kind:"ecdh test" make_ecdh_test
+  |> Jsont.Object.mem "tcId" Jsont.int
+  |> Jsont.Object.mem "comment" Jsont.string
+  |> Jsont.Object.opt_mem "curve" Jsont.string
+  |> Jsont.Object.mem "public" hex
+  |> Jsont.Object.mem "private" hex
+  |> Jsont.Object.mem "shared" hex
+  |> Jsont.Object.mem "result" test_result
+  |> Jsont.Object.mem "flags" Jsont.(list string)
+  |> Jsont.Object.finish
+
+let has_ignored_flag test ~ignored_flags =
+  List.exists
+    (fun ignored_flag -> List.mem ignored_flag test.flags)
+    ignored_flags
+
+type ecdh_test_group = {
+  curve : string;
+  tests : ecdh_test list;
+}
+
+let make_ecdh_test_group curve tests = { curve ; tests }
+
+let ecdh_test_group =
+  Jsont.Object.map ~kind:"ecdh test group" make_ecdh_test_group
+  |> Jsont.Object.mem "curve" Jsont.string
+  |> Jsont.Object.mem "tests" (Jsont.list ecdh_test)
+  |> Jsont.Object.finish
+
+let ecdh_test_file =
+  Jsont.Object.map ~kind:"ecdh test file" Fun.id
+  |> Jsont.Object.mem "testGroups" (Jsont.list ecdh_test_group)
+  |> Jsont.Object.finish
+
+type ecdsa_key = {
+  curve : string;
+  uncompressed : hex;
+}
+
+let make_ecdsa_key curve uncompressed = { curve ; uncompressed }
+
+let ecdsa_key =
+  Jsont.Object.map ~kind:"ecdsa key" make_ecdsa_key
+  |> Jsont.Object.mem "curve" Jsont.string
+  |> Jsont.Object.mem "uncompressed" hex
+  |> Jsont.Object.finish
+
+type dsa_test = {
+  tcId : int;
+  comment : string;
+  msg : hex;
+  sig_ : hex;
+  result : test_result;
+}
+
+let make_dsa_test tcId comment msg sig_ result =
+  { tcId ; comment ; msg ; sig_ ; result }
+
+let dsa_test =
+  Jsont.Object.map ~kind:"dsa test" make_dsa_test
+  |> Jsont.Object.mem "tcId" Jsont.int
+  |> Jsont.Object.mem "comment" Jsont.string
+  |> Jsont.Object.mem "msg" hex
+  |> Jsont.Object.mem "sig" hex
+  |> Jsont.Object.mem "result" test_result
+  |> Jsont.Object.finish
+
+type ecdsa_test_group = {
+  key : ecdsa_key;
+  sha : string;
+  tests : dsa_test list;
+}
+
+let make_ecdsa_test_group key sha tests = { key ; sha ; tests }
+
+let ecdsa_test_group =
+  Jsont.Object.map ~kind:"ecdsa test group" make_ecdsa_test_group
+  |> Jsont.Object.mem "key" ecdsa_key
+  |> Jsont.Object.mem "sha" Jsont.string
+  |> Jsont.Object.mem "tests" (Jsont.list dsa_test)
+  |> Jsont.Object.finish
+
+let ecdsa_test_file =
+  Jsont.Object.map ~kind:"ecdsa test file" Fun.id
+  |> Jsont.Object.mem "testGroups" (Jsont.list ecdsa_test_group)
+  |> Jsont.Object.finish
+
+type eddsa_key = {
+  pk : hex;
+  sk : hex;
+}
+
+let make_eddsa_key pk sk = { pk ; sk }
+
+let eddsa_key =
+  Jsont.Object.map ~kind:"eddsa key" make_eddsa_key
+  |> Jsont.Object.mem "pk" hex
+  |> Jsont.Object.mem "sk" hex
+  |> Jsont.Object.finish
+
+type eddsa_test_group = {
+  key : eddsa_key;
+  tests : dsa_test list;
+}
+
+let make_eddsa_test_group key tests = { key ; tests }
+
+let eddsa_test_group =
+  Jsont.Object.map ~kind:"eddsa test group" make_eddsa_test_group
+  |> Jsont.Object.mem "key" eddsa_key
+  |> Jsont.Object.mem "tests" (Jsont.list dsa_test)
+  |> Jsont.Object.finish
+
+let eddsa_test_file =
+  Jsont.Object.map ~kind:"eddsa test file" Fun.id
+  |> Jsont.Object.mem "testGroups" (Jsont.list eddsa_test_group)
+  |> Jsont.Object.finish
+
 
 let ( let* ) = Result.bind
 
-let hex = Alcotest.testable Wycheproof.pp_hex Wycheproof.equal_hex
+let hex = Alcotest.testable Ohex.pp String.equal
 
 module Asn = struct
   let parse_point curve s =
@@ -143,13 +297,17 @@ let to_ecdh_tests curve (x : ecdh_test) =
   | Error e -> Printf.ksprintf failwith "While parsing %d: %s" x.tcId e
 
 let ecdh_tests file =
-  let data = load_file_exn file in
-  let groups : ecdh_test_group list =
-    List.map ecdh_test_group_exn data.testGroups
-  in
-  List.concat_map (fun (group : ecdh_test_group) ->
-      List.concat_map (to_ecdh_tests group.curve) group.tests)
-    groups
+  match
+    let* content = Bos.OS.File.read (Fpath.v file) in
+    Result.map_error (fun s -> `Msg s)
+      (Jsont_bytesrw.decode_string ecdh_test_file content)
+  with
+  | Ok groups ->
+    List.concat_map (fun (group : ecdh_test_group) ->
+        List.concat_map (to_ecdh_tests group.curve) group.tests)
+      groups
+  | Error `Msg m ->
+    failwith ("error loading ECDH file " ^ file ^ ": " ^ m)
 
 let make_ecdsa_test curve key hash (tst : dsa_test) =
   let name = Printf.sprintf "%d - %s" tst.tcId tst.comment in
@@ -207,11 +365,14 @@ let to_ecdsa_tests (x : ecdsa_test_group) =
     x.tests
 
 let ecdsa_tests file =
-  let data = load_file_exn file in
-  let groups : ecdsa_test_group list =
-    List.map ecdsa_test_group_exn data.testGroups
-  in
-  List.concat_map to_ecdsa_tests groups
+  match
+    let* content = Bos.OS.File.read (Fpath.v file) in
+    Result.map_error (fun s -> `Msg s)
+      (Jsont_bytesrw.decode_string ecdsa_test_file content)
+  with
+  | Ok groups -> List.concat_map to_ecdsa_tests groups
+  | Error `Msg m ->
+    failwith ("error loading ECDSA file " ^ file ^ ": " ^ m)
 
 let to_x25519_test (x : ecdh_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment
@@ -249,14 +410,18 @@ let to_x25519_test (x : ecdh_test) =
     in
     name, `Quick, f
 
-let x25519_tests =
-  let data = load_file_exn "x25519_test.json" in
-  let groups : ecdh_test_group list =
-    List.map ecdh_test_group_exn data.testGroups
-  in
-  List.concat_map (fun (group : ecdh_test_group) ->
-      List.map to_x25519_test group.tests)
-    groups
+let x25519_tests file =
+  match
+    let* content = Bos.OS.File.read (Fpath.v file) in
+    Result.map_error (fun s -> `Msg s)
+      (Jsont_bytesrw.decode_string ecdh_test_file content)
+  with
+  | Ok groups ->
+    List.concat_map (fun (group : ecdh_test_group) ->
+        List.map to_x25519_test group.tests)
+      groups
+  | Error `Msg m ->
+    failwith ("error loading ECDH file " ^ file ^ ": " ^ m)
 
 let to_ed25519_test (priv, pub) (x : dsa_test) =
   let name = Printf.sprintf "%d - %s" x.tcId x.comment in
@@ -284,15 +449,20 @@ let to_ed25519_keys (key : eddsa_key) =
     priv, pub
   | _ -> assert false
 
-let ed25519_tests =
-  let data = load_file_exn "eddsa_test.json" in
-  let groups : eddsa_test_group list =
-    List.map eddsa_test_group_exn data.testGroups
-  in
-  List.concat_map (fun (group : eddsa_test_group) ->
-      let keys = to_ed25519_keys group.key in
-      List.map (to_ed25519_test keys) group.tests)
-    groups
+let ed25519_tests file =
+  match
+    let* content = Bos.OS.File.read (Fpath.v file) in
+    Result.map_error (fun s -> `Msg s)
+      (Jsont_bytesrw.decode_string eddsa_test_file content)
+  with
+  | Ok groups ->
+    List.concat_map (fun (group : eddsa_test_group) ->
+        let keys = to_ed25519_keys group.key in
+        List.map (to_ed25519_test keys) group.tests)
+      groups
+  | Error `Msg m ->
+    failwith ("error loading EDDSA file " ^ file ^ ": " ^ m)
+
 
 let () =
   Alcotest.run "Wycheproof NIST curves" [
@@ -309,6 +479,6 @@ let () =
     ("ECDH P521 test vectors", ecdh_tests "ecdh_secp521r1_test.json") ;
     ("ECDSA P521 test vectors (SHA512)",
      ecdsa_tests "ecdsa_secp521r1_sha512_test.json") ;
-    ("X25519 test vectors", x25519_tests) ;
-    ("ED25519 test vectors", ed25519_tests) ;
+    ("X25519 test vectors", x25519_tests "x25519_test.json") ;
+    ("ED25519 test vectors", ed25519_tests "eddsa_test.json") ;
   ]

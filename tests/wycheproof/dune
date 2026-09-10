@@ -1,6 +1,0 @@
-(library
- (name wycheproof)
- (libraries yojson ppx_deriving_yojson.runtime)
- (preprocess
-  (pps ppx_deriving.std ppx_deriving_yojson))
- (optional))
