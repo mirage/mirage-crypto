@@ -1030,12 +1030,7 @@ let empty_cases _ =
       test_one (String.make 8 '\x00');
       if key_size = 32 then
         test_one (String.make 12 '\x00'))
-    [| 16 ; 32 |] ;
-
-  (* ARC4 *)
-  let key = ARC4.of_secret (String.make 16 '\x00') in
-  assert_oct_equal ~msg:"ARC4 encrypt" cipher (ARC4.(encrypt ~key plain).message) ;
-  assert_oct_equal ~msg:"ARC4 decrypt" plain (ARC4.(decrypt ~key cipher).message)
+    [| 16 ; 32 |]
 
 let aead_forged_tag =
   let nonce = String.make 12 '\x00'
