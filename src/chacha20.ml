@@ -121,7 +121,7 @@ let check_aead_blocks_and_key key nonce len =
   | 16, 8 | 32, 8 ->
     if Int64.unsigned_compare (Int64.of_int blocks) Int64.minus_one > 0 then
       invalid_arg "Chacha20: too many blocks"
-  | n, k ->
+  | k, n ->
     invalid_arg "ChaCha20: invalid key and nonce length. Supported are: key 32 \
                  bytes and nonce 8 bytes OR key 16 or 32 bytes and nonce 12 \
                  bytes. Provided: key %u bytes and nonce %u bytes" k n
