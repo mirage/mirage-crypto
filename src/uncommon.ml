@@ -18,7 +18,9 @@ let unsafe_xor_into src ~src_off dst ~dst_off n =
   Native.xor_into_bytes src src_off dst dst_off n
 
 let xor a b =
-  assert (String.length a = String.length b);
+  if not (String.length a = String.length b) then
+    invalid_arg "xor with strings of different lengths: %u and %u"
+      (String.length a) (String.length b);
   let b' = Bytes.of_string b in
   unsafe_xor_into a ~src_off:0 b' ~dst_off:0 (Bytes.length b');
   Bytes.unsafe_to_string b'
