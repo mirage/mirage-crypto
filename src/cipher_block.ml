@@ -291,7 +291,9 @@ module Modes = struct
   struct
     (* FIXME: CTR has more room for speedups. Like stitching. *)
 
-    assert (Core.block = Ctr.size)
+    if not (Core.block = Ctr.size) then
+      invalid_arg "block size %u not equal to counter size %u"
+        Core.block Ctr.size
     type key = Core.ekey
     type ctr = Ctr.ctr
 
@@ -359,7 +361,9 @@ module Modes = struct
     let keysize = Native.GHASH.keysize ()
     let tagsize = 16
     let derive cs =
-      assert (String.length cs >= tagsize);
+      if not (String.length cs >= tagsize) then
+        invalid_arg "derive length %u not equal to tag size %u"
+          (String.length cs) tagsize;
       let k = Bytes.create keysize in
       Native.GHASH.keyinit cs k;
       Bytes.unsafe_to_string k
@@ -376,7 +380,8 @@ module Modes = struct
 
   module GCM_of (C : Block.Core) : Block.GCM = struct
 
-    assert (C.block = 16)
+    if not (C.block = 16) then
+      invalid_arg "GCM_of C.block %u is not 16" C.block
     module CTR = CTR_of (C) (Counters.C128be32)
 
     type key = { key : C.ekey ; hkey : GHASH.key }
@@ -474,7 +479,8 @@ module Modes = struct
 
   module CCM16_of (C : Block.Core) : Block.CCM16 = struct
 
-    assert (C.block = 16)
+    if not (C.block = 16) then
+      invalid_arg "CCM16_of C.block %u is not 16" C.block
 
     let tag_size = C.block
 
