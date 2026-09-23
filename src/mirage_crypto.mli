@@ -561,15 +561,3 @@ module Chacha20 : sig
       16 bytes or 32 bytes and [nonce] 8 bytes.
   *)
 end
-
-(** General stream cipher type. *)
-module type Stream = sig
-  type key
-  type result = { message : string ; key : key }
-  val of_secret : string -> key
-  val encrypt : key:key -> string -> result
-  val decrypt : key:key -> string -> result
-end
-
-(** {e Alleged Rivest Cipher 4}. *)
-module ARC4 : Stream
