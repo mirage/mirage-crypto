@@ -508,7 +508,9 @@ end
     (** The size of a single block. *)
   end
 
-  (** {e Counter with CBC-MAC} mode. *)
+  (** {e Counter with CBC-MAC} mode. Note when using [_into] functions and the
+      tag validation fails the plaintext is temporary exposed in the
+      caller-owned buffer - and zeroed out before the function returns. *)
   module type CCM16 = sig
 
     include AEAD
