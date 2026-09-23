@@ -71,7 +71,7 @@ let key_of_secret group ~s =
 let rec gen_key ?g ?bits ({ p; q; _ } as group) =
   let pb = Z.numbits p in
   let s =
-    imin (Option.value bits ~default:pb |> exp_size)
+    imin (Option.value bits ~default:(exp_size pb))
          (Option.fold ~none:pb ~some:Z.numbits q)
     |> Z_extra.gen_bits ?g ~msb:1
   in
