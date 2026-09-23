@@ -187,6 +187,7 @@ module type AEAD = sig
 
       This may cause memory issues if an invariant is violated:
       {ul
+      {- [len >= 0].}
       {- [String.length msg - src_off >= len].}
       {- [Bytes.length dst - dst_off >= len].}
       {- [Bytes.length dst - tag_off >= tag_size].}} *)
@@ -201,6 +202,7 @@ module type AEAD = sig
 
       This may cause memory issues if an invariant is violated:
       {ul
+      {- [len >= 0].}
       {- [String.length msg - src_off >= len].}
       {- [Bytes.length dst - dst_off >= len].}
       {- [String.length msg - tag_off >= tag_size].}} *)
@@ -477,7 +479,7 @@ end
 
         This may cause memory issues if the invariant is violated:
         {ul
-        {- [off >= 0 && Bytes.length buf - off >= len].}} *)
+        {- [off >= 0 && len >= 0 && Bytes.length buf - off >= len].}} *)
 
     val unsafe_encrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
@@ -485,8 +487,8 @@ end
 
         This may cause memory issues if an invariant is violated:
         {ul
-        {- [dst_off >= 0 && Bytes.length dst - dst_off >= len],}
-        {- [src_off >= 0 && String.length src - src_off >= len].}} *)
+        {- [dst_off >= 0 && len >= 0 && Bytes.length dst - dst_off >= len],}
+        {- [src_off >= 0 && len >= 0 && String.length src - src_off >= len].}} *)
 
     val unsafe_decrypt_into : key:key -> ctr:ctr -> string -> src_off:int ->
       bytes -> dst_off:int -> int -> unit
