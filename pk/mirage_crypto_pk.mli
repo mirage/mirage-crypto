@@ -321,9 +321,10 @@ module Dsa : sig
   (** [pub ~fips ~p ~q ~gg ~y ()] constructs a public DSA key from the given
       numbers. Will result in an error if the parameters are not well-formed:
       [one < gg < p], [q] probabilistically a prime, [p] probabilistically
-      prime and odd, [0 < y < p], [q < p], and [p - 1 mod q = 0]. If [fips] is
-      specified and [true] (defaults to [false]), only FIPS-specified bit length
-      for [p] and [q] are accepted. *)
+      prime and odd, [1 < y < p - 1], [q < p], [p - 1 mod q = 0], and both
+      [gg] and [y] in the subgroup of order [q]. If [fips] is specified and
+      [true] (defaults to [false]), only FIPS-specified bit lengths for [p]
+      and [q] are accepted. *)
 
   type keysize = [ `Fips1024 | `Fips2048 | `Fips3072 | `Exactly of int * int ]
   (** Key size request. Three {e Fips} variants refer to FIPS-standardized
