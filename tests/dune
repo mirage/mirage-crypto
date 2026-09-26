@@ -44,6 +44,12 @@
  (modules test_numeric test_dh test_dsa test_rsa test_pk_runner))
 
 (test
+ (name test_dsa_public_validation)
+ (libraries mirage-crypto-pk)
+ (modules test_dsa_public_validation)
+ (package mirage-crypto-pk))
+
+(test
  (name test_entropy_collection)
  (modules test_entropy_collection)
  (package mirage-crypto-rng-mirage)

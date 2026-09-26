@@ -8,9 +8,11 @@ let pub ?(fips = false) ~p ~q ~gg ~y () =
   let* () = guard Z.(one < gg && gg < p) (`Msg "bad generator") in
   let* () = guard (Z_extra.pseudoprime q) (`Msg "q is not prime") in
   let* () = guard (Z.is_odd p && Z_extra.pseudoprime p) (`Msg "p is not prime") in
-  let* () = guard Z.(zero < y && y < p) (`Msg "y not in 0..p-1") in
+  let* () = guard Z.(one < y && y < pred p) (`Msg "y not in 2..p-2") in
   let* () = guard (q < p) (`Msg "q is not smaller than p") in
   let* () = guard Z.(zero = (pred p) mod q) (`Msg "p - 1 mod q <> 0") in
+  let* () = guard Z.(powm gg q p = one) (`Msg "g is not of order q") in
+  let* () = guard Z.(powm y q p = one) (`Msg "y is not in the q-order subgroup") in
   let* () =
     if fips then
       match Z.numbits p, Z.numbits q with
