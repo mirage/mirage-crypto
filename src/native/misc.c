@@ -16,8 +16,13 @@ static inline void xor_into (const uint8_t *src, uint8_t *dst, size_t n) {
 }
 
 static inline void _mc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks) {
-  uint64_t qw = be64_to_cpu (*init);
-  while (blocks --) *(dst ++) = cpu_to_be64 (qw ++);
+  uint64_t qw, tmp;
+  memcpy (&tmp, init, 8);
+  qw = be64_to_cpu (tmp);
+  while (blocks--) {
+    tmp = cpu_to_be64 (qw++);
+    memcpy (dst++, &tmp, 8);
+  }
 }
 
 /* XXX
@@ -31,11 +36,14 @@ static inline void _mc_count_8_be (uint64_t *init, uint64_t *dst, size_t blocks)
  *   - SSE carry bit handling.
  */
 static inline void _mc_count_16_be (uint64_t *init, uint64_t *dst, size_t blocks) {
-  uint64_t qw1 = init[0],
-           qw2 = be64_to_cpu (init[1]);
+  uint64_t qw1, qw2, tmp;
+  memcpy (&qw1, init, 8);
+  memcpy (&tmp, (uint8_t*) init + 8, 8);
+  qw2 = be64_to_cpu (tmp);
   for (; blocks --; dst += 2) {
-    dst[0] = qw1;
-    dst[1] = cpu_to_be64 (qw2);
+    memcpy (dst, &qw1, 8);
+    tmp = cpu_to_be64 (qw2);
+    memcpy ((uint8_t*) dst + 8, &tmp, 8);
     if ((++ qw2) == 0) qw1 = cpu_to_be64 (be64_to_cpu (qw1) + 1);
   }
 }
