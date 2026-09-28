@@ -212,11 +212,13 @@ type 'a generator = (module Generator with type g = 'a)
 (** Ready-to-use RNG algorithms. *)
 
 (** {b Fortuna}, a CSPRNG {{: https://www.schneier.com/fortuna.html} proposed}
-    by Schneier. NOTE this is not safe when using [Unix.fork]. *)
+    by Schneier. NOTE: this is not safe when using [Unix.fork]. NOTE: this is
+    not safe in a concurrent setting. *)
 module Fortuna : Generator
 
 (** {b HMAC_DRBG}: A NIST-specified RNG based on HMAC construction over the
-    provided hash. NOTE this is not safe when using [Unix.fork]. *)
+    provided hash. NOTE: this is not safe when using [Unix.fork]. NOTE: this
+    does not collect entropy, and does not contain any reseed interval. *)
 module Hmac_drbg (H : Digestif.S) : Generator
 
 val create : ?g:'a -> ?seed:string -> ?strict:bool ->
