@@ -123,7 +123,7 @@ let check_aead_blocks_and_key key nonce len =
       invalid_arg "Chacha20: too many blocks"
   | k, n ->
     invalid_arg "ChaCha20: invalid key and nonce length. Supported are: key 32 \
-                 bytes and nonce 8 bytes OR key 16 or 32 bytes and nonce 12 \
+                 bytes and nonce 12 bytes OR key 16 or 32 bytes and nonce 8 \
                  bytes. Provided: key %u bytes and nonce %u bytes" k n
 [@@inline always]
 
