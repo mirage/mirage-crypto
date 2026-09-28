@@ -2,7 +2,8 @@
 
 module Pfortuna : Mirage_crypto_rng.Generator
 (** {b Pfortuna}, a {b domain-safe} CSPRNG
-    {{: https://www.schneier.com/fortuna.html} proposed} by Schneier. *)
+    {{: https://www.schneier.com/fortuna.html} proposed} by Schneier. NOTE: this
+    is not safe when using [Unix.fork]. *)
 
 type rng
 (** Type of tasks seeding the RNG. *)
