@@ -9,15 +9,10 @@
   (include_dirs ../src/native)
   (flags
    (:standard -DNDEBUG)
-   (:include cflags_optimized.sexp))))
+   (:include ../config/cflags_optimized.sexp))))
 
 (env
  (dev
-  (c_flags (:include cflags_warn.sexp))))
+  (c_flags (:include ../config/cflags_warn.sexp))))
 
 (include_subdirs unqualified)
-
-(rule
- (targets cflags_optimized.sexp cflags_warn.sexp)
- (action
-  (run ../config/cfg.exe)))
