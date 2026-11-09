@@ -42,3 +42,8 @@ let () = Mirage_crypto_rng_unix.use_default ()
 ## LICENSE
 
 Mostly ISC, the `mirage-crypto-rng` and `mirage-crypto-rng-mirage` packages are 2 clause BSD licensed, the `mirage-crypto-ec` package is MIT licensed.
+
+## AI
+
+Contributions involving AI must comply with the rules set out [here](./AI.md).
+If they do not comply, we reserve the right to reject your contribution.
